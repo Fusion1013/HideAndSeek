@@ -1,0 +1,9 @@
+.git
+.angular
+dist
+node_modules
+frontend/.angular
+frontend/dist
+frontend/node_modules
+backend/target
+coverage

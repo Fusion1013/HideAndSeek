@@ -1,59 +1,34 @@
-# JetlagWeb
+# Jetlag
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.2.21.
+Jetlag is split into an Angular frontend and a Spring Boot backend. The backend uses PostgreSQL and Springdoc to publish an OpenAPI document from its controllers; the Angular API client is generated from that live document.
 
-## Development server
+## Run the full application
 
-To start a local development server, run:
+Requirements: Docker Desktop with Docker Compose.
 
-```bash
-ng serve
+```sh
+docker compose up --build
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+Open [http://localhost:4200](http://localhost:4200). The map remains the main view; the greeting in its upper-left corner is fetched from the backend. Stop the application with `docker compose down`. PostgreSQL data is kept in the `postgres-data` volume.
 
-## Code scaffolding
+The greeting endpoint is `GET /api/hello` and returns `Hello, world!`. The generated OpenAPI documentation is available at [http://localhost:4200/swagger-ui/index.html](http://localhost:4200/swagger-ui/index.html), with the JSON document at `/v3/api-docs`.
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+## Generate API code
 
-```bash
-ng generate component component-name
+Install dependencies from the repository root, ensure Java and Maven are available, and start the backend so Springdoc can expose its generated API document:
+
+```sh
+npm ci
+mvn -f backend/pom.xml spring-boot:run
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+In another terminal, generate the Angular client from the running backend:
 
-```bash
-ng generate --help
+```sh
+npm run api:generate
 ```
 
-## Building
+The Angular workspace lives in `frontend/`. Root npm scripts forward to that workspace, so `npm start`, `npm run build`, and `npm test` remain available from the repository root. The frontend client is generated under `frontend/src/app/api/generated` from the Springdoc document at `http://localhost:8080/v3/api-docs`. The Spring controllers themselves are the backend implementation; no separate generated server interface is needed.
 
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+For local frontend development, run `npm start` and start the backend with `mvn -f backend/pom.xml spring-boot:run`. The Angular development server proxies `/api` to `localhost:8080`. Set `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, and `SPRING_DATASOURCE_PASSWORD` if using a local PostgreSQL instance.

@@ -1,0 +1,24 @@
+.backend-status {
+	position: fixed;
+	z-index: 2;
+	top: 16px;
+	left: 16px;
+	max-width: min(360px, calc(100vw - 180px));
+	margin: 0;
+	padding: 10px 14px;
+	border: 1px solid #8799a3;
+	border-radius: 4px;
+	background: #ffffff;
+	color: #17232b;
+	box-shadow: 0 2px 8px rgb(23 35 43 / 18%);
+	font: 600 14px/1.4 system-ui, sans-serif;
+}
+
+@media (max-width: 600px) {
+	.backend-status {
+		top: 10px;
+		left: 10px;
+		max-width: calc(100vw - 170px);
+		padding: 8px 10px;
+	}
+}

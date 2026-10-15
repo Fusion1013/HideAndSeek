@@ -1,0 +1,97 @@
+<div class="map-shell">
+	<div #mapElement class="map"></div>
+
+	<button
+		id="map-controls-toggle"
+		class="controls-toggle"
+		type="button"
+		[attr.aria-expanded]="controlsOpen()"
+		aria-controls="map-controls-panel"
+		(click)="toggleControls()"
+	>
+		{{ controlsOpen() ? 'Close controls' : 'Map controls' }}
+	</button>
+
+	@if (controlsOpen()) {
+		<aside id="map-controls-panel" class="controls-panel" aria-label="Map controls">
+			<div class="menu-switcher" aria-label="Control menu">
+				<button type="button" [attr.aria-pressed]="activeControlsMenu() === 'transit'" (click)="showControlsMenu('transit')">Transit</button>
+				<button type="button" [attr.aria-pressed]="activeControlsMenu() === 'measure'" (click)="showControlsMenu('measure')">Measure</button>
+			</div>
+
+			@if (activeControlsMenu() === 'transit') {
+				<section class="menu-content" aria-label="Transit line visibility">
+					<div class="panel-heading">
+						<label for="line-select">Transit lines</label>
+						<span>{{ selectedLines().length }} / {{ lines().length }}</span>
+					</div>
+					<div class="panel-actions">
+						<button type="button" (click)="selectAllLines()">All</button>
+						<button type="button" (click)="clearSelectedLines()">None</button>
+						<button type="button" (click)="toggleLabels()">{{ showLabels() ? 'Hide' : 'Show' }} Labels</button>
+					</div>
+					<div class="panel-actions vehicle-actions">
+						<button type="button" [disabled]="vehiclePositionsLoading()" (click)="refreshVehiclePositions()">
+							{{ vehiclePositionsLoading() ? 'Updating...' : 'Refresh vehicles' }}
+						</button>
+						<span role="status" aria-live="polite">{{ vehiclePositions().length }} vehicles</span>
+					</div>
+					@if (vehiclePositionsError()) {
+						<p class="load-error" role="alert">Vehicle positions could not be updated.</p>
+					}
+					<div class="panel-heading vehicle-list-heading">
+						<span>Vehicles</span>
+						<span>{{ mappableVehicles().length }}</span>
+					</div>
+					@if (mappableVehicles().length === 0) {
+						<p class="empty-vehicles">No vehicles available.</p>
+					} @else {
+						<ul class="vehicle-list" aria-label="Vehicles">
+							@for (vehicle of mappableVehicles(); track vehicle.id ?? vehicle.tripId ?? $index) {
+								<li>
+									<button class="vehicle-item" type="button" (click)="focusVehicle(vehicle)">
+										<strong>{{ vehicle.routeId ? 'Route ' + vehicle.routeId : 'Vehicle' }}</strong>
+										<span>{{ vehicle.id ?? vehicle.tripId ?? 'Position ' + ($index + 1) }}</span>
+									</button>
+								</li>
+							}
+						</ul>
+					}
+					<select
+						id="line-select"
+						multiple
+						size="12"
+						aria-label="Select transit lines to display"
+						(change)="onLinesChange($event)"
+					>
+						@for (line of lines(); track line) {
+							<option [value]="line" [selected]="selectedLines().includes(line)">{{ line }}</option>
+						}
+					</select>
+				</section>
+			}
+
+			@if (activeControlsMenu() === 'measure') {
+				<section class="menu-content measure-tools" aria-label="Measure shapes">
+					<div class="panel-heading">
+						<span>Measure</span>
+						<span>{{ shapeCount() }} shapes</span>
+					</div>
+					<div class="panel-actions measure-actions">
+						<button type="button" [attr.aria-pressed]="drawMode() === 'line'" (click)="setDrawMode('line')">Line</button>
+						<button type="button" [attr.aria-pressed]="drawMode() === 'circle'" (click)="setDrawMode('circle')">Circle</button>
+						<button type="button" [attr.aria-pressed]="drawMode() === null" (click)="setDrawMode(null)">Edit</button>
+					</div>
+					<div class="panel-actions measure-actions">
+						<button type="button" [disabled]="selectedShapeCount() === 0" (click)="deleteSelectedShapes()">Delete selected</button>
+						<button type="button" [disabled]="shapeCount() === 0" (click)="deleteAllShapes()">Delete all</button>
+					</div>
+				</section>
+			}
+
+			@if (loadError()) {
+				<p class="load-error" role="alert">Transit data could not be loaded.</p>
+			}
+		</aside>
+		}
+</div>

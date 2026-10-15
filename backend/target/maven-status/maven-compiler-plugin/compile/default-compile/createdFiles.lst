@@ -1,0 +1,15 @@
+com\jetlag\VehiclePositionClient.class
+com\jetlag\service\GtfsStaticDataService.class
+com\jetlag\TransitController.class
+com\jetlag\domain\GtfsDataset.class
+com\jetlag\domain\GtfsRow.class
+com\jetlag\repository\StopRepository.class
+com\jetlag\domain\GtfsTable.class
+com\jetlag\scheduled\GtfsUpdateJob.class
+com\jetlag\service\GtfsStopImportService.class
+com\jetlag\HelloController.class
+com\jetlag\service\StopBatchWriter.class
+com\jetlag\domain\StopEntity.class
+com\jetlag\JetlagApplication.class
+com\jetlag\controller\GtfsController.class
+com\jetlag\VehiclePosition.class
