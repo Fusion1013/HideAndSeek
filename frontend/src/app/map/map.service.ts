@@ -13,7 +13,7 @@ export class MapService {
 
   private readonly map = signal<OlMap | null>(null);
 
-  public async createMap(target: HTMLElement): Promise<string[]> {
+  public async createMap(target: HTMLElement): Promise<void> {
     const map = new OlMap({
       target,
       layers: [],
@@ -24,7 +24,7 @@ export class MapService {
     });
 
     this.map.set(map);
-    return this.layerService.loadLayers(map);
+    this.layerService.loadLayers(map);
   }
 
   public getMap(): OlMap | null {

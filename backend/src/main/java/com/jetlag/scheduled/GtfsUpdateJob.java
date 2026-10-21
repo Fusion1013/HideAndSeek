@@ -1,6 +1,6 @@
 package com.jetlag.scheduled;
 
-import com.jetlag.service.GtfsStopImportService;
+import com.jetlag.service.GtfsImportService;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,24 +14,25 @@ public class GtfsUpdateJob {
   private static final Logger logger =
     LoggerFactory.getLogger(GtfsUpdateJob.class);
 
-  private final GtfsStopImportService importService;
+  private final GtfsImportService importService;
 
-  public GtfsUpdateJob(GtfsStopImportService importService) {
+  public GtfsUpdateJob(GtfsImportService importService) {
     this.importService = importService;
   }
 
-  @Scheduled(
-    initialDelayString = "${gtfs.update.initial-delay-ms:10000}",
-    fixedDelayString = "${gtfs.update.fixed-delay-ms:86400000}"
-  )
-  public void updateStops() {
-    logger.info("Starting GTFS stop update");
+  // cron = "0 0 0 * * *"
+//  @Scheduled(
+//    initialDelayString = "${gtfs.update.initial-delay-ms:10000}",
+//    fixedDelayString = "${gtfs.update.fixed-delay-ms:86400000}"
+//  )
+  public void updateAll() {
+    logger.info("Starting GTFS update");
     try {
-      int count = importService.importStops();
-      logger.info("GTFS update successful: {} stops imported", count);
+      int count = importService.importData();
+      logger.info("GTFS update successful: {} entries imported", count);
     } catch (Exception exception) {
       logger.error(
-        "GTFS stop update failed; existing stop data is retained",
+        "GTFS update failed; existing data is retained",
         exception);
     }
   }

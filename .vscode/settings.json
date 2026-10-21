@@ -8,6 +8,7 @@
         "/^docker compose version; mvn -version$/": {
             "approve": true,
             "matchCommandLine": true
-        }
+        },
+        "npm --prefix frontend": true
     }
 }

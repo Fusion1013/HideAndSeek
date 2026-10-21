@@ -2,6 +2,8 @@ import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { App } from './app';
 import { HelloService } from './api/generated/api/hello.service';
+import { RouteControllerService, StopControllerService } from './api/generated';
+import { TransitService as TransitApiService } from './api/generated/api/transit.service';
 
 describe('App', () => {
   beforeEach(async () => {
@@ -14,7 +16,10 @@ describe('App', () => {
     await TestBed.configureTestingModule({
       imports: [App],
       providers: [
-        { provide: HelloService, useValue: { getHello: () => of('Hello, world!') } }
+        { provide: HelloService, useValue: { getHello: () => of('Hello, world!') } },
+        { provide: RouteControllerService, useValue: { getRoutes: () => of([]) } },
+        { provide: StopControllerService, useValue: { getStops: () => of([]) } },
+        { provide: TransitApiService, useValue: { getVehiclePositions: () => of([]) } }
       ]
     }).compileComponents();
   });

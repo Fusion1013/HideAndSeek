@@ -1,10 +1,10 @@
 package com.jetlag.domain;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Index;
-import jakarta.persistence.Table;
+import com.jetlag.util.GtfsParserUtil;
+import jakarta.persistence.*;
+import org.apache.commons.csv.CSVRecord;
+
+import java.io.IOException;
 
 @Entity
 @Table(
@@ -63,6 +63,27 @@ public class StopEntity {
   private String importGeneration;
 
   public StopEntity() {
+  }
+
+  public StopEntity(CSVRecord record, String generation) {
+    try {
+      setStopId(GtfsParserUtil.required(record, "stop_id"));
+      setStopCode(GtfsParserUtil.optional(record, "stop_code"));
+      setStopName(GtfsParserUtil.optional(record, "stop_name"));
+      setStopDescription(GtfsParserUtil.optional(record, "stop_desc"));
+      setLatitude(GtfsParserUtil.decimal(record, "stop_lat"));
+      setLongitude(GtfsParserUtil.decimal(record, "stop_lon"));
+      setZoneId(GtfsParserUtil.optional(record, "zone_id"));
+      setStopUrl(GtfsParserUtil.optional(record, "stop_url"));
+      setLocationType(GtfsParserUtil.integer(record, "location_type"));
+      setParentStation(GtfsParserUtil.optional(record, "parent_station"));
+      setWheelchairBoarding(GtfsParserUtil.integer(record, "wheelchair_boarding"));
+      setLevelId(GtfsParserUtil.optional(record, "level_id"));
+      setPlatformCode(GtfsParserUtil.optional(record, "platform_code"));
+      setImportGeneration(generation);
+    } catch (IOException e) {
+      throw new RuntimeException("Error parsing GTFS stop record", e);
+    }
   }
 
   public String getStopId() {

@@ -11,7 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 @Service
-public class StopBatchWriter {
+public class StopBatchWriter implements IBatchWriter<StopEntity> {
 
   private final StopRepository stopRepository;
   private final EntityManager entityManager;
@@ -27,13 +27,11 @@ public class StopBatchWriter {
   public void saveBatch(List<StopEntity> stops) {
     stopRepository.saveAll(stops);
     stopRepository.flush();
-
-    // Prevent JPA from retaining every imported entity.
     entityManager.clear();
   }
 
   @Transactional
-  public int deleteStaleStops(String generation) {
+  public int deleteStale(String generation) {
     return stopRepository.deleteNotInGeneration(generation);
   }
 }
