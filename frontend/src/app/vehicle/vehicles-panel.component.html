@@ -1,0 +1,49 @@
+<section class="menu-content" aria-label="Vehicle positions">
+	<div class="panel-actions vehicle-actions">
+		<button type="button" [disabled]="transit.vehiclePositionsLoading()" (click)="selection.refresh()">
+			{{ transit.vehiclePositionsLoading() ? 'Updating...' : 'Refresh vehicles' }}
+		</button>
+		<span role="status" aria-live="polite">{{ transit.vehiclePositions().length }} vehicles</span>
+	</div>
+	@if (updatedAt(); as updatedAt) {
+		<p class="vehicles-updated">
+			Updated {{ updatedAt }}{{ autoRefresh() ? ' · refreshes every ' + refreshSeconds + ' s' : ' · turn on the Vehicles layer to refresh automatically' }}
+		</p>
+	}
+	@if (transit.vehiclePositionsError()) {
+		<p class="load-error" role="alert">Vehicle positions could not be updated.</p>
+	}
+	<div class="panel-heading vehicle-list-heading">
+		<span>Vehicles</span>
+		<span>{{ selection.selectedIds().length }} selected · {{ selection.vehicles().length }} total</span>
+	</div>
+	@if (selection.vehicles().length === 0) {
+		<p class="status-text">No vehicles available.</p>
+	} @else {
+		<select
+			id="vehicle-select"
+			class="vehicle-select"
+			multiple
+			size="12"
+			aria-label="Select vehicles to focus"
+			(change)="onSelectionChange($event)"
+		>
+			@for (vehicle of selection.vehicles(); track vehicleKey(vehicle)) {
+				<option [value]="vehicleKey(vehicle)" [selected]="selection.selectedIds().includes(vehicleKey(vehicle))">
+					{{ optionLabel(vehicle, $index) }}
+				</option>
+			}
+		</select>
+	}
+	@if (selection.selectedVehicles().length === 1) {
+		<app-vehicle-trip
+			[vehicle]="selection.selectedVehicles()[0]"
+			[route]="catalog.route(selection.selectedVehicles()[0].routeId)"
+			[trip]="selection.trip()"
+			[tripLoading]="selection.tripLoading()"
+			[tripError]="selection.tripError()"
+		/>
+	} @else if (selection.selectedVehicles().length > 1) {
+		<p class="status-text">Select a single vehicle to see its trip.</p>
+	}
+</section>

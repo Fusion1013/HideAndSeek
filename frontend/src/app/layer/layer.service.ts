@@ -1,115 +1,71 @@
-import { inject, Injectable } from '@angular/core';
+import { inject, Injectable, Injector, signal } from '@angular/core';
 import Feature from 'ol/Feature';
 import Geometry from 'ol/geom/Geometry';
 import type BaseLayer from 'ol/layer/Base';
 import VectorLayer from 'ol/layer/Vector';
 import OlMap from 'ol/Map';
 import VectorSource from 'ol/source/Vector';
-import { BaseMapLayerService } from './base-map-layer.service';
-import { DistrictLayerService } from './district-layer.service';
-import { StopsLayerService } from './stops-layer.service';
-import { RouteShapesLayerService } from './route-shapes-layer.service';
-import { VehicleLayerService } from './vehicle-layer.service';
-import type { AgencyRouteEntity, ShapeEntity } from '../api/generated';
-import { AirportLayerService } from './airport-layer.service';
-import { AquariumLayerService } from './aquarium-layer.service';
-import { ParkLayerService } from './park-layer.service';
-import { RailStationLayerService } from './rail-station-layer.service';
-import { MountainLayerService } from './mountain-layer.service';
-import { AdminDivision1Service } from './admin-division-1-layer.service';
-import { AdminDivision2Service } from './admin-division-2.service';
-import { AdminDivision4Service } from './admin-division-4.service';
+import { OverpassService } from '../api/generated';
+import { OverpassLayer } from './overpass-layer';
+import { MAP_LAYERS } from './map-layers';
+import type { MapLayerDefinition, MapLayerId } from './map-layers';
+import type { MapLayerProvider } from './base-layer.service';
 
-export type MapLayerId = 'base-map' | 'districts' | 'routes' | 'stops' | 'vehicles' | 'measurements' | 'airports' | 'aquariums' | 'parks' | 'rail_station' | 'mountains' | 'admin_division_1' | 'admin_division_2' | 'admin_division_4';
+export type { MapLayerId } from './map-layers';
 
 @Injectable({
   providedIn: 'root',
 })
 export class LayerService {
-  private readonly baseMapLayer = inject(BaseMapLayerService);
-  private readonly stopsLayer = inject(StopsLayerService);
-  private readonly vehicleLayer = inject(VehicleLayerService);
-  private readonly districtLayer = inject(DistrictLayerService);
-  private readonly routeShapesLayer = inject(RouteShapesLayerService);
-  private readonly airportLayer = inject(AirportLayerService);
-  private readonly aquariumLayer = inject(AquariumLayerService);
-  private readonly parksLayer = inject(ParkLayerService);
-  private readonly mountainsLayer = inject(MountainLayerService);
-  private readonly adminDivision1 = inject(AdminDivision1Service);
-  private readonly adminDivision2 = inject(AdminDivision2Service);
-  private readonly adminDivision4 = inject(AdminDivision4Service);
-  private readonly railStationLayerService = inject(RailStationLayerService);
+  private readonly injector = inject(Injector);
+  private readonly overpassApi = inject(OverpassService);
   private readonly registeredLayers = new Map<MapLayerId, BaseLayer[]>();
-  private readonly layerVisibility = new Map<MapLayerId, boolean>();
-  private readonly defaultLayerVisibility: Record<MapLayerId, boolean> = {
-    'base-map': true,
-    districts: false,
-    routes: true,
-    stops: false,
-    vehicles: false,
-    measurements: true,
-    airports: false,
-    aquariums: false,
-    parks: false,
-    rail_station: false,
-    mountains: false,
-    admin_division_1: false,
-    admin_division_2: false,
-    admin_division_4: false,
-  };
 
-  public async loadLayers(map: OlMap): Promise<void> {
-    this.registerLayers('base-map', this.baseMapLayer.load(map));
-    this.registerLayers('districts', this.districtLayer.load(map));
-    this.registerLayers('routes', this.routeShapesLayer.load(map));
-    this.registerLayers('stops', this.stopsLayer.load(map));
-    this.registerLayers('vehicles', this.vehicleLayer.load(map));
-    this.registerLayers('airports', this.airportLayer.load(map));
-    this.registerLayers('aquariums', this.aquariumLayer.load(map));
-    this.registerLayers('parks', this.parksLayer.load(map));
-    this.registerLayers('rail_station', this.railStationLayerService.load(map));
-    this.registerLayers('mountains', this.mountainsLayer.load(map));
-    this.registerLayers('admin_division_1', this.adminDivision1.load(map));
-    this.registerLayers('admin_division_2', this.adminDivision2.load(map));
-    this.registerLayers('admin_division_4', this.adminDivision4.load(map));
+  /** The object that creates each layer: its service, or an {@link OverpassLayer} built from its settings. */
+  private readonly providers: ReadonlyMap<MapLayerId, MapLayerProvider> = new Map(
+    (MAP_LAYERS as readonly MapLayerDefinition[]).flatMap(definition => {
+      const provider = this.createProvider(definition);
+      return provider ? [[definition.id as MapLayerId, provider] as const] : [];
+    })
+  );
 
-  }
+  private readonly distanceLayers: ReadonlyMap<MapLayerId, OverpassLayer> = new Map(
+    (MAP_LAYERS as readonly MapLayerDefinition[]).flatMap(definition => {
+      const provider = this.providers.get(definition.id as MapLayerId);
+      return definition.measurable && provider instanceof OverpassLayer
+        ? [[definition.id as MapLayerId, provider] as const]
+        : [];
+    })
+  );
 
-  public refreshVehiclePositions(map: OlMap): Promise<void> {
-    return this.vehicleLayer.refreshVehiclePositions(map);
-  }
+  /** Layers currently shown on the map, starting from each layer's default. */
+  readonly visibleLayerIds = signal<ReadonlySet<MapLayerId>>(
+    new Set(MAP_LAYERS.filter(layer => layer.visible).map(layer => layer.id))
+  );
 
-  public setRouteShapes(map: OlMap, shapesByRoute: ReadonlyMap<string, readonly ShapeEntity[][]>): void {
-    this.routeShapesLayer.setRouteShapes(map, shapesByRoute);
-  }
-
-  public setVehicleRouteShape(shapes: readonly ShapeEntity[] | null): void {
-    this.routeShapesLayer.setVehicleRouteShape(shapes);
-  }
-
-  public setVehicleRouteMetadata(routes: readonly AgencyRouteEntity[]): void {
-    this.vehicleLayer.setRouteMetadata(routes);
-  }
-
-  public setVehicleTripRouteIds(routeIdsByTripId: ReadonlyMap<string, string>): void {
-    this.vehicleLayer.setTripRouteIds(routeIdsByTripId);
-  }
-
-  public setHighlightedVehicleRouteIds(routeIds: readonly string[]): void {
-    this.vehicleLayer.setHighlightedRouteIds(routeIds);
-  }
-
-  public setVisibleStopIds(stopIds: readonly string[] | null): void {
-    this.stopsLayer.setVisibleStopIds(stopIds);
+  public loadLayers(map: OlMap): void {
+    for (const [layerId, provider] of this.providers) {
+      this.registerLayers(layerId, provider.load(map));
+    }
   }
 
   public setLayerVisibility(layerId: MapLayerId, visible: boolean): void {
-    this.layerVisibility.set(layerId, visible);
     this.registeredLayers.get(layerId)?.forEach(layer => layer.setVisible(visible));
+    this.visibleLayerIds.update(ids => {
+      if (ids.has(layerId) === visible) return ids;
+      const next = new Set(ids);
+      if (visible) next.add(layerId); else next.delete(layerId);
+      return next;
+    });
+  }
+
+  /** Layers marked `measurable` in the registry, e.g. for "closest location" distances. */
+  public getDistanceLayers(): ReadonlyMap<MapLayerId, OverpassLayer> {
+    return this.distanceLayers;
   }
 
   public getLayerVisibility(layerId: MapLayerId): boolean {
-    return this.layerVisibility.get(layerId) ?? this.defaultLayerVisibility[layerId];
+    return this.visibleLayerIds().has(layerId);
   }
 
   public addMeasureLayer(map: OlMap, layer: VectorLayer<VectorSource<Feature<Geometry>>>): void {
@@ -118,6 +74,11 @@ export class LayerService {
     measurementLayers.push(layer);
     this.registeredLayers.set('measurements', measurementLayers);
     map.addLayer(layer);
+  }
+
+  private createProvider(definition: MapLayerDefinition): MapLayerProvider | undefined {
+    if (definition.overpass) return new OverpassLayer(this.overpassApi, definition.overpass);
+    return definition.provider && this.injector.get(definition.provider);
   }
 
   private registerLayers(layerId: MapLayerId, layers: BaseLayer[]): void {

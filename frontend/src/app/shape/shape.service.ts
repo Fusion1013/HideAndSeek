@@ -16,12 +16,15 @@ import { getDistance, getLength } from 'ol/sphere';
 import { toLonLat } from 'ol/proj';
 import { LayerService } from '../layer/layer.service';
 import { MapService } from '../map/map.service';
+import { formatDistance } from '../shared/format';
 
 export interface ShapeStyleOptions {
   strokeColor?: string;
   strokeWidth?: number;
   fillColor?: string | null;
 }
+
+export type DrawMode = 'line' | 'circle' | null;
 
 @Injectable({
   providedIn: 'root',
@@ -38,6 +41,8 @@ export class ShapeService {
   private translate: Translate | null = null;
   readonly shapeCount = signal(0);
   readonly selectedShapeCount = signal(0);
+  /** The shape being drawn on click, or null when clicks select and move shapes. */
+  readonly drawMode = signal<DrawMode>(null);
 
   public initialize(map = this.mapService.getMap()): void {
     if (!map) {
@@ -73,7 +78,8 @@ export class ShapeService {
     this.select.on('select', () => this.selectedShapeCount.set(selectedFeatures.getLength()));
   }
 
-  public setDrawMode(mode: 'line' | 'circle' | null): void {
+  public setDrawMode(mode: DrawMode): void {
+    this.drawMode.set(mode);
     this.drawLine?.setActive(mode === 'line');
     this.drawCircle?.setActive(mode === 'circle');
     this.select?.setActive(mode === null);
@@ -158,9 +164,9 @@ export class ShapeService {
   private getMeasureStyle(feature: Feature<Geometry>, map: OlMap): Style {
     const geometry = feature.getGeometry();
     const measurement = geometry instanceof LineString
-      ? this.formatDistance(getLength(geometry, { projection: map.getView().getProjection() }))
+      ? formatDistance(getLength(geometry, { projection: map.getView().getProjection() }))
       : geometry instanceof CircleGeometry
-        ? `R ${this.formatDistance(getDistance(
+        ? `R ${formatDistance(getDistance(
           toLonLat(geometry.getCenter(), map.getView().getProjection()),
           toLonLat([
             geometry.getCenter()[0] + geometry.getRadius(),
@@ -185,11 +191,6 @@ export class ShapeService {
       })
     });
   }
-
-  private formatDistance(distance: number): string {
-    return distance >= 1000 ? `${(distance / 1000).toFixed(2)} km` : `${Math.round(distance)} m`;
-  }
-
   private validateCoordinate(coordinate: Coordinate): void {
     if (!Number.isFinite(coordinate[0]) || !Number.isFinite(coordinate[1])) {
       throw new RangeError('Shape coordinates must be finite.');

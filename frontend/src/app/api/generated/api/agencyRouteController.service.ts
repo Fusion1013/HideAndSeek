@@ -17,7 +17,7 @@ import { Observable }                                        from 'rxjs';
 import { OpenApiHttpParams, QueryParamStyle } from '../query.params';
 
 // @ts-ignore
-import { AgencyRouteEntity } from '../model/agencyRouteEntity';
+import { AgencyRouteDTO } from '../model/agencyRouteDTO';
 
 // @ts-ignore
 import { BASE_PATH, COLLECTION_FORMATS }                     from '../variables';
@@ -36,16 +36,16 @@ export class AgencyRouteControllerService extends BaseService {
     }
 
     /**
-     * Get all agencies
+     * Get a route with its agency
      * @endpoint get /api/agency-routes/{routeId}
      * @param routeId 
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
      * @param options additional options
      */
-    public getAgencyRoute(routeId: string, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<Array<AgencyRouteEntity>>;
-    public getAgencyRoute(routeId: string, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<Array<AgencyRouteEntity>>>;
-    public getAgencyRoute(routeId: string, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<Array<AgencyRouteEntity>>>;
+    public getAgencyRoute(routeId: string, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<AgencyRouteDTO>;
+    public getAgencyRoute(routeId: string, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<AgencyRouteDTO>>;
+    public getAgencyRoute(routeId: string, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<AgencyRouteDTO>>;
     public getAgencyRoute(routeId: string, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
         if (routeId === null || routeId === undefined) {
             throw new Error('Required parameter routeId was null or undefined when calling getAgencyRoute.');
@@ -78,7 +78,7 @@ export class AgencyRouteControllerService extends BaseService {
 
         let localVarPath = `/api/agency-routes/${this.configuration.encodeParam({name: "routeId", value: routeId, in: "path", style: "simple", explode: false, dataType: "string", dataFormat: undefined})}`;
         const { basePath, withCredentials } = this.configuration;
-        return this.httpClient.request<Array<AgencyRouteEntity>>('get', `${basePath}${localVarPath}`,
+        return this.httpClient.request<AgencyRouteDTO>('get', `${basePath}${localVarPath}`,
             {
                 context: localVarHttpContext,
                 responseType: <any>responseType_,
@@ -100,9 +100,9 @@ export class AgencyRouteControllerService extends BaseService {
      * @param reportProgress flag to report request and response progress.
      * @param options additional options
      */
-    public getAgencyRoutes(agencyId?: string, routeType?: string, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<Array<AgencyRouteEntity>>;
-    public getAgencyRoutes(agencyId?: string, routeType?: string, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<Array<AgencyRouteEntity>>>;
-    public getAgencyRoutes(agencyId?: string, routeType?: string, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<Array<AgencyRouteEntity>>>;
+    public getAgencyRoutes(agencyId?: string, routeType?: string, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<Array<AgencyRouteDTO>>;
+    public getAgencyRoutes(agencyId?: string, routeType?: string, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<Array<AgencyRouteDTO>>>;
+    public getAgencyRoutes(agencyId?: string, routeType?: string, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<Array<AgencyRouteDTO>>>;
     public getAgencyRoutes(agencyId?: string, routeType?: string, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
 
         let localVarQueryParameters = new OpenApiHttpParams(this.encoder);
@@ -152,7 +152,7 @@ export class AgencyRouteControllerService extends BaseService {
 
         let localVarPath = `/api/agency-routes`;
         const { basePath, withCredentials } = this.configuration;
-        return this.httpClient.request<Array<AgencyRouteEntity>>('get', `${basePath}${localVarPath}`,
+        return this.httpClient.request<Array<AgencyRouteDTO>>('get', `${basePath}${localVarPath}`,
             {
                 context: localVarHttpContext,
                 params: localVarQueryParameters.toHttpParams(),

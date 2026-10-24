@@ -1,0 +1,34 @@
+<section class="menu-content distance-tools" aria-labelledby="closest-locations-heading">
+	<label class="control-field" for="distance-position-source">
+		Position from
+		<select id="distance-position-source" [value]="closest.positionSource()" (change)="setPositionSource($event)">
+			<option value="mouse">Mouse</option>
+			<option value="gps">GPS</option>
+		</select>
+	</label>
+	<h3 id="closest-locations-heading" class="distance-heading">Closest locations</h3>
+	@if (closest.openLayerIds().length === 0) {
+		<p class="status-text">Turn on a layer such as Zoos, Museums or High-Speed Rail under Map layers.</p>
+	} @else if (closest.positionSource() === 'gps' && closest.gpsError(); as error) {
+		<p class="status-text" role="alert">{{ gpsErrorMessage(error) }}</p>
+	} @else if (!closest.origin()) {
+		<p class="status-text" role="status">
+			{{ closest.positionSource() === 'gps' ? 'Waiting for a GPS position...' : 'Move the mouse over the map.' }}
+		</p>
+	} @else if (closest.results().length === 0) {
+		<p class="status-text" role="status">Loading places...</p>
+	} @else {
+		<ul class="closest-locations" aria-label="Closest location on each open layer">
+			@for (location of closest.results(); track location.layerId) {
+				<li>
+					<span class="closest-location-layer">
+						<span class="layer-swatch" [style.background-color]="location.color" aria-hidden="true"></span>
+						{{ layerLabels.get(location.layerId) }}
+					</span>
+					<span class="closest-location-name">{{ location.name }}</span>
+					<strong>{{ formatDistance(location.distanceMeters) }}</strong>
+				</li>
+			}
+		</ul>
+	}
+</section>

@@ -1,0 +1,104 @@
+<section class="vehicle-trip" aria-labelledby="vehicle-trip-title">
+	<header class="trip-header">
+		<span class="route-badge">{{ routeName() }}</span>
+		<div class="trip-heading">
+			<h3 id="vehicle-trip-title">
+				@if (headsign(); as headsign) {
+					<span class="visually-hidden">Route {{ routeName() }}, </span>Towards {{ headsign }}
+				} @else {
+					Route {{ routeName() }}
+				}
+			</h3>
+			@if (routeDescription()) {
+				<p>{{ routeDescription() }}</p>
+			}
+		</div>
+	</header>
+
+	<ul class="trip-facts" aria-label="Vehicle details">
+		@if (speed(); as speed) {
+			<li><span>Speed</span> {{ speed }}</li>
+		}
+		<li><span>Vehicle</span> {{ vehicle().id || 'Unknown' }}</li>
+		@if (updatedAt(); as updatedAt) {
+			<li><span>Position from</span> {{ updatedAt }}</li>
+		}
+	</ul>
+
+	@if (!vehicle().tripId) {
+		<p class="trip-status">This vehicle is not on a scheduled trip right now.</p>
+	} @else if (tripLoading() && rows().length === 0) {
+		<p class="trip-status" role="status">Loading trip...</p>
+	} @else if (tripError()) {
+		<p class="trip-status trip-error" role="alert">The trip could not be loaded.</p>
+	} @else if (rows().length < 2) {
+		<p class="trip-status">No stop information for this trip.</p>
+	} @else {
+		<div class="trip-progress">
+			<div
+				class="trip-bar"
+				role="progressbar"
+				aria-label="Trip progress"
+				aria-valuemin="0"
+				aria-valuemax="100"
+				[attr.aria-valuenow]="tripPercent()"
+				[attr.aria-valuetext]="progressText()"
+			>
+				<div class="trip-bar-fill" [style.width.%]="tripPercent()"></div>
+				<span class="trip-bar-bus" [style.left.%]="tripPercent()" aria-hidden="true">
+					<svg lucideBusFront [size]="14"></svg>
+				</span>
+			</div>
+			<div class="trip-ends" aria-hidden="true">
+				<span>{{ rows()[0].stop.name }}</span>
+				<span>{{ rows()[rows().length - 1].stop.name }}</span>
+			</div>
+		</div>
+
+		@if (nextStop(); as next) {
+			<div class="next-stop" aria-live="polite">
+				<span class="next-stop-label">{{ next.isHere ? 'At stop' : 'Next stop' }}</span>
+				<strong>{{ next.stop.name }}@if (next.stop.platform) {<span class="platform">{{ ' · ' + next.stop.platform }}</span>}</strong>
+				<span class="next-stop-meta">
+					@if (next.time) { {{ next.time }} }
+					@if (next.due && !next.isHere) { · {{ next.due }} }
+					@if (next.distance) { · {{ next.distance }} }
+				</span>
+			</div>
+		} @else {
+			<p class="trip-status">The vehicle has reached the end of its trip.</p>
+		}
+
+		<ol class="trip-stops" aria-label="Stops in order">
+			@for (row of rows(); track $index; let index = $index) {
+				<li
+					[class]="'stop-' + row.status"
+					[class.terminus]="row.isTerminus"
+					[class.is-last]="$last"
+					[class.has-vehicle]="marker()?.index === index"
+					[style.--segment-fill]="marker()?.index === index ? marker()!.fraction : null"
+					[attr.aria-current]="row.status === 'current' || row.status === 'next' ? 'step' : null"
+				>
+					<button type="button" (click)="focusStop(row.stop)" [attr.aria-label]="row.stop.name + (row.stop.platform ? ', platform ' + row.stop.platform : '') + (row.time ? ', ' + row.time : '') + ', ' + statusLabel(row.status) + '. Show on map'">
+						<span class="stop-dot" aria-hidden="true"></span>
+						<span class="stop-name">
+							{{ row.stop.name }}
+							@if (row.stop.platform) {
+								<span class="platform">{{ row.stop.platform }}</span>
+							}
+						</span>
+						@if (row.status === 'current' || row.status === 'next') {
+							<span class="stop-tag">{{ row.status === 'current' ? 'Here' : 'Next' }}</span>
+						}
+						<time class="stop-time">{{ row.time }}</time>
+					</button>
+					@if (marker()?.index === index) {
+						<span class="vehicle-marker" [style.--marker-fraction]="marker()!.fraction" aria-hidden="true">
+							<svg lucideBusFront [size]="14"></svg>
+						</span>
+					}
+				</li>
+			}
+		</ol>
+	}
+</section>

@@ -5,6 +5,10 @@
 /tmp
 /out-tsc
 /bazel-out
+target/
+
+# Local secrets (see backend/config/application-local.properties.example)
+backend/config/application-local.properties
 
 # Node
 /node_modules

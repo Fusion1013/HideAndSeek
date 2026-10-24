@@ -1,0 +1,52 @@
+<button
+	id="map-controls-toggle"
+	class="controls-toggle"
+	type="button"
+	[attr.aria-label]="controls.open() ? 'Close map controls' : 'Open map controls'"
+	[attr.title]="controls.open() ? 'Close map controls' : 'Open map controls'"
+	[attr.aria-expanded]="controls.open()"
+	aria-controls="map-controls-panel"
+	(click)="controls.toggle()"
+>
+	@if (controls.open()) {
+		<svg lucidePanelRightClose [size]="20" aria-hidden="true"></svg>
+	} @else {
+		<svg lucidePanelRightOpen [size]="20" aria-hidden="true"></svg>
+	}
+</button>
+
+<aside
+	id="map-controls-panel"
+	class="controls-panel"
+	[class.is-closed]="!controls.open()"
+	[class.has-scrolling-list]="controls.activeMenu() === 'layers'"
+	[attr.aria-hidden]="!controls.open()"
+	[attr.inert]="controls.open() ? null : ''"
+	aria-label="Map controls"
+>
+	<h2 class="controls-title">Map controls</h2>
+	<nav class="menu-switcher" aria-label="Map control menus">
+		<button type="button" aria-label="Transit routes" title="Transit routes" [attr.aria-pressed]="controls.activeMenu() === 'transit'" (click)="controls.select('transit')">
+			<svg lucideRoute [size]="20" aria-hidden="true"></svg>
+		</button>
+		<button type="button" aria-label="Vehicles" title="Vehicles" [attr.aria-pressed]="controls.activeMenu() === 'vehicles'" (click)="controls.select('vehicles')">
+			<svg lucideBusFront [size]="20" aria-hidden="true"></svg>
+		</button>
+		@if (stationAvailable()) {
+			<button type="button" aria-label="Selected station" title="Selected station" [attr.aria-pressed]="controls.activeMenu() === 'station'" (click)="controls.select('station')">
+				<svg lucideMapPin [size]="20" aria-hidden="true"></svg>
+			</button>
+		}
+		<button type="button" aria-label="Measure shapes" title="Measure shapes" [attr.aria-pressed]="controls.activeMenu() === 'measure'" (click)="controls.select('measure')">
+			<svg lucideRuler [size]="20" aria-hidden="true"></svg>
+		</button>
+		<button type="button" aria-label="Map layers" title="Map layers" [attr.aria-pressed]="controls.activeMenu() === 'layers'" (click)="controls.select('layers')">
+			<svg lucideLayers [size]="20" aria-hidden="true"></svg>
+		</button>
+		<button type="button" aria-label="Distances" title="Distances" [attr.aria-pressed]="controls.activeMenu() === 'distances'" (click)="controls.select('distances')">
+			<svg lucideLocateFixed [size]="20" aria-hidden="true"></svg>
+		</button>
+	</nav>
+
+	<ng-content />
+</aside>

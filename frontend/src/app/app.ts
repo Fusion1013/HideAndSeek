@@ -1,6 +1,5 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { MapComponent } from './map/map.component';
-import { HelloService } from './api/generated/api/hello.service';
 
 @Component({
   selector: 'app-root',

@@ -11,8 +11,9 @@ import { fromLonLat, toLonLat } from 'ol/proj';
 import { getDistance } from 'ol/sphere';
 import { Circle as CircleStyle, Fill, Stroke, Style, Text } from 'ol/style';
 import VectorSource from 'ol/source/Vector';
-import type { StopEntity } from '../api/generated';
+import type { StopDTO } from '../api/generated';
 import { LayerService } from './layer.service';
+import { formatDistance } from '../shared/format';
 
 export interface StationMeasurePoint {
   id: number;
@@ -28,7 +29,7 @@ export class StationMeasurementService {
   private radiusFeature: Feature<CircleGeometry> | null = null;
   private nextPointId = 1;
 
-  readonly selectedStop = signal<StopEntity | null>(null);
+  readonly selectedStop = signal<StopDTO | null>(null);
   readonly radiusMeters = signal(250);
   readonly measurePoints = signal<StationMeasurePoint[]>([]);
 
@@ -43,7 +44,7 @@ export class StationMeasurementService {
     this.layerService.addMeasureLayer(map, layer);
   }
 
-  selectStop(stop: StopEntity): void {
+  selectStop(stop: StopDTO): void {
     if (!this.map || !hasStopCoordinates(stop)) return;
 
     this.source.clear();
@@ -146,15 +147,11 @@ export class StationMeasurementService {
   }
 }
 
-function hasStopCoordinates(stop: StopEntity): stop is StopEntity & { longitude: number; latitude: number } {
+function hasStopCoordinates(stop: StopDTO): stop is StopDTO & { longitude: number; latitude: number } {
   return typeof stop.longitude === 'number' && Number.isFinite(stop.longitude)
     && typeof stop.latitude === 'number' && Number.isFinite(stop.latitude);
 }
 
 function isCoordinate(longitude: number, latitude: number): boolean {
   return Number.isFinite(longitude) && Number.isFinite(latitude);
-}
-
-function formatDistance(distance: number): string {
-  return distance >= 1000 ? `${(distance / 1000).toFixed(2)} km` : `${Math.round(distance)} m`;
 }

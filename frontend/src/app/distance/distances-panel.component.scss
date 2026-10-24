@@ -1,0 +1,47 @@
+:host {
+  display: contents;
+}
+
+.distance-heading {
+  margin: 12px 0 4px;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.closest-locations {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'layer distance'
+      'name distance';
+    align-items: center;
+    column-gap: 12px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--control-border);
+  }
+
+  strong {
+    grid-area: distance;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.closest-location-layer {
+  grid-area: layer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--control-muted);
+  font-size: 12px;
+}
+
+.closest-location-name {
+  grid-area: name;
+  overflow-wrap: anywhere;
+}

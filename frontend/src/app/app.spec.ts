@@ -1,7 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { App } from './app';
-import { HelloService } from './api/generated/api/hello.service';
 import { RouteControllerService, StopControllerService } from './api/generated';
 import { TransitService as TransitApiService } from './api/generated/api/transit.service';
 
@@ -16,7 +15,6 @@ describe('App', () => {
     await TestBed.configureTestingModule({
       imports: [App],
       providers: [
-        { provide: HelloService, useValue: { getHello: () => of('Hello, world!') } },
         { provide: RouteControllerService, useValue: { getRoutes: () => of([]) } },
         { provide: StopControllerService, useValue: { getStops: () => of([]) } },
         { provide: TransitApiService, useValue: { getVehiclePositions: () => of([]) } }
@@ -37,13 +35,5 @@ describe('App', () => {
     (compiled.querySelector('#map-controls-toggle') as HTMLButtonElement).click();
     fixture.detectChanges();
     expect(compiled.querySelector('#line-select')).toBeTruthy();
-  });
-
-  it('should show the backend greeting', async () => {
-    const fixture = TestBed.createComponent(App);
-    await fixture.whenStable();
-    fixture.detectChanges();
-    expect((fixture.nativeElement as HTMLElement).querySelector('[role="status"]')?.textContent)
-      .toContain('Hello, world!');
   });
 });

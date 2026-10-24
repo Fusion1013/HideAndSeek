@@ -9,7 +9,7 @@ import CircleStyle from 'ol/style/Circle';
 import Style from 'ol/style/Style';
 import { VehiclePosition } from '../api/generated/model/vehiclePosition';
 import { TransitService } from '../transit/transit.service';
-import { VehicleLayerService } from './vehicle-layer.service';
+import { MOVE_DURATION_MS, VehicleLayerService } from './vehicle-layer.service';
 
 describe('VehicleLayerService', () => {
   it('uses route short names and highlights matching vehicles without hiding others', async () => {
@@ -45,5 +45,73 @@ describe('VehicleLayerService', () => {
     expect((otherStyles[0].getImage() as CircleStyle).getRadius()).toBe(4);
     const tripOnlyStyles = features[2].getStyleFunction()?.(features[2], 1) as Style[];
     expect((tripOnlyStyles[0].getImage() as CircleStyle).getRadius()).toBe(8);
+  });
+
+  describe('when positions update', () => {
+    let positions: VehiclePosition[];
+    let service: VehicleLayerService;
+    let map: OlMap;
+    let source: VectorSource<Feature<Point>>;
+
+    beforeEach(() => {
+      positions = [
+        { id: 'bus-1', latitude: 57.78, longitude: 14.16 },
+        { id: 'bus-2', latitude: 57.79, longitude: 14.17 }
+      ];
+      TestBed.configureTestingModule({
+        providers: [
+          VehicleLayerService,
+          { provide: TransitService, useValue: { refreshVehiclePositions: () => Promise.resolve(positions) } }
+        ]
+      });
+      service = TestBed.inject(VehicleLayerService);
+      map = { addLayer: vi.fn(), getView: () => new View() } as unknown as OlMap;
+      source = (service.load(map)[0] as VectorLayer<VectorSource<Feature<Point>>>).getSource()!;
+    });
+
+    afterEach(() => vi.unstubAllGlobals());
+
+    it('glides each marker from where it was to where it is now', async () => {
+      const frames: FrameRequestCallback[] = [];
+      vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => frames.push(callback));
+      vi.stubGlobal('cancelAnimationFrame', vi.fn());
+      vi.spyOn(performance, 'now').mockReturnValue(0);
+      await service.refreshVehiclePositions(map);
+      const marker = source.getFeatureById('id:bus-1') as Feature<Point>;
+      const [startX] = marker.getGeometry()!.getCoordinates();
+
+      positions = [{ id: 'bus-1', latitude: 57.78, longitude: 14.165 }];
+      await service.refreshVehiclePositions(map);
+
+      // Same marker, still at the old position until the animation runs
+      expect(source.getFeatureById('id:bus-1')).toBe(marker);
+      expect(marker.getGeometry()!.getCoordinates()[0]).toBe(startX);
+      frames.shift()!(MOVE_DURATION_MS / 2);
+      const halfwayX = marker.getGeometry()!.getCoordinates()[0];
+      expect(halfwayX).toBeGreaterThan(startX);
+      frames.shift()!(MOVE_DURATION_MS);
+      const endX = marker.getGeometry()!.getCoordinates()[0];
+      expect(endX).toBeGreaterThan(halfwayX);
+      expect(halfwayX - startX).toBeCloseTo((endX - startX) / 2, 0);
+      expect(frames).toHaveLength(0);
+
+      // Vehicles that left the feed are removed
+      expect(source.getFeatureById('id:bus-2')).toBeNull();
+    });
+
+    it('moves markers at once when reduced motion is preferred', async () => {
+      vi.stubGlobal('matchMedia', () => ({ matches: true }));
+      const requestFrame = vi.fn();
+      vi.stubGlobal('requestAnimationFrame', requestFrame);
+      await service.refreshVehiclePositions(map);
+      const marker = source.getFeatureById('id:bus-1') as Feature<Point>;
+      const [startX] = marker.getGeometry()!.getCoordinates();
+
+      positions = [{ id: 'bus-1', latitude: 57.78, longitude: 14.165 }, positions[1]];
+      await service.refreshVehiclePositions(map);
+
+      expect(marker.getGeometry()!.getCoordinates()[0]).toBeGreaterThan(startX);
+      expect(requestFrame).not.toHaveBeenCalled();
+    });
   });
 });

@@ -6,10 +6,11 @@ import type OlMap from 'ol/Map';
 import { fromLonLat } from 'ol/proj';
 import { Stroke, Style, Text, Fill } from 'ol/style';
 import VectorSource from 'ol/source/Vector';
-import type { ShapeEntity } from '../api/generated';
+import type { ShapePointDTO } from '../api/generated';
+import { BaseLayerService } from './base-layer.service';
 
 @Injectable({ providedIn: 'root' })
-export class RouteShapesLayerService {
+export class RouteShapesLayerService extends BaseLayerService {
   private readonly source = new VectorSource<Feature<LineString>>();
   private readonly vehicleRouteSource = new VectorSource<Feature<LineString>>();
   private readonly layer = new VectorLayer({
@@ -31,13 +32,11 @@ export class RouteShapesLayerService {
     ]
   });
 
-  public load(map: OlMap): VectorLayer<VectorSource<Feature<LineString>>>[] {
-    map.addLayer(this.layer);
-    map.addLayer(this.vehicleRouteLayer);
+  protected override createLayers(_map: OlMap) {
     return [this.layer, this.vehicleRouteLayer];
   }
 
-  public setVehicleRouteShape(shapes: readonly ShapeEntity[] | null): void {
+  public setVehicleRouteShape(shapes: readonly ShapePointDTO[] | null): void {
     this.vehicleRouteSource.clear(true);
     if (!shapes) return;
 
@@ -50,17 +49,17 @@ export class RouteShapesLayerService {
     }
   }
 
+  /** Draws each route's lines, given as [longitude, latitude] points in order, and fits the view to them. */
   public setRouteShapes(
     map: OlMap,
-    shapesByRoute: ReadonlyMap<string, readonly ShapeEntity[][]>
+    linesByRoute: ReadonlyMap<string, readonly (readonly number[])[][]>
   ): void {
     const features: Feature<LineString>[] = [];
-    for (const [routeId, shapes] of shapesByRoute) {
-      for (const shape of shapes) {
-        const coordinates = shape
-          .filter(point => Number.isFinite(point.shapePtLon) && Number.isFinite(point.shapePtLat))
-          .sort((left, right) => (left.shapePtSequence ?? 0) - (right.shapePtSequence ?? 0))
-          .map(point => fromLonLat([point.shapePtLon!, point.shapePtLat!]));
+    for (const [routeId, lines] of linesByRoute) {
+      for (const line of lines) {
+        const coordinates = line
+          .filter(point => Number.isFinite(point[0]) && Number.isFinite(point[1]))
+          .map(point => fromLonLat([point[0], point[1]]));
         if (coordinates.length < 2) continue;
 
         features.push(new Feature({
@@ -87,7 +86,8 @@ export class RouteShapesLayerService {
   }
 }
 
-function routeColor(routeId: string): string {
+/** A stable color per route, so a route keeps its color everywhere it is shown. */
+export function routeColor(routeId: string): string {
   let hash = 0;
   for (const character of routeId) {
     hash = (hash * 31 + character.charCodeAt(0)) >>> 0;

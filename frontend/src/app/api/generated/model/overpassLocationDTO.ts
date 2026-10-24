@@ -20,6 +20,10 @@ export interface OverpassLocationDTO {
     longitude?: number;
     tags?: { [key: string]: string; };
     fetchedAt?: string;
+    /**
+     * GeoJSON geometry in EPSG:4326. Only present when requested and stored for the place.
+     */
+    geometry?: object;
 }
 export namespace OverpassLocationDTO {
     export const OsmTypeEnum = {

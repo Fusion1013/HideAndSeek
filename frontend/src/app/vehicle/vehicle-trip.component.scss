@@ -1,0 +1,356 @@
+:host {
+  --route-color: #087e8b;
+  --trip-ink: #172b32;
+  --trip-muted: #52666e;
+  --trip-line-idle: #c3d0d3;
+  --rail-x: 14px;
+  // Vertical centre of each stop's dot and first text line, from the top of its row
+  --dot-y: 16px;
+  display: block;
+  color: var(--trip-ink);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.vehicle-trip {
+  display: grid;
+  gap: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--control-border, #d4dfe1);
+}
+
+// Header: route badge and destination
+.trip-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.route-badge {
+  display: grid;
+  flex: none;
+  min-width: 44px;
+  height: 44px;
+  padding: 0 8px;
+  box-sizing: border-box;
+  place-items: center;
+  border: 3px solid var(--route-color);
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgb(23 43 50 / 15%);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.trip-heading {
+  min-width: 0;
+
+  h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+  }
+
+  p {
+    margin: 2px 0 0;
+    color: var(--trip-muted);
+    font-size: 12px;
+  }
+}
+
+.trip-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: #eef3f4;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  span {
+    color: var(--trip-muted);
+  }
+}
+
+.trip-status {
+  margin: 0;
+  color: var(--trip-muted);
+  font-size: 13px;
+}
+
+.trip-error {
+  color: #8d2525;
+}
+
+// Progress bar across the whole trip
+.trip-progress {
+  display: grid;
+  gap: 6px;
+}
+
+.trip-bar {
+  position: relative;
+  height: 8px;
+  margin: 8px 10px 0;
+  border-radius: 999px;
+  background: var(--trip-line-idle);
+}
+
+.trip-bar-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--route-color);
+  transition: width 600ms ease;
+}
+
+.trip-bar-bus {
+  position: absolute;
+  top: 50%;
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  background: var(--route-color);
+  color: #ffffff;
+  box-shadow: 0 1px 4px rgb(23 43 50 / 35%);
+  transform: translate(-50%, -50%);
+  transition: left 600ms ease;
+}
+
+.trip-ends {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--trip-muted);
+  font-size: 11px;
+
+  span:last-child {
+    text-align: right;
+  }
+}
+
+// Next stop callout
+.next-stop {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border-left: 4px solid var(--route-color);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--route-color) 9%, #ffffff);
+
+  strong {
+    font-size: 15px;
+  }
+}
+
+.next-stop-label {
+  color: var(--trip-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.next-stop-meta {
+  color: var(--trip-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.platform {
+  color: var(--trip-muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+// Stop list drawn as a metro line
+.trip-stops {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    position: relative;
+  }
+
+  // The stretch of line from this stop's dot to the next one
+  li:not(.is-last)::before {
+    position: absolute;
+    top: var(--dot-y);
+    left: calc(var(--rail-x) - 2px);
+    width: 4px;
+    height: 100%;
+    content: '';
+    background: repeating-linear-gradient(to bottom, var(--trip-line-idle) 0 6px, transparent 6px 10px);
+  }
+
+  li.stop-passed::before,
+  li.stop-current::before {
+    background: var(--route-color);
+  }
+
+  // The stretch the vehicle is on: filled up to the vehicle
+  li.has-vehicle::before {
+    background: linear-gradient(
+      to bottom,
+      var(--route-color) calc(var(--segment-fill, 0) * 100%),
+      var(--trip-line-idle) calc(var(--segment-fill, 0) * 100%)
+    );
+  }
+
+  button {
+    position: relative;
+    display: grid;
+    width: 100%;
+    min-height: 42px;
+    grid-template-columns: calc(var(--rail-x) * 2) minmax(0, 1fr) auto auto;
+    align-items: start;
+    line-height: 20px;
+    gap: 8px;
+    padding: 6px 4px 6px 0;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover {
+      background: #eef3f4;
+    }
+
+    &:focus-visible {
+      outline: 3px solid var(--control-accent, #087e8b);
+      outline-offset: 1px;
+    }
+  }
+}
+
+.stop-dot {
+  --dot-size: 12px;
+  z-index: 1;
+  width: var(--dot-size);
+  height: var(--dot-size);
+  margin-top: calc(var(--dot-y) - 6px - var(--dot-size) / 2);
+  box-sizing: border-box;
+  justify-self: center;
+  border: 3px solid var(--trip-line-idle);
+  border-radius: 50%;
+  background: #ffffff;
+}
+
+.terminus .stop-dot {
+  --dot-size: 16px;
+  border-radius: 4px;
+}
+
+.stop-passed .stop-dot {
+  border-color: var(--route-color);
+  background: var(--route-color);
+}
+
+.stop-next .stop-dot,
+.stop-current .stop-dot {
+  --dot-size: 18px;
+  border-width: 4px;
+  border-color: var(--route-color);
+}
+
+.stop-current .stop-dot {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--route-color) 25%, transparent);
+}
+
+.stop-name {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.stop-passed .stop-name {
+  color: var(--trip-muted);
+}
+
+.stop-next .stop-name,
+.stop-current .stop-name {
+  font-weight: 700;
+}
+
+.stop-tag {
+  margin-top: 1px;
+  padding: 0 6px;
+  line-height: 16px;
+  border: 1px solid var(--route-color);
+  border-radius: 999px;
+  background: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.stop-time {
+  color: var(--trip-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+// The vehicle, riding the line between two stops
+.vehicle-marker {
+  position: absolute;
+  z-index: 2;
+  top: calc(var(--dot-y) + var(--marker-fraction, 0) * 100%);
+  left: var(--rail-x);
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  background: var(--route-color);
+  color: #ffffff;
+  box-shadow: 0 1px 4px rgb(23 43 50 / 35%);
+  transform: translate(-50%, -50%);
+  transition: top 600ms ease;
+
+  &::after {
+    position: absolute;
+    inset: -2px;
+    border-radius: 50%;
+    content: '';
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--route-color) 55%, transparent);
+    animation: vehicle-pulse 1.8s ease-out infinite;
+  }
+}
+
+@keyframes vehicle-pulse {
+  to {
+    box-shadow: 0 0 0 10px transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vehicle-marker,
+  .trip-bar-fill,
+  .trip-bar-bus {
+    transition: none;
+  }
+
+  .vehicle-marker::after {
+    animation: none;
+  }
+}

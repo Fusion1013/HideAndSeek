@@ -1,0 +1,152 @@
+:host {
+  display: contents;
+}
+
+.station-heading span:first-child {
+  color: var(--control-ink);
+  font-size: 17px;
+  font-weight: 650;
+}
+
+.station-details {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+
+  div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--control-border);
+  }
+
+  dt,
+  dd {
+    font-size: 12px;
+  }
+
+  dt {
+    color: var(--control-muted);
+  }
+
+  dd {
+    max-width: 65%;
+    margin: 0;
+    overflow-wrap: anywhere;
+    text-align: right;
+  }
+}
+
+.station-timetable-heading {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  h3 {
+    margin: 4px 0;
+    font-size: 14px;
+  }
+}
+
+.station-timetable-heading span,
+.station-timetable-status {
+  color: var(--control-muted);
+  font-size: 12px;
+}
+
+.station-timetable-status {
+  margin: 0;
+}
+
+.station-timetable-scroll {
+  max-height: min(32dvh, 320px);
+  overflow: auto;
+  border: 1px solid var(--control-border);
+  border-radius: 4px;
+  background: #ffffff;
+
+  &:focus-visible {
+    outline: 3px solid var(--control-accent);
+    outline-offset: 2px;
+  }
+}
+
+.station-timetable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+
+  th,
+  td {
+    padding: 7px 6px;
+    border-bottom: 1px solid var(--control-border);
+    text-align: left;
+  }
+
+  th {
+    position: sticky;
+    top: 0;
+    background: var(--control-surface);
+    color: var(--control-muted);
+    font-weight: 600;
+  }
+
+  td:nth-child(n + 2) {
+    white-space: nowrap;
+  }
+
+  .stop-time-past td {
+    background: #edf1f1;
+    color: var(--control-muted);
+  }
+
+  .stop-time-next td {
+    background: #e1f1f0;
+    color: #075761;
+    font-weight: 700;
+  }
+
+  .stop-time-next td:first-child {
+    box-shadow: inset 3px 0 var(--control-accent);
+  }
+
+  .stop-time-upcoming td:first-child {
+    color: var(--control-muted);
+  }
+}
+
+.station-radius {
+  margin-top: 12px;
+}
+
+.station-measure-points {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: 8px;
+    min-height: 42px;
+    border-bottom: 1px solid var(--control-border);
+    font-size: 12px;
+  }
+}
+
+.station-measure-points button,
+.station-heading button {
+  min-height: 36px;
+  padding: 6px 8px;
+  border: 1px solid #aebdc0;
+  border-radius: 5px;
+  background: #ffffff;
+  color: var(--control-ink);
+  font: inherit;
+  cursor: pointer;
+}

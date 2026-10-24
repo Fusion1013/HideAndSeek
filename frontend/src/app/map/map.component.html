@@ -1,269 +1,30 @@
 <div class="map-shell">
 	<div #mapElement class="map"></div>
 
-	<button
-		id="map-controls-toggle"
-		class="controls-toggle"
-		type="button"
-		[attr.aria-label]="controlsOpen() ? 'Close map controls' : 'Open map controls'"
-		[attr.title]="controlsOpen() ? 'Close map controls' : 'Open map controls'"
-		[attr.aria-expanded]="controlsOpen()"
-		aria-controls="map-controls-panel"
-		(click)="toggleControls()"
-	>
-		@if (controlsOpen()) {
-			<svg lucidePanelRightClose [size]="20" aria-hidden="true"></svg>
-		} @else {
-			<svg lucidePanelRightOpen [size]="20" aria-hidden="true"></svg>
+	<app-controls-panel [stationAvailable]="!!stationTimetable.stop()">
+		@switch (controls.activeMenu()) {
+			@case ('transit') {
+				<app-transit-panel />
+			}
+			@case ('vehicles') {
+				<app-vehicles-panel />
+			}
+			@case ('station') {
+				<app-station-panel />
+			}
+			@case ('measure') {
+				<app-measure-panel />
+			}
+			@case ('layers') {
+				<app-layers-panel />
+			}
+			@case ('distances') {
+				<app-distances-panel />
+			}
 		}
-	</button>
 
-	<aside
-		id="map-controls-panel"
-		class="controls-panel"
-		[class.is-closed]="!controlsOpen()"
-		[attr.aria-hidden]="!controlsOpen()"
-		[attr.inert]="controlsOpen() ? null : ''"
-		aria-label="Map controls"
-	>
-		<h2 class="controls-title">Map controls</h2>
-		<nav class="menu-switcher" aria-label="Map control menus">
-			<button type="button" aria-label="Transit routes" title="Transit routes" [attr.aria-pressed]="activeControlsMenu() === 'transit'" (click)="showControlsMenu('transit')">
-				<svg lucideRoute [size]="20" aria-hidden="true"></svg>
-			</button>
-			<button type="button" aria-label="Vehicles" title="Vehicles" [attr.aria-pressed]="activeControlsMenu() === 'vehicles'" (click)="showControlsMenu('vehicles')">
-				<svg lucideBusFront [size]="20" aria-hidden="true"></svg>
-			</button>
-			@if (stationMeasurement.selectedStop()) {
-				<button type="button" aria-label="Selected station" title="Selected station" [attr.aria-pressed]="activeControlsMenu() === 'station'" (click)="showControlsMenu('station')">
-					<svg lucideMapPin [size]="20" aria-hidden="true"></svg>
-				</button>
-			}
-			<button type="button" aria-label="Measure shapes" title="Measure shapes" [attr.aria-pressed]="activeControlsMenu() === 'measure'" (click)="showControlsMenu('measure')">
-				<svg lucideRuler [size]="20" aria-hidden="true"></svg>
-			</button>
-			<button type="button" aria-label="Map layers" title="Map layers" [attr.aria-pressed]="activeControlsMenu() === 'layers'" (click)="showControlsMenu('layers')">
-				<svg lucideLayers [size]="20" aria-hidden="true"></svg>
-			</button>
-		</nav>
-
-		@if (activeControlsMenu() === 'transit') {
-			<section class="menu-content" aria-label="Transit line visibility">
-					<div class="panel-actions">
-						<button type="button" (click)="selectAllLines()">Select shown</button>
-						<button type="button" (click)="selectRoutesInView()">Routes in view</button>
-						<button type="button" (click)="clearSelectedLines()">None</button>
-					</div>
-					<div class="route-filters" aria-label="Filter routes">
-						<label for="route-search">Search routes</label>
-						<input
-							id="route-search"
-							type="search"
-							[value]="routeSearch()"
-							placeholder="Name, agency, or route ID"
-							(input)="setRouteSearch($event)"
-						>
-						<div class="route-filter-row">
-							<label for="agency-filter">
-								Agency
-								<select id="agency-filter" [value]="selectedAgency()" (change)="setSelectedAgency($event)">
-									<option value="">All agencies</option>
-									@for (agency of routeAgencies(); track agency) {
-										<option [value]="agency">{{ agency }}</option>
-									}
-								</select>
-							</label>
-							<label for="route-type-filter">
-								Mode
-								<select id="route-type-filter" [value]="selectedRouteType()" (change)="setSelectedRouteType($event)">
-									<option value="">All modes</option>
-									@for (routeType of routeTypes(); track routeType) {
-										<option [value]="routeType">{{ routeTypeLabel(routeType) }}</option>
-									}
-								</select>
-							</label>
-						</div>
-						<div class="panel-actions">
-							<button type="button" [disabled]="activeRouteFilterCount() === 0" (click)="clearRouteFilters()">
-								Clear filters
-							</button>
-						</div>
-					</div>
-					<div class="panel-heading">
-						<label for="line-select">Routes</label>
-						<span>{{ selectedLines().length }} selected · {{ filteredLines().length }} shown</span>
-					</div>
-					<select
-						id="line-select"
-						multiple
-						size="13"
-						aria-label="Select transit lines to display"
-						(change)="onLinesChange($event)"
-					>
-						@for (line of filteredLines(); track line.routeId) {
-							<option [value]="line.routeId" [selected]="selectedLines().includes(line.routeId ?? '')">
-								{{ line.agencyName ? line.agencyName + ' - ' : '' }}{{ line.routeShortName || line.routeLongName || line.routeId }}
-							</option>
-						}
-					</select>
-			</section>
-			}
-
-			@if (activeControlsMenu() === 'vehicles') {
-				<section class="menu-content" aria-label="Vehicle positions">
-					<div class="panel-actions vehicle-actions">
-						<button type="button" [disabled]="vehiclePositionsLoading()" (click)="refreshVehiclePositions()">
-							{{ vehiclePositionsLoading() ? 'Updating...' : 'Refresh vehicles' }}
-						</button>
-						<span role="status" aria-live="polite">{{ vehiclePositions().length }} vehicles</span>
-					</div>
-					@if (vehiclePositionsError()) {
-						<p class="load-error" role="alert">Vehicle positions could not be updated.</p>
-					}
-					<div class="panel-heading vehicle-list-heading">
-						<span>Vehicles</span>
-						<span>{{ selectedVehicleIds().length }} selected · {{ mappableVehicles().length }} total</span>
-					</div>
-					@if (mappableVehicles().length === 0) {
-						<p class="empty-vehicles">No vehicles available.</p>
-					} @else {
-						<select
-							id="vehicle-select"
-							class="vehicle-select"
-							multiple
-							size="12"
-							aria-label="Select vehicles to focus"
-							(change)="onVehiclesChange($event)"
-						>
-							@for (vehicle of mappableVehicles(); track vehicleSelectionKey(vehicle)) {
-								<option [value]="vehicleSelectionKey(vehicle)" [selected]="selectedVehicleIds().includes(vehicleSelectionKey(vehicle))">
-									{{ vehicleOptionLabel(vehicle, $index) }}
-								</option>
-							}
-						</select>
-					}
-				</section>
-			}
-
-			@if (activeControlsMenu() === 'station' && stationMeasurement.selectedStop(); as stop) {
-				<section class="menu-content station-tools" aria-label="Selected station details">
-					<div class="panel-heading station-heading">
-						<span>{{ stop.stopName || 'Unnamed station' }}</span>
-						<button type="button" (click)="clearSelectedStation()">Clear</button>
-					</div>
-					<dl class="station-details">
-						@if (stop.stopCode) {
-							<div><dt>Stop code</dt><dd>{{ stop.stopCode }}</dd></div>
-						}
-						@if (stop.stopDescription) {
-							<div><dt>Description</dt><dd>{{ stop.stopDescription }}</dd></div>
-						}
-						@if (stop.platformCode) {
-							<div><dt>Platform</dt><dd>{{ stop.platformCode }}</dd></div>
-						}
-						@if (stop.latitude !== undefined && stop.longitude !== undefined) {
-							<div><dt>Coordinates</dt><dd>{{ stop.latitude }}, {{ stop.longitude }}</dd></div>
-						}
-					</dl>
-					<div class="station-timetable-heading">
-						<h3>Stop times</h3>
-						<span>{{ stationStopTimes().length }}</span>
-					</div>
-					@if (stationStopTimesLoading()) {
-						<p class="station-timetable-status" role="status">Loading stop times...</p>
-					} @else if (stationStopTimesError()) {
-						<p class="station-timetable-status" role="alert">Stop times could not be loaded.</p>
-					} @else if (stationStopTimes().length === 0) {
-						<p class="station-timetable-status">No stop times available.</p>
-					} @else {
-						<div #stationTimetableViewport class="station-timetable-scroll">
-							<table class="station-timetable">
-								<thead>
-									<tr>
-										<th scope="col">Trip</th>
-										<th scope="col">Arrival</th>
-										<th scope="col">Departure</th>
-										<th scope="col">Until / since</th>
-									</tr>
-								</thead>
-								<tbody>
-									@for (stopTime of stationTimetableRows(); track stopTime.id) {
-										<tr
-											[class.stop-time-past]="stopTime.status === 'past'"
-											[class.stop-time-next]="stopTime.status === 'next'"
-											[class.stop-time-upcoming]="stopTime.status === 'upcoming'"
-											[class.stop-time-anchor]="stopTime.isTimeAnchor"
-										>
-											<td>{{ stopTime.tripShortName || stopTime.tripId || 'Unknown' }}</td>
-											<td>{{ stopTime.arrivalTime || '—' }}</td>
-											<td>{{ stopTime.departureTime || '—' }}</td>
-											<td>{{ stopTime.relativeTime }}</td>
-										</tr>
-									}
-								</tbody>
-							</table>
-						</div>
-					}
-					<label class="station-radius" for="station-radius">
-						Radius (meters)
-						<input id="station-radius" type="number" min="1" max="10000" step="25" [value]="stationMeasurement.radiusMeters()" (change)="setStationRadius($event)">
-					</label>
-					<div class="panel-actions">
-						<button type="button" [attr.aria-pressed]="addingStationMeasurePoint()" (click)="beginStationMeasurePoint()">
-							{{ addingStationMeasurePoint() ? 'Click map to add point' : 'Add distance point' }}
-						</button>
-						@if (addingStationMeasurePoint()) {
-							<button type="button" (click)="cancelStationMeasurePoint()">Cancel</button>
-						}
-					</div>
-					@if (stationMeasurement.measurePoints().length > 0) {
-						<ul class="station-measure-points" aria-label="Distance measurements">
-							@for (point of stationMeasurement.measurePoints(); track point.id; let index = $index) {
-								<li>
-									<span>Point {{ index + 1 }}</span>
-									<strong>{{ formatStationDistance(point.distanceMeters) }}</strong>
-									<button type="button" [attr.aria-label]="'Remove distance point ' + (index + 1)" (click)="removeStationMeasurePoint(point)">Remove</button>
-								</li>
-							}
-						</ul>
-					}
-				</section>
-			}
-
-			@if (activeControlsMenu() === 'measure') {
-				<section class="menu-content measure-tools" aria-label="Measure shapes">
-					<div class="panel-heading">
-						<span>Measurement shapes</span>
-						<span>{{ shapeCount() }}</span>
-					</div>
-					<div class="panel-actions measure-actions">
-						<button type="button" [attr.aria-pressed]="drawMode() === 'line'" (click)="setDrawMode('line')">Line</button>
-						<button type="button" [attr.aria-pressed]="drawMode() === 'circle'" (click)="setDrawMode('circle')">Circle</button>
-					</div>
-					<div class="panel-actions measure-actions">
-						<button type="button" [disabled]="selectedShapeCount() === 0" (click)="deleteSelectedShapes()">Delete selected</button>
-						<button type="button" [disabled]="shapeCount() === 0" (click)="deleteAllShapes()">Delete all</button>
-					</div>
-				</section>
-			}
-
-			@if (activeControlsMenu() === 'layers') {
-				<section class="menu-content" aria-label="Map layers">
-					@for (layer of mapLayers; track layer.id) {
-						<label class="layer-toggle">
-							<input
-								type="checkbox"
-								[checked]="layerVisibility()[layer.id]"
-								(change)="setLayerVisibility(layer.id, $event)"
-							>
-							<span>{{ layer.label }}</span>
-						</label>
-					}
-				</section>
-			}
-
-		@if (loadError()) {
+		@if (mapError() || routeCatalog.loadError() || routeSelection.loadError()) {
 			<p class="load-error" role="alert">Transit data could not be loaded.</p>
 		}
-	</aside>
+	</app-controls-panel>
 </div>

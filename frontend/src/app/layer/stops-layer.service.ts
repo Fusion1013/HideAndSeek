@@ -1,4 +1,4 @@
-import { inject, Injectable } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import Feature from 'ol/Feature';
 import Point from 'ol/geom/Point';
 import VectorLayer from 'ol/layer/Vector';
@@ -6,14 +6,14 @@ import OlMap from 'ol/Map';
 import { fromLonLat } from 'ol/proj';
 import { Circle as CircleStyle, Fill, Stroke, Style, Text } from 'ol/style';
 import VectorSource from 'ol/source/Vector';
-import { StopControllerService, StopEntity } from '../api/generated';
+import { StopControllerService, StopDTO } from '../api/generated';
 import { BaseLayerService } from './base-layer.service';
 
 @Injectable({ providedIn: 'root' })
 export class StopsLayerService extends BaseLayerService {
   private readonly stopService = inject(StopControllerService);
   private readonly source = new VectorSource<Feature<Point>>();
-  private stops: StopEntity[] = [];
+  private readonly stops = signal<StopDTO[]>([]);
   private visibleStopIds: Set<string> | null = null;
   private readonly stopColor = '#0059a9';
   private readonly markerStyle = new Style({
@@ -26,10 +26,15 @@ export class StopsLayerService extends BaseLayerService {
   private readonly labelStyles = new Map<string, Style>();
   private labelMaxResolution = 0;
 
+  /** Every stop, by id, once loaded. Empty until the map has loaded the stops. */
+  readonly stopsById = computed(() => new Map(this.stops()
+    .filter(stop => stop.stopId)
+    .map(stop => [stop.stopId!, stop] as const)));
+
   protected override createLayers(map: OlMap) {
-    this.labelMaxResolution = map.getView().getResolutionForZoom(15);
+    this.labelMaxResolution = map.getView().getResolutionForZoom(17);
     this.stopService.getStops().subscribe(stops => {
-      this.stops = stops;
+      this.stops.set(stops);
       this.refreshVisibleStops();
     });
 
@@ -44,12 +49,12 @@ export class StopsLayerService extends BaseLayerService {
   private refreshVisibleStops(): void {
     this.source.clear(true);
     const visibleStops = this.visibleStopIds === null
-      ? this.stops
-      : this.stops.filter(stop => stop.stopId && this.visibleStopIds?.has(stop.stopId));
+      ? this.stops()
+      : this.stops().filter(stop => stop.stopId && this.visibleStopIds?.has(stop.stopId));
     this.source.addFeatures(visibleStops.map(stop => this.createStopFeature(stop)));
   }
 
-  private createStopFeature(stop: StopEntity): Feature<Point> {
+  private createStopFeature(stop: StopDTO): Feature<Point> {
     const feature = new Feature({
       geometry: new Point(fromLonLat([stop.longitude || 0, stop.latitude || 0])),
       stopId: stop.stopId,

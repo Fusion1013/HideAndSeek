@@ -14,6 +14,8 @@ export class TransitService {
     public readonly vehiclePositions = signal<VehiclePosition[]>([]);
     public readonly vehiclePositionsLoading = signal(false);
     public readonly vehiclePositionsError = signal(false);
+    /** When positions were last fetched successfully (epoch ms), or null before the first fetch. */
+    public readonly vehiclePositionsUpdatedAt = signal<number | null>(null);
 
     public async refreshVehiclePositions(): Promise<VehiclePosition[]> {
         this.vehiclePositionsLoading.set(true);
@@ -21,13 +23,13 @@ export class TransitService {
 
         try {
             const response: unknown = await firstValueFrom(this.transitApi.getVehiclePositions());
-            console.log('Received vehicle positions response:', response);
             if (!Array.isArray(response)) {
                 throw new Error('Vehicle positions response must be an array');
             }
 
             const positions = response.filter(isVehiclePosition);
             this.vehiclePositions.set(positions);
+            this.vehiclePositionsUpdatedAt.set(Date.now());
             return positions;
         } catch (error: unknown) {
             this.vehiclePositionsError.set(true);

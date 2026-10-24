@@ -1,0 +1,10 @@
+# Copy to application-local.properties (git-ignored) and fill in. Values here override application.yml.
+# Environment variables work too: SPRING_DATASOURCE_USERNAME, TRAFIKLAB_STATIC_API_KEY, ...
+
+spring.datasource.url=jdbc:postgresql://localhost:5432/jetlag
+spring.datasource.username=
+spring.datasource.password=
+
+# From https://developer.trafiklab.se: "GTFS Sweden 3 Static data" and "GTFS Sweden 3 Realtime"
+trafiklab.static-api-key=
+trafiklab.realtime-api-key=

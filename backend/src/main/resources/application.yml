@@ -1,10 +1,48 @@
 spring:
   application:
     name: jetlag-backend
+  # Local overrides (database login, API keys) live in a git-ignored file; see
+  # backend/config/application-local.properties.example. Listed twice so it is found whether the app
+  # is started from backend/ or from the repository root.
+  config:
+    import:
+      - optional:file:./config/application-local.properties
+      - optional:file:./backend/config/application-local.properties
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/jetlag}
     username: ${SPRING_DATASOURCE_USERNAME:jetlag}
     password: ${SPRING_DATASOURCE_PASSWORD:jetlag}
+  sql:
+    init:
+      # Run schema.sql (enables PostGIS) against PostgreSQL too, not only embedded databases
+      mode: always
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          batch_size: 1000
+        order_inserts: true
+        order_updates: true
+
+trafiklab:
+  # Static GTFS data (Sweden 3), used by the GTFS import
+  static-api-key: ${TRAFIKLAB_STATIC_API_KEY:}
+  # GTFS Realtime (Sweden 3), used for vehicle positions
+  realtime-api-key: ${TRAFIKLAB_REALTIME_API_KEY:}
+  realtime-operator: ${TRAFIKLAB_REALTIME_OPERATOR:jlt}
+
+gtfs:
+  update:
+    initial-delay-ms: 10000
+    fixed-delay-ms: 86400000
+
+overpass:
+  base-url: https://overpass-api.de/api/interpreter
+
 management:
   endpoints:
     web:
@@ -14,6 +52,7 @@ management:
     health:
       probes:
         enabled: true
+
 springdoc:
   swagger-ui:
     path: /swagger-ui.html

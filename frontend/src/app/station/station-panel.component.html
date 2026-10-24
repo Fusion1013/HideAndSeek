@@ -1,0 +1,85 @@
+@if (timetable.stop(); as stop) {
+	<section class="menu-content station-tools" aria-label="Selected station details">
+		<div class="panel-heading station-heading">
+			<span>{{ stop.stopName || 'Unnamed station' }}</span>
+			<button type="button" (click)="clear()">Clear</button>
+		</div>
+		<dl class="station-details">
+			@if (stop.stopCode) {
+				<div><dt>Stop code</dt><dd>{{ stop.stopCode }}</dd></div>
+			}
+			@if (stop.stopDescription) {
+				<div><dt>Description</dt><dd>{{ stop.stopDescription }}</dd></div>
+			}
+			@if (stop.platformCode) {
+				<div><dt>Platform</dt><dd>{{ stop.platformCode }}</dd></div>
+			}
+			@if (stop.latitude !== undefined && stop.longitude !== undefined) {
+				<div><dt>Coordinates</dt><dd>{{ stop.latitude }}, {{ stop.longitude }}</dd></div>
+			}
+		</dl>
+		<div class="station-timetable-heading">
+			<h3>Stop times</h3>
+			<span>{{ timetable.rows().length }}</span>
+		</div>
+		@if (timetable.loading()) {
+			<p class="station-timetable-status" role="status">Loading stop times...</p>
+		} @else if (timetable.error()) {
+			<p class="station-timetable-status" role="alert">Stop times could not be loaded.</p>
+		} @else if (timetable.rows().length === 0) {
+			<p class="station-timetable-status">No stop times available.</p>
+		} @else {
+			<!-- Focusable so the timetable can be scrolled with the keyboard -->
+			<div #timetableViewport class="station-timetable-scroll" tabindex="0" role="region" aria-label="Stop times">
+				<table class="station-timetable">
+					<thead>
+						<tr>
+							<th scope="col">Trip</th>
+							<th scope="col">Arrival</th>
+							<th scope="col">Departure</th>
+							<th scope="col">Until / since</th>
+						</tr>
+					</thead>
+					<tbody>
+						@for (row of timetable.rows(); track row.id) {
+							<tr
+								[class.stop-time-past]="row.status === 'past'"
+								[class.stop-time-next]="row.status === 'next'"
+								[class.stop-time-upcoming]="row.status === 'upcoming'"
+								[class.stop-time-anchor]="row.isTimeAnchor"
+							>
+								<td>{{ tripLabel(row) }}</td>
+								<td>{{ row.arrivalTime || '—' }}</td>
+								<td>{{ row.departureTime || '—' }}</td>
+								<td>{{ row.relativeTime }}</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			</div>
+		}
+		<label class="control-field station-radius" for="station-radius">
+			Radius (meters)
+			<input id="station-radius" type="number" min="1" max="10000" step="25" [value]="measurement.radiusMeters()" (change)="setRadius($event)">
+		</label>
+		<div class="panel-actions">
+			<button type="button" [attr.aria-pressed]="timetable.addingMeasurePoint()" (click)="timetable.addingMeasurePoint.set(true)">
+				{{ timetable.addingMeasurePoint() ? 'Click map to add point' : 'Add distance point' }}
+			</button>
+			@if (timetable.addingMeasurePoint()) {
+				<button type="button" (click)="timetable.addingMeasurePoint.set(false)">Cancel</button>
+			}
+		</div>
+		@if (measurement.measurePoints().length > 0) {
+			<ul class="station-measure-points" aria-label="Distance measurements">
+				@for (point of measurement.measurePoints(); track point.id; let index = $index) {
+					<li>
+						<span>Point {{ index + 1 }}</span>
+						<strong>{{ formatDistance(point.distanceMeters) }}</strong>
+						<button type="button" [attr.aria-label]="'Remove distance point ' + (index + 1)" (click)="removePoint(point)">Remove</button>
+					</li>
+				}
+			</ul>
+		}
+	</section>
+}

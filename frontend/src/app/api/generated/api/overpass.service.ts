@@ -158,14 +158,16 @@ export class OverpassService extends BaseService {
      * @param east Eastern longitude of the bounding box, -180 to 180
      * @param page Zero-based page index
      * @param size Page size, between 1 and 1000 (larger values are capped)
+     * @param includeGeometry Include each place\&#39;s GeoJSON geometry, where one is stored. With a category and bounding box, places are then matched by their shape instead of their center point
+     * @param simplify With includeGeometry, simplify each geometry to this tolerance in degrees. Omit or use 0 for full detail
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
      * @param options additional options
      */
-    public searchPlaces(category?: 'COMMERCIAL_AIRPORT' | 'HIGH_SPEED_RAIL_LINE' | 'RAIL_STATION' | 'ADMIN_DIVISION_1' | 'ADMIN_DIVISION_2' | 'ADMIN_DIVISION_4' | 'BODY_OF_WATER' | 'COASTLINE' | 'MOUNTAIN' | 'PARK' | 'ZOO' | 'AQUARIUM' | 'GOLF_COURSE' | 'MUSEUM' | 'MOVIE_THEATRE' | 'HOSPITAL' | 'LIBRARY' | 'FOREIGN_CONSULATE' | 'OTHER', south?: number, west?: number, north?: number, east?: number, page?: number, size?: number, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<OverpassLocationPage>;
-    public searchPlaces(category?: 'COMMERCIAL_AIRPORT' | 'HIGH_SPEED_RAIL_LINE' | 'RAIL_STATION' | 'ADMIN_DIVISION_1' | 'ADMIN_DIVISION_2' | 'ADMIN_DIVISION_4' | 'BODY_OF_WATER' | 'COASTLINE' | 'MOUNTAIN' | 'PARK' | 'ZOO' | 'AQUARIUM' | 'GOLF_COURSE' | 'MUSEUM' | 'MOVIE_THEATRE' | 'HOSPITAL' | 'LIBRARY' | 'FOREIGN_CONSULATE' | 'OTHER', south?: number, west?: number, north?: number, east?: number, page?: number, size?: number, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<OverpassLocationPage>>;
-    public searchPlaces(category?: 'COMMERCIAL_AIRPORT' | 'HIGH_SPEED_RAIL_LINE' | 'RAIL_STATION' | 'ADMIN_DIVISION_1' | 'ADMIN_DIVISION_2' | 'ADMIN_DIVISION_4' | 'BODY_OF_WATER' | 'COASTLINE' | 'MOUNTAIN' | 'PARK' | 'ZOO' | 'AQUARIUM' | 'GOLF_COURSE' | 'MUSEUM' | 'MOVIE_THEATRE' | 'HOSPITAL' | 'LIBRARY' | 'FOREIGN_CONSULATE' | 'OTHER', south?: number, west?: number, north?: number, east?: number, page?: number, size?: number, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<OverpassLocationPage>>;
-    public searchPlaces(category?: 'COMMERCIAL_AIRPORT' | 'HIGH_SPEED_RAIL_LINE' | 'RAIL_STATION' | 'ADMIN_DIVISION_1' | 'ADMIN_DIVISION_2' | 'ADMIN_DIVISION_4' | 'BODY_OF_WATER' | 'COASTLINE' | 'MOUNTAIN' | 'PARK' | 'ZOO' | 'AQUARIUM' | 'GOLF_COURSE' | 'MUSEUM' | 'MOVIE_THEATRE' | 'HOSPITAL' | 'LIBRARY' | 'FOREIGN_CONSULATE' | 'OTHER', south?: number, west?: number, north?: number, east?: number, page?: number, size?: number, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
+    public searchPlaces(category?: 'COMMERCIAL_AIRPORT' | 'HIGH_SPEED_RAIL_LINE' | 'RAIL_STATION' | 'ADMIN_DIVISION_1' | 'ADMIN_DIVISION_2' | 'ADMIN_DIVISION_4' | 'BODY_OF_WATER' | 'COASTLINE' | 'MOUNTAIN' | 'PARK' | 'ZOO' | 'AQUARIUM' | 'GOLF_COURSE' | 'MUSEUM' | 'MOVIE_THEATRE' | 'HOSPITAL' | 'LIBRARY' | 'FOREIGN_CONSULATE' | 'OTHER', south?: number, west?: number, north?: number, east?: number, page?: number, size?: number, includeGeometry?: boolean, simplify?: number, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<OverpassLocationPage>;
+    public searchPlaces(category?: 'COMMERCIAL_AIRPORT' | 'HIGH_SPEED_RAIL_LINE' | 'RAIL_STATION' | 'ADMIN_DIVISION_1' | 'ADMIN_DIVISION_2' | 'ADMIN_DIVISION_4' | 'BODY_OF_WATER' | 'COASTLINE' | 'MOUNTAIN' | 'PARK' | 'ZOO' | 'AQUARIUM' | 'GOLF_COURSE' | 'MUSEUM' | 'MOVIE_THEATRE' | 'HOSPITAL' | 'LIBRARY' | 'FOREIGN_CONSULATE' | 'OTHER', south?: number, west?: number, north?: number, east?: number, page?: number, size?: number, includeGeometry?: boolean, simplify?: number, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<OverpassLocationPage>>;
+    public searchPlaces(category?: 'COMMERCIAL_AIRPORT' | 'HIGH_SPEED_RAIL_LINE' | 'RAIL_STATION' | 'ADMIN_DIVISION_1' | 'ADMIN_DIVISION_2' | 'ADMIN_DIVISION_4' | 'BODY_OF_WATER' | 'COASTLINE' | 'MOUNTAIN' | 'PARK' | 'ZOO' | 'AQUARIUM' | 'GOLF_COURSE' | 'MUSEUM' | 'MOVIE_THEATRE' | 'HOSPITAL' | 'LIBRARY' | 'FOREIGN_CONSULATE' | 'OTHER', south?: number, west?: number, north?: number, east?: number, page?: number, size?: number, includeGeometry?: boolean, simplify?: number, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<OverpassLocationPage>>;
+    public searchPlaces(category?: 'COMMERCIAL_AIRPORT' | 'HIGH_SPEED_RAIL_LINE' | 'RAIL_STATION' | 'ADMIN_DIVISION_1' | 'ADMIN_DIVISION_2' | 'ADMIN_DIVISION_4' | 'BODY_OF_WATER' | 'COASTLINE' | 'MOUNTAIN' | 'PARK' | 'ZOO' | 'AQUARIUM' | 'GOLF_COURSE' | 'MUSEUM' | 'MOVIE_THEATRE' | 'HOSPITAL' | 'LIBRARY' | 'FOREIGN_CONSULATE' | 'OTHER', south?: number, west?: number, north?: number, east?: number, page?: number, size?: number, includeGeometry?: boolean, simplify?: number, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
 
         let localVarQueryParameters = new OpenApiHttpParams(this.encoder);
 
@@ -227,6 +229,24 @@ export class OverpassService extends BaseService {
             localVarQueryParameters,
             'size',
             <any>size,
+            QueryParamStyle.Form,
+            true,
+        );
+
+
+        localVarQueryParameters = this.addToHttpParams(
+            localVarQueryParameters,
+            'includeGeometry',
+            <any>includeGeometry,
+            QueryParamStyle.Form,
+            true,
+        );
+
+
+        localVarQueryParameters = this.addToHttpParams(
+            localVarQueryParameters,
+            'simplify',
+            <any>simplify,
             QueryParamStyle.Form,
             true,
         );

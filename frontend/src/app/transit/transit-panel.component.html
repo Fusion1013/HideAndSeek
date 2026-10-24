@@ -1,0 +1,61 @@
+<section class="menu-content" aria-label="Transit line visibility">
+	<div class="panel-actions">
+		<button type="button" (click)="selectShown()">Select shown</button>
+		<button type="button" (click)="selection.selectRoutesInView()">Routes in view</button>
+		<button type="button" (click)="selectNone()">None</button>
+	</div>
+	<div class="route-filters" aria-label="Filter routes">
+		<div class="control-field">
+			<label for="route-search">Search routes</label>
+			<input
+				id="route-search"
+				type="search"
+				[value]="filters.search()"
+				placeholder="Name, agency, or route ID"
+				(input)="setSearch($event)"
+			>
+		</div>
+		<div class="route-filter-row">
+			<label class="control-field" for="agency-filter">
+				Agency
+				<select id="agency-filter" [value]="filters.agency()" (change)="setAgency($event)">
+					<option value="">All agencies</option>
+					@for (agency of catalog.agencies(); track agency) {
+						<option [value]="agency">{{ agency }}</option>
+					}
+				</select>
+			</label>
+			<label class="control-field" for="route-type-filter">
+				Mode
+				<select id="route-type-filter" [value]="filters.routeType()" (change)="setRouteType($event)">
+					<option value="">All modes</option>
+					@for (routeType of catalog.routeTypes(); track routeType) {
+						<option [value]="routeType">{{ routeTypeLabel(routeType) }}</option>
+					}
+				</select>
+			</label>
+		</div>
+		<div class="panel-actions">
+			<button type="button" [disabled]="filters.activeFilterCount() === 0" (click)="filters.clear()">
+				Clear filters
+			</button>
+		</div>
+	</div>
+	<div class="panel-heading">
+		<label for="line-select">Routes</label>
+		<span>{{ selection.selectedRouteIds().length }} selected · {{ filters.filteredRoutes().length }} shown</span>
+	</div>
+	<select
+		id="line-select"
+		multiple
+		size="13"
+		aria-label="Select transit lines to display"
+		(change)="onRoutesChange($event)"
+	>
+		@for (route of filters.filteredRoutes(); track route.routeId) {
+			<option [value]="route.routeId" [selected]="selection.selectedRouteIds().includes(route.routeId ?? '')">
+				{{ routeListLabel(route) }}
+			</option>
+		}
+	</select>
+</section>

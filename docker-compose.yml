@@ -17,6 +17,8 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://database:5432/${POSTGRES_DB:-jetlag}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-jetlag}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-jetlag}
+      TRAFIKLAB_STATIC_API_KEY: ${TRAFIKLAB_STATIC_API_KEY:-}
+      TRAFIKLAB_REALTIME_API_KEY: ${TRAFIKLAB_REALTIME_API_KEY:-}
     depends_on:
       database:
         condition: service_healthy
@@ -28,7 +30,8 @@ services:
       start_period: 40s
 
   database:
-    image: postgres:17-alpine
+    # PostGIS is required for the overpass_geometry column
+    image: postgis/postgis:17-3.5-alpine
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-jetlag}
       POSTGRES_USER: ${POSTGRES_USER:-jetlag}

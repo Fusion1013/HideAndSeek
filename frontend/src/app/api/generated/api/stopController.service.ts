@@ -17,7 +17,7 @@ import { Observable }                                        from 'rxjs';
 import { OpenApiHttpParams, QueryParamStyle } from '../query.params';
 
 // @ts-ignore
-import { StopEntity } from '../model/stopEntity';
+import { StopDTO } from '../model/stopDTO';
 
 // @ts-ignore
 import { BASE_PATH, COLLECTION_FORMATS }                     from '../variables';
@@ -42,9 +42,9 @@ export class StopControllerService extends BaseService {
      * @param reportProgress flag to report request and response progress.
      * @param options additional options
      */
-    public getStops(observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<Array<StopEntity>>;
-    public getStops(observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<Array<StopEntity>>>;
-    public getStops(observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<Array<StopEntity>>>;
+    public getStops(observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<Array<StopDTO>>;
+    public getStops(observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<Array<StopDTO>>>;
+    public getStops(observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<Array<StopDTO>>>;
     public getStops(observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
 
         let localVarHeaders = this.defaultHeaders;
@@ -74,7 +74,7 @@ export class StopControllerService extends BaseService {
 
         let localVarPath = `/api/stops`;
         const { basePath, withCredentials } = this.configuration;
-        return this.httpClient.request<Array<StopEntity>>('get', `${basePath}${localVarPath}`,
+        return this.httpClient.request<Array<StopDTO>>('get', `${basePath}${localVarPath}`,
             {
                 context: localVarHttpContext,
                 responseType: <any>responseType_,
@@ -98,9 +98,9 @@ export class StopControllerService extends BaseService {
      * @param reportProgress flag to report request and response progress.
      * @param options additional options
      */
-    public getStopsWithinBounds(minLatitude: number, maxLatitude: number, minLongitude: number, maxLongitude: number, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<Array<StopEntity>>;
-    public getStopsWithinBounds(minLatitude: number, maxLatitude: number, minLongitude: number, maxLongitude: number, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<Array<StopEntity>>>;
-    public getStopsWithinBounds(minLatitude: number, maxLatitude: number, minLongitude: number, maxLongitude: number, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<Array<StopEntity>>>;
+    public getStopsWithinBounds(minLatitude: number, maxLatitude: number, minLongitude: number, maxLongitude: number, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<Array<StopDTO>>;
+    public getStopsWithinBounds(minLatitude: number, maxLatitude: number, minLongitude: number, maxLongitude: number, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<Array<StopDTO>>>;
+    public getStopsWithinBounds(minLatitude: number, maxLatitude: number, minLongitude: number, maxLongitude: number, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<Array<StopDTO>>>;
     public getStopsWithinBounds(minLatitude: number, maxLatitude: number, minLongitude: number, maxLongitude: number, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
         if (minLatitude === null || minLatitude === undefined) {
             throw new Error('Required parameter minLatitude was null or undefined when calling getStopsWithinBounds.');
@@ -180,7 +180,7 @@ export class StopControllerService extends BaseService {
 
         let localVarPath = `/api/stops/bounds`;
         const { basePath, withCredentials } = this.configuration;
-        return this.httpClient.request<Array<StopEntity>>('get', `${basePath}${localVarPath}`,
+        return this.httpClient.request<Array<StopDTO>>('get', `${basePath}${localVarPath}`,
             {
                 context: localVarHttpContext,
                 params: localVarQueryParameters.toHttpParams(),

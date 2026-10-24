@@ -17,7 +17,7 @@ import { Observable }                                        from 'rxjs';
 import { OpenApiHttpParams, QueryParamStyle } from '../query.params';
 
 // @ts-ignore
-import { StopTimeEntity } from '../model/stopTimeEntity';
+import { StopTimeDTO } from '../model/stopTimeDTO';
 
 // @ts-ignore
 import { BASE_PATH, COLLECTION_FORMATS }                     from '../variables';
@@ -37,14 +37,14 @@ export class StopTimeControllerService extends BaseService {
 
     /**
      * Get all stop times
-     * @endpoint get /api/stop_times
+     * @endpoint get /api/stop-times
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
      * @param options additional options
      */
-    public getStopTimes(observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<Array<StopTimeEntity>>;
-    public getStopTimes(observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<Array<StopTimeEntity>>>;
-    public getStopTimes(observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<Array<StopTimeEntity>>>;
+    public getStopTimes(observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<Array<StopTimeDTO>>;
+    public getStopTimes(observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<Array<StopTimeDTO>>>;
+    public getStopTimes(observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<Array<StopTimeDTO>>>;
     public getStopTimes(observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
 
         let localVarHeaders = this.defaultHeaders;
@@ -72,9 +72,9 @@ export class StopTimeControllerService extends BaseService {
             }
         }
 
-        let localVarPath = `/api/stop_times`;
+        let localVarPath = `/api/stop-times`;
         const { basePath, withCredentials } = this.configuration;
-        return this.httpClient.request<Array<StopTimeEntity>>('get', `${basePath}${localVarPath}`,
+        return this.httpClient.request<Array<StopTimeDTO>>('get', `${basePath}${localVarPath}`,
             {
                 context: localVarHttpContext,
                 responseType: <any>responseType_,
@@ -89,15 +89,15 @@ export class StopTimeControllerService extends BaseService {
 
     /**
      * Get stop times for a stop
-     * @endpoint get /api/stop_times/stop/{stopId}
+     * @endpoint get /api/stop-times/stop/{stopId}
      * @param stopId 
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
      * @param options additional options
      */
-    public getStopTimesByStopId(stopId: string, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<Array<StopTimeEntity>>;
-    public getStopTimesByStopId(stopId: string, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<Array<StopTimeEntity>>>;
-    public getStopTimesByStopId(stopId: string, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<Array<StopTimeEntity>>>;
+    public getStopTimesByStopId(stopId: string, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<Array<StopTimeDTO>>;
+    public getStopTimesByStopId(stopId: string, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<Array<StopTimeDTO>>>;
+    public getStopTimesByStopId(stopId: string, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<Array<StopTimeDTO>>>;
     public getStopTimesByStopId(stopId: string, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
         if (stopId === null || stopId === undefined) {
             throw new Error('Required parameter stopId was null or undefined when calling getStopTimesByStopId.');
@@ -128,9 +128,9 @@ export class StopTimeControllerService extends BaseService {
             }
         }
 
-        let localVarPath = `/api/stop_times/stop/${this.configuration.encodeParam({name: "stopId", value: stopId, in: "path", style: "simple", explode: false, dataType: "string", dataFormat: undefined})}`;
+        let localVarPath = `/api/stop-times/stop/${this.configuration.encodeParam({name: "stopId", value: stopId, in: "path", style: "simple", explode: false, dataType: "string", dataFormat: undefined})}`;
         const { basePath, withCredentials } = this.configuration;
-        return this.httpClient.request<Array<StopTimeEntity>>('get', `${basePath}${localVarPath}`,
+        return this.httpClient.request<Array<StopTimeDTO>>('get', `${basePath}${localVarPath}`,
             {
                 context: localVarHttpContext,
                 responseType: <any>responseType_,
@@ -145,15 +145,15 @@ export class StopTimeControllerService extends BaseService {
 
     /**
      * Get stop times for multiple stops
-     * @endpoint post /api/stop_times/by-stop-ids
+     * @endpoint post /api/stop-times/by-stop-ids
      * @param requestBody 
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
      * @param options additional options
      */
-    public getStopTimesByStopIds(requestBody: Array<string>, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<Array<StopTimeEntity>>;
-    public getStopTimesByStopIds(requestBody: Array<string>, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<Array<StopTimeEntity>>>;
-    public getStopTimesByStopIds(requestBody: Array<string>, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<Array<StopTimeEntity>>>;
+    public getStopTimesByStopIds(requestBody: Array<string>, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<Array<StopTimeDTO>>;
+    public getStopTimesByStopIds(requestBody: Array<string>, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<Array<StopTimeDTO>>>;
+    public getStopTimesByStopIds(requestBody: Array<string>, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<Array<StopTimeDTO>>>;
     public getStopTimesByStopIds(requestBody: Array<string>, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
         if (requestBody === null || requestBody === undefined) {
             throw new Error('Required parameter requestBody was null or undefined when calling getStopTimesByStopIds.');
@@ -193,9 +193,9 @@ export class StopTimeControllerService extends BaseService {
             }
         }
 
-        let localVarPath = `/api/stop_times/by-stop-ids`;
+        let localVarPath = `/api/stop-times/by-stop-ids`;
         const { basePath, withCredentials } = this.configuration;
-        return this.httpClient.request<Array<StopTimeEntity>>('post', `${basePath}${localVarPath}`,
+        return this.httpClient.request<Array<StopTimeDTO>>('post', `${basePath}${localVarPath}`,
             {
                 context: localVarHttpContext,
                 body: requestBody,
@@ -211,15 +211,15 @@ export class StopTimeControllerService extends BaseService {
 
     /**
      * Get stop times for multiple trips
-     * @endpoint post /api/stop_times/by-trip-ids
+     * @endpoint post /api/stop-times/by-trip-ids
      * @param requestBody 
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
      * @param options additional options
      */
-    public getStopTimesByTripIds(requestBody: Array<string>, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<Array<StopTimeEntity>>;
-    public getStopTimesByTripIds(requestBody: Array<string>, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<Array<StopTimeEntity>>>;
-    public getStopTimesByTripIds(requestBody: Array<string>, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<Array<StopTimeEntity>>>;
+    public getStopTimesByTripIds(requestBody: Array<string>, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<Array<StopTimeDTO>>;
+    public getStopTimesByTripIds(requestBody: Array<string>, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<Array<StopTimeDTO>>>;
+    public getStopTimesByTripIds(requestBody: Array<string>, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<Array<StopTimeDTO>>>;
     public getStopTimesByTripIds(requestBody: Array<string>, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
         if (requestBody === null || requestBody === undefined) {
             throw new Error('Required parameter requestBody was null or undefined when calling getStopTimesByTripIds.');
@@ -259,9 +259,9 @@ export class StopTimeControllerService extends BaseService {
             }
         }
 
-        let localVarPath = `/api/stop_times/by-trip-ids`;
+        let localVarPath = `/api/stop-times/by-trip-ids`;
         const { basePath, withCredentials } = this.configuration;
-        return this.httpClient.request<Array<StopTimeEntity>>('post', `${basePath}${localVarPath}`,
+        return this.httpClient.request<Array<StopTimeDTO>>('post', `${basePath}${localVarPath}`,
             {
                 context: localVarHttpContext,
                 body: requestBody,
