@@ -1,0 +1,7 @@
+# HTTPS in front of the frontend: browsers only allow GPS (and other device features) on secure pages.
+# Set SITE_ADDRESS to the server's domain name and Caddy gets and renews a Let's Encrypt certificate for it;
+# ports 80 and 443 must be reachable from the internet. Unset, it serves https://localhost with a local certificate.
+{$SITE_ADDRESS:localhost} {
+	encode gzip
+	reverse_proxy frontend:80
+}

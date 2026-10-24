@@ -1,4 +1,20 @@
 services:
+  # HTTPS entry point; see caddy/Caddyfile
+  proxy:
+    image: caddy:2.10-alpine
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-localhost}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - frontend
+
   frontend:
     build:
       context: .
@@ -48,3 +64,5 @@ services:
 
 volumes:
   postgres-data:
+  caddy-data:
+  caddy-config:

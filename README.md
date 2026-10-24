@@ -12,6 +12,16 @@ docker compose up --build
 
 Open [http://localhost:4200](http://localhost:4200). The map remains the main view; the greeting in its upper-left corner is fetched from the backend. Stop the application with `docker compose down`. PostgreSQL data is kept in the `postgres-data` volume.
 
+### Hosting on a server (HTTPS)
+
+Browsers only allow GPS on HTTPS pages (and on `localhost`), so a hosted site must be served over HTTPS. The `proxy` service (Caddy, configured in `caddy/Caddyfile`) does this: point a domain name at the server, open ports 80 and 443, and start the stack with that domain:
+
+```sh
+SITE_ADDRESS=jetlag.example.com docker compose up --build -d
+```
+
+Caddy gets and renews a Let's Encrypt certificate on its own; the site is then at `https://jetlag.example.com`. You can also put `SITE_ADDRESS=...` in a `.env` file next to `docker-compose.yml`.
+
 The greeting endpoint is `GET /api/hello` and returns `Hello, world!`. The generated OpenAPI documentation is available at [http://localhost:4200/swagger-ui/index.html](http://localhost:4200/swagger-ui/index.html), with the JSON document at `/v3/api-docs`.
 
 ## Generate API code

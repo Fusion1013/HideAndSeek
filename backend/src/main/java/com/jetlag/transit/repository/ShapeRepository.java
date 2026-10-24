@@ -17,8 +17,6 @@ public interface ShapeRepository extends GtfsRepository<ShapeEntity, String> {
   int deleteNotInGeneration(
     @Param("generation") String generation);
 
-  List<ShapeEntity> findByShapeId(String shapeId);
-
   List<ShapeEntity> findByShapeIdIn(List<String> shapeIds);
 
 }

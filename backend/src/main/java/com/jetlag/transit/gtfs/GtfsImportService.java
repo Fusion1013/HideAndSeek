@@ -10,7 +10,6 @@ import com.jetlag.transit.repository.StopTimeRepository;
 import com.jetlag.transit.repository.TripRepository;
 import com.jetlag.transit.model.AgencyEntity;
 import com.jetlag.transit.model.RouteEntity;
-import com.jetlag.transit.model.ShapeEntity;
 import com.jetlag.transit.model.StopEntity;
 import com.jetlag.transit.model.StopTimeEntity;
 import com.jetlag.transit.model.TripEntity;
@@ -52,6 +51,7 @@ public class GtfsImportService {
   private final TrafiklabProperties properties;
   private final GtfsBatchWriter batchWriter;
   private final RouteStopsView routeStopsView;
+  private final ShapeLineImporter shapeLineImporter;
 
   private final StopRepository stopRepository;
   private final RouteRepository routeRepository;
@@ -65,6 +65,7 @@ public class GtfsImportService {
     TrafiklabProperties properties,
     GtfsBatchWriter batchWriter,
     RouteStopsView routeStopsView,
+    ShapeLineImporter shapeLineImporter,
     StopRepository stopRepository,
     RouteRepository routeRepository,
     TripRepository tripRepository,
@@ -76,6 +77,7 @@ public class GtfsImportService {
     this.properties = properties;
     this.batchWriter = batchWriter;
     this.routeStopsView = routeStopsView;
+    this.shapeLineImporter = shapeLineImporter;
     this.stopRepository = stopRepository;
     this.routeRepository = routeRepository;
     this.tripRepository = tripRepository;
@@ -178,7 +180,7 @@ public class GtfsImportService {
           } else if (fileName.equalsIgnoreCase("stop_times.txt")) {
             importedCount += parse("stop_times", parser, generation, stopTimeRepository, StopTimeEntity::new);
           } else if (fileName.equalsIgnoreCase("shapes.txt")) {
-            importedCount += parse("shapes", parser, generation, shapeRepository, ShapeEntity::new);
+            importedCount += shapeLineImporter.importShapes(parser, generation);
           } else if (fileName.equalsIgnoreCase("agency.txt")) {
             importedCount += parse("agencies", parser, generation, agencyRepository, AgencyEntity::new);
           }

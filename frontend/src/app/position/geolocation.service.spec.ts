@@ -16,6 +16,7 @@ describe('GeolocationService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubGlobal('navigator', { geolocation });
+    vi.stubGlobal('isSecureContext', true);
   });
 
   afterEach(() => vi.unstubAllGlobals());
@@ -53,5 +54,13 @@ describe('GeolocationService', () => {
     const service = TestBed.inject(GeolocationService);
     service.track();
     expect(service.error()).toBe('unsupported');
+  });
+
+  it('reports a page served without HTTPS instead of asking for a position', () => {
+    vi.stubGlobal('isSecureContext', false);
+    const service = TestBed.inject(GeolocationService);
+    service.track();
+    expect(service.error()).toBe('insecure-context');
+    expect(geolocation.watchPosition).not.toHaveBeenCalled();
   });
 });

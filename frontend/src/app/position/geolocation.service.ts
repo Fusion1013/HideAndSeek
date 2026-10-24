@@ -8,7 +8,7 @@ export interface GeoPosition {
   timestamp: number;
 }
 
-export type GeolocationError = 'unsupported' | 'permission-denied' | 'unavailable' | 'timeout';
+export type GeolocationError = 'unsupported' | 'insecure-context' | 'permission-denied' | 'unavailable' | 'timeout';
 
 /**
  * Tracks the device's GPS position. Several features can use it at once: each calls
@@ -41,6 +41,12 @@ export class GeolocationService {
     const geolocation = typeof navigator === 'undefined' ? undefined : navigator.geolocation;
     if (!geolocation) {
       this.error.set('unsupported');
+      return;
+    }
+    // Browsers only give positions to HTTPS pages (and localhost); elsewhere they refuse without asking,
+    // which would otherwise look like the user had denied access
+    if (!isSecureContext) {
+      this.error.set('insecure-context');
       return;
     }
 

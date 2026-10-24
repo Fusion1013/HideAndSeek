@@ -54,20 +54,16 @@ public class RouteNetworkQueries {
 
   /**
    * The shapes as lines, simplified so that no point moves more than {@code tolerance} degrees. Simplifying
-   * to about a screen pixel keeps the look and cuts the size many times over. Points at exactly 0,0 are
-   * missing positions in the feed, not the Gulf of Guinea, so they are left out.
+   * to about a screen pixel keeps the look and cuts the size many times over.
    */
   public List<ShapeLine> simplifiedLines(Collection<String> shapeIds, double tolerance) {
     if (shapeIds.isEmpty()) return List.of();
     return jdbcTemplate.query(
       connection -> {
         PreparedStatement statement = withIds(connection, """
-          SELECT shape_id, ST_AsGeoJSON(ST_Simplify(
-              ST_MakeLine(ST_MakePoint(shape_pt_lon, shape_pt_lat) ORDER BY shape_pt_sequence), ?), 6) AS geo_json
-          FROM gtfs_shapes
-          WHERE shape_id = ANY(?) AND NOT (shape_pt_lat = 0 AND shape_pt_lon = 0)
-          GROUP BY shape_id
-          HAVING count(*) >= 2
+          SELECT shape_id, ST_AsGeoJSON(ST_Simplify(geometry, ?), 6) AS geo_json
+          FROM gtfs_shape_lines
+          WHERE shape_id = ANY(?)
           """, shapeIds, 2);
         statement.setDouble(1, Math.max(tolerance, 0));
         return statement;

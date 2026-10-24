@@ -47,7 +47,7 @@ public class ShapeController {
     )
   )
   public List<ShapePointDTO> getShapesById(@PathVariable String id) {
-    return ShapePointDTO.from(shapeRepository.findByShapeId(id));
+    return ShapePointDTO.from(shapeRepository.findByShapeIdIn(List.of(id)));
   }
 
   @PostMapping(value = "/batch", consumes = MediaType.APPLICATION_JSON_VALUE)

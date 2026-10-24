@@ -35,6 +35,7 @@ export class DistancesPanelComponent {
   protected gpsErrorMessage(error: GeolocationError): string {
     switch (error) {
       case 'unsupported': return 'This browser cannot provide a GPS position.';
+      case 'insecure-context': return 'GPS needs a secure connection. Open this site with https:// to use it.';
       case 'permission-denied': return 'Location access was denied. Allow it in the browser to use GPS.';
       case 'timeout': return 'Getting a GPS position took too long. Still trying...';
       case 'unavailable': return 'Your position is currently unavailable. Still trying...';
