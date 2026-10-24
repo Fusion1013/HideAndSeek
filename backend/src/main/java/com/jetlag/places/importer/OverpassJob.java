@@ -3,6 +3,7 @@ package com.jetlag.places.importer;
 import com.jetlag.places.model.OverpassLocationCategory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
@@ -11,7 +12,9 @@ import org.springframework.web.client.ResourceAccessException;
 
 import java.util.UUID;
 
+/** Imports every Overpass category on a schedule; only exists when {@code overpass.update.enabled} is true. */
 @Component
+@ConditionalOnProperty(name = "overpass.update.enabled", havingValue = "true")
 public class OverpassJob {
 
   private static final int MAX_ATTEMPTS = 10;
@@ -26,18 +29,16 @@ public class OverpassJob {
   }
 
   @Scheduled(
-    initialDelayString = "${gtfs.update.initial-delay-ms:10000}",
-    fixedDelayString = "${gtfs.update.fixed-delay-ms:86400000}"
+    initialDelayString = "${overpass.update.initial-delay-ms:10000}",
+    fixedDelayString = "${overpass.update.fixed-delay-ms:86400000}"
   )
   public void updateAll() {
     logger.info("Starting overpass update");
 
-//    updateCategory(OverpassLocationCategory.BODY_OF_WATER);
-
-//    for (OverpassLocationCategory category : OverpassLocationCategory.values()) {
-//      if (category == OverpassLocationCategory.OTHER) continue;
-//      updateCategory(category);
-//    }
+    for (OverpassLocationCategory category : OverpassLocationCategory.values()) {
+      if (category == OverpassLocationCategory.OTHER) continue;
+      updateCategory(category);
+    }
   }
 
   private void updateCategory(OverpassLocationCategory category) {

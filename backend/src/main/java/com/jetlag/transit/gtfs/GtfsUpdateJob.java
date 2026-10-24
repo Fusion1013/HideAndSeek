@@ -4,10 +4,13 @@ package com.jetlag.transit.gtfs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+/** Imports the static GTFS feed on a schedule; only exists when {@code gtfs.update.enabled} is true. */
 @Component
+@ConditionalOnProperty(name = "gtfs.update.enabled", havingValue = "true")
 public class GtfsUpdateJob {
 
   private static final Logger logger =
@@ -19,11 +22,11 @@ public class GtfsUpdateJob {
     this.importService = importService;
   }
 
-  // cron = "0 0 0 * * *"
-//  @Scheduled(
-//    initialDelayString = "${gtfs.update.initial-delay-ms:10000}",
-//    fixedDelayString = "${gtfs.update.fixed-delay-ms:86400000}"
-//  )
+//   cron = "0 0 0 * * *"
+  @Scheduled(
+    initialDelayString = "${gtfs.update.initial-delay-ms:10000}",
+    fixedDelayString = "${gtfs.update.fixed-delay-ms:86400000}"
+  )
   public void updateAll() {
     logger.info("Starting GTFS update");
     try {

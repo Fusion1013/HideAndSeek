@@ -37,11 +37,16 @@ trafiklab:
 
 gtfs:
   update:
+    # Whether the scheduled GTFS import runs at all (env: GTFS_UPDATE_ENABLED)
+    enabled: true
     initial-delay-ms: 10000
     fixed-delay-ms: 86400000
 
 overpass:
   base-url: https://overpass-api.de/api/interpreter
+  update:
+    # Whether the scheduled Overpass import runs at all (env: OVERPASS_UPDATE_ENABLED)
+    enabled: true
 
 management:
   endpoints:

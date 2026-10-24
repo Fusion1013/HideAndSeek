@@ -8,3 +8,7 @@ spring.datasource.password=
 # From https://developer.trafiklab.se: "GTFS Sweden 3 Static data" and "GTFS Sweden 3 Realtime"
 trafiklab.static-api-key=
 trafiklab.realtime-api-key=
+
+# Scheduled imports; turn them off to work on existing data without downloading it again
+gtfs.update.enabled=true
+overpass.update.enabled=true
