@@ -24,6 +24,7 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -34,6 +35,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
 import java.util.function.BiFunction;
+import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -46,6 +48,8 @@ public class GtfsImportService {
   private static final String DATASET_PATH = "/gtfs-sweden/sweden.zip";
 
   private static final int BATCH_SIZE = 1_000;
+
+  private static final int ERROR_MESSAGE_LIMIT = 500;
 
   private final RestClient trafiklab;
   private final TrafiklabProperties properties;
@@ -122,8 +126,13 @@ public class GtfsImportService {
   }
 
   private void downloadDataset(Path zipPath) throws IOException {
+    String apiKey = properties.staticApiKey();
+    if (apiKey == null || apiKey.isBlank()) {
+      throw new IOException("No Trafiklab API key: set TRAFIKLAB_STATIC_API_KEY (trafiklab.static-api-key)");
+    }
+
     HttpStatusCode status = trafiklab.get()
-      .uri(uri -> uri.path(DATASET_PATH).queryParam("key", properties.staticApiKey()).build())
+      .uri(uri -> uri.path(DATASET_PATH).queryParam("key", apiKey).build())
       .header(HttpHeaders.ACCEPT_ENCODING, "gzip")
       .exchange((request, response) -> {
         Files.copy(response.getBody(), zipPath, StandardCopyOption.REPLACE_EXISTING);
@@ -131,9 +140,25 @@ public class GtfsImportService {
       });
 
     if (!status.is2xxSuccessful()) {
-      String errorBody = Files.readString(zipPath, StandardCharsets.UTF_8);
-      throw new IOException("Trafiklab returned HTTP " + status.value() + ": " + errorBody);
+      throw new IOException("Trafiklab returned HTTP " + status.value() + ": " + errorMessage(zipPath));
     }
+  }
+
+  /**
+   * The text of an error response, for the log. It comes gzip-compressed like the dataset, since the request
+   * accepts gzip, and may not be text at all; unreadable bytes are replaced and long bodies cut short.
+   */
+  static String errorMessage(Path body) throws IOException {
+    byte[] bytes = Files.readAllBytes(body);
+    if (bytes.length >= 2 && (bytes[0] & 0xff) == 0x1f && (bytes[1] & 0xff) == 0x8b) {
+      try (InputStream gzip = new GZIPInputStream(new ByteArrayInputStream(bytes))) {
+        bytes = gzip.readNBytes(ERROR_MESSAGE_LIMIT * 4);
+      } catch (IOException e) {
+        return "(unreadable compressed response)";
+      }
+    }
+    String text = new String(bytes, StandardCharsets.UTF_8).strip();
+    return text.length() > ERROR_MESSAGE_LIMIT ? text.substring(0, ERROR_MESSAGE_LIMIT) + "..." : text;
   }
 
   private int parseAndImport(
@@ -171,6 +196,7 @@ public class GtfsImportService {
                .setIgnoreEmptyLines(true)
                .get()
                .parse(reader)) {
+          logger.info("Start parse of file: {}", fileName);
           if (fileName.equalsIgnoreCase("stops.txt")) {
             importedCount += parse("stops", parser, generation, stopRepository, StopEntity::new);
           } else if (fileName.equalsIgnoreCase("routes.txt")) {
@@ -219,6 +245,8 @@ public class GtfsImportService {
       batchWriter.saveBatch(repository, batch);
       importedCount += batch.size();
     }
+
+    logger.info("Finished parsing {}, with {} imports", type, importedCount);
 
     return importedCount;
   }
