@@ -7,6 +7,7 @@ import type OlMap from 'ol/Map';
 import { fromLonLat } from 'ol/proj';
 import View from 'ol/View';
 import { ClosestLocationsService } from './closest-locations.service';
+import { ControlsPanelService } from '../controls/controls-panel.service';
 import { LayerService } from '../layer/layer.service';
 import type { MapLayerId } from '../layer/layer.service';
 import { GeolocationService } from '../position/geolocation.service';
@@ -48,7 +49,7 @@ describe('ClosestLocationsService', () => {
 
   it('lists the closest place on each open layer, nearest first', () => {
     const service = TestBed.inject(ClosestLocationsService);
-    service.active.set(true);
+    TestBed.inject(ControlsPanelService).select('distances');
     service.positionSource.set('gps');
     position.set({ longitude: 12, latitude: 57.7, accuracyMeters: 5, timestamp: 0 });
     visibleLayerIds.set(new Set<MapLayerId>(['museums', 'zoos', 'hospitals', 'parks']));
@@ -65,7 +66,7 @@ describe('ClosestLocationsService', () => {
   it('measures lines to their nearest point rather than their stored point', () => {
     const service = TestBed.inject(ClosestLocationsService);
     service.initialize({ addLayer: vi.fn(), on: vi.fn(), getView: () => new View() } as unknown as OlMap);
-    service.active.set(true);
+    TestBed.inject(ControlsPanelService).select('distances');
     service.positionSource.set('gps');
     position.set({ longitude: 12, latitude: 57.7, accuracyMeters: 5, timestamp: 0 });
     visibleLayerIds.set(new Set<MapLayerId>(['high_speed_rail']));
@@ -83,6 +84,22 @@ describe('ClosestLocationsService', () => {
     position.set({ longitude: 12, latitude: 57.7, accuracyMeters: 5, timestamp: 0 });
     visibleLayerIds.set(new Set<MapLayerId>(['zoos']));
 
+    expect(service.results()).toEqual([]);
+  });
+
+  it('keeps measuring with the panel closed, until another tab is selected', () => {
+    const service = TestBed.inject(ClosestLocationsService);
+    const controls = TestBed.inject(ControlsPanelService);
+    controls.show('distances');
+    service.positionSource.set('gps');
+    position.set({ longitude: 12, latitude: 57.7, accuracyMeters: 5, timestamp: 0 });
+    visibleLayerIds.set(new Set<MapLayerId>(['zoos']));
+
+    controls.toggle();
+    expect(controls.open()).toBe(false);
+    expect(service.results().map(result => result.name)).toEqual(['Near zoo']);
+
+    controls.select('layers');
     expect(service.results()).toEqual([]);
   });
 });

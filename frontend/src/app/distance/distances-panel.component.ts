@@ -1,6 +1,5 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, effect, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 
-import { ControlsPanelService } from '../controls/controls-panel.service';
 import { MAP_LAYERS } from '../layer/map-layers';
 import type { MapLayerId } from '../layer/map-layers';
 import type { GeolocationError } from '../position/geolocation.service';
@@ -17,16 +16,9 @@ import type { PositionSource } from './closest-locations.service';
 })
 export class DistancesPanelComponent {
   protected readonly closest = inject(ClosestLocationsService);
-  private readonly controls = inject(ControlsPanelService);
 
   protected readonly formatDistance = formatDistance;
   protected readonly layerLabels: ReadonlyMap<MapLayerId, string> = new Map(MAP_LAYERS.map(layer => [layer.id, layer.label]));
-
-  constructor() {
-    // Distances are only calculated and drawn while this tab is showing in an open panel
-    effect(() => this.closest.active.set(this.controls.open()));
-    inject(DestroyRef).onDestroy(() => this.closest.active.set(false));
-  }
 
   protected setPositionSource(event: Event): void {
     this.closest.positionSource.set((event.target as HTMLSelectElement).value as PositionSource);

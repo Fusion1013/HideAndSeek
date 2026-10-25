@@ -11,6 +11,7 @@ import { getDistance } from 'ol/sphere';
 import { Circle as CircleStyle, Fill, Stroke, Style, Text } from 'ol/style';
 
 import type { OverpassLocationDTO } from '../api/generated';
+import { ControlsPanelService } from '../controls/controls-panel.service';
 import { LayerService } from '../layer/layer.service';
 import type { MapLayerId } from '../layer/layer.service';
 import { GeolocationService } from '../position/geolocation.service';
@@ -40,6 +41,7 @@ type LonLat = readonly [longitude: number, latitude: number];
 export class ClosestLocationsService {
   private readonly layerService = inject(LayerService);
   private readonly geolocation = inject(GeolocationService);
+  private readonly controls = inject(ControlsPanelService);
 
   private readonly source = new VectorSource<Feature<Geometry>>();
   private readonly layer = new VectorLayer({
@@ -54,8 +56,11 @@ export class ClosestLocationsService {
   /** Bumped when a point layer loads or drops features, so results are recomputed. */
   private readonly featuresVersion = signal(0);
 
-  /** Lines and calculations only run, and are only shown, while this is true. */
-  readonly active = signal(false);
+  /**
+   * Lines and calculations only run, and are only shown, while the Distances tab is the selected one,
+   * whether or not the controls panel is open: closing the panel leaves the lines on the map.
+   */
+  readonly active = computed(() => this.controls.activeMenu() === 'distances');
   readonly positionSource = signal<PositionSource>('mouse');
 
   readonly origin = computed<LonLat | null>(() => {
