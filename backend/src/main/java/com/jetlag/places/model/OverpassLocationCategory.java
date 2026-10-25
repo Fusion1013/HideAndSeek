@@ -23,7 +23,7 @@ public enum OverpassLocationCategory {
     of("boundary", "administrative"), of("admin_level", AdminLevels.DIVISION_4)),
 
   // Nature
-  BODY_OF_WATER("nwr", "water", OutMode.GEOM, of("natural", "water"), exists("name")),
+  BODY_OF_WATER("nwr", "water", OutMode.GEOM, of("natural", "water")),
   COASTLINE("way", null, OutMode.GEOM, of("natural", "coastline")),
   MOUNTAIN("nwr", null, of("natural", "peak")),
   PARK("nwr", null, of("leisure", "park")),
