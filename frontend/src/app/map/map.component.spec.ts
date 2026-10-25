@@ -1,5 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter, Router } from '@angular/router';
 
+import { routes } from '../app.routes';
 import { MapComponent } from './map.component';
 import { LayerService } from '../layer/layer.service';
 import { MAP_LAYERS } from '../layer/map-layers';
@@ -35,6 +37,7 @@ describe('MapComponent', () => {
     await TestBed.configureTestingModule({
       imports: [MapComponent],
       providers: [
+        provideRouter(routes),
         { provide: AgencyRouteControllerService, useValue: { getAgencyRoutes: () => of([
           { routeId: 'beta-a', agencyName: 'Beta', routeShortName: 'A', routeType: '2' },
           { routeId: 'alpha-10', agencyName: 'Alpha', routeShortName: '10', routeType: '3' },
@@ -53,6 +56,8 @@ describe('MapComponent', () => {
 
     fixture = TestBed.createComponent(MapComponent);
     component = fixture.componentInstance;
+    // The tabs tested here belong to Overview mode, whose panel comes through the router
+    await TestBed.inject(Router).navigateByUrl('/');
     await fixture.whenStable();
   });
 

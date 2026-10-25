@@ -39,7 +39,9 @@ describe('RouteCatalogService', () => {
 describe('route labels', () => {
   it('names route types and normalizes search text', () => {
     expect(routeTypeLabel('3')).toBe('Bus');
-    expect(routeTypeLabel('700')).toBe('Route type 700');
+    expect(routeTypeLabel('700')).toBe('Bus');
+    expect(routeTypeLabel('900')).toBe('Tram');
+    expect(routeTypeLabel('9999')).toBe('Route type 9999');
     expect(routeTypeLabel(undefined)).toBe('Unknown type');
     expect(normalizeSearchText('  Malmö ')).toBe('malmo');
   });

@@ -2,26 +2,7 @@
 	<div #mapElement class="map"></div>
 
 	<app-controls-panel [stationAvailable]="!!stationTimetable.stop()">
-		@switch (controls.activeMenu()) {
-			@case ('transit') {
-				<app-transit-panel />
-			}
-			@case ('vehicles') {
-				<app-vehicles-panel />
-			}
-			@case ('station') {
-				<app-station-panel />
-			}
-			@case ('measure') {
-				<app-measure-panel />
-			}
-			@case ('layers') {
-				<app-layers-panel />
-			}
-			@case ('distances') {
-				<app-distances-panel />
-			}
-		}
+		<router-outlet />
 
 		@if (mapError() || routeCatalog.loadError() || routeSelection.loadError()) {
 			<p class="load-error" role="alert">Transit data could not be loaded.</p>

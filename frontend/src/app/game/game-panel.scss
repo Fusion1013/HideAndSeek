@@ -1,0 +1,307 @@
+// Play mode: joining and following a game; the panel's shared building blocks are in controls/_controls.scss
+
+:host {
+  display: contents;
+}
+
+.game-panel {
+  gap: 16px;
+}
+
+// A titled part of the game: phase, invite, players, host controls
+.game-section {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--control-border);
+
+  h3 {
+    margin: 0;
+    font-size: inherit;
+  }
+
+  a {
+    color: #075761;
+    font-weight: 600;
+  }
+}
+
+.phase {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border-left: 4px solid var(--control-accent);
+  border-radius: 4px;
+  background: #e8f3f3;
+
+  p {
+    margin: 0;
+  }
+
+  &.phase-hiding {
+    border-color: #a85d00;
+    background: #fff4e5;
+  }
+
+  &.phase-seeking {
+    border-color: #2d5bb8;
+    background: #eaf0fb;
+  }
+
+  &.phase-finished {
+    border-color: #6b7b80;
+    background: #eef1f2;
+  }
+}
+
+.phase-title {
+  font-weight: 650;
+}
+
+.countdown {
+  font-size: 34px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.phase-hint {
+  color: var(--control-muted);
+  font-size: 14px;
+}
+
+.invite-code {
+  margin: 0;
+  font-family: ui-monospace, 'Cascadia Mono', Menlo, monospace;
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-align: center;
+}
+
+.player-list,
+.game-links,
+.start-blockers {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.player-list li {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--control-border);
+
+  select {
+    min-height: 36px;
+    max-width: 140px;
+    padding: 4px 8px;
+    border: 1px solid #aebdc0;
+    border-radius: 5px;
+    background: #ffffff;
+    color: var(--control-ink);
+    font: inherit;
+  }
+}
+
+.player-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.player-tag {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: #e1f1f0;
+  color: #075761;
+  font-size: 12px;
+}
+
+.player-role {
+  color: var(--control-muted);
+  font-size: 14px;
+}
+
+.start-blockers {
+  gap: 2px;
+  color: var(--control-muted);
+  font-size: 13px;
+}
+
+.game-links {
+  gap: 6px;
+
+  li {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  span {
+    color: var(--control-muted);
+    font-size: 12px;
+  }
+}
+
+.hiding-choice,
+.seeker-line {
+  margin: 0;
+}
+
+.hiding-choice strong {
+  font-size: 18px;
+}
+
+.seeker-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+// A station clicked on the map, waiting to be chosen
+.picked {
+  padding: 12px 14px;
+  border-left: 4px solid #a85d00;
+  border-radius: 4px;
+  background: #fff4e5;
+}
+
+.station-list {
+  display: grid;
+  max-height: 40dvh;
+  margin: 0 -6px;
+  padding: 0 6px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  list-style: none;
+
+  li {
+    display: flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border-bottom: 1px solid var(--control-border);
+  }
+
+  button {
+    flex: none;
+    min-height: 36px;
+    padding: 4px 10px;
+    border: 1px solid #aebdc0;
+    border-radius: 5px;
+    background: #ffffff;
+    color: var(--control-ink);
+    font: inherit;
+    font-size: 14px;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: #eaf1f1;
+    }
+
+    &:disabled {
+      cursor: default;
+      opacity: 0.6;
+    }
+  }
+}
+
+.question-text {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+// A question waiting for its answer
+.pending-question,
+.waiting-question {
+  padding: 12px 14px;
+  border-left: 4px solid #2d5bb8;
+  border-radius: 4px;
+  background: #eaf0fb;
+}
+
+.place-answer {
+  display: flex;
+  width: 100%;
+  align-items: end;
+  gap: 8px;
+
+  .control-field {
+    flex: 1;
+  }
+}
+
+.question-kinds {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+
+  legend {
+    margin-bottom: 4px;
+    padding: 0;
+  }
+}
+
+.question-kind {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid var(--control-border);
+  cursor: pointer;
+
+  input {
+    flex: none;
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    accent-color: var(--control-accent);
+  }
+
+  span {
+    display: grid;
+  }
+}
+
+.question-preview {
+  margin: 0;
+  color: var(--control-ink);
+  font-style: italic;
+}
+
+.question-history {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: grid;
+    gap: 2px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--control-border);
+  }
+}
+
+.answer {
+  margin: 0;
+  color: #075761;
+  font-weight: 700;
+
+  &.expired {
+    color: #8a4b00;
+  }
+}

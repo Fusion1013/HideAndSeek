@@ -16,7 +16,21 @@ const ROUTE_TYPE_LABELS: Record<string, string> = {
   '6': 'Aerial lift',
   '7': 'Funicular',
   '11': 'Trolleybus',
-  '12': 'Monorail'
+  '12': 'Monorail',
+  // Extended types (https://developers.google.com/transit/gtfs/reference/extended-route-types), as Trafiklab uses
+  '100': 'Rail',
+  '101': 'High-speed rail',
+  '102': 'Long-distance rail',
+  '106': 'Regional rail',
+  '109': 'Suburban rail',
+  '401': 'Metro',
+  '700': 'Bus',
+  '702': 'Express bus',
+  '715': 'Demand-responsive bus',
+  '900': 'Tram',
+  '1000': 'Water transport',
+  '1200': 'Ferry',
+  '1501': 'Communal taxi'
 };
 
 export function routeTypeLabel(routeType: string | undefined): string {

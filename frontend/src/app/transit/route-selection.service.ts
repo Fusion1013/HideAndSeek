@@ -1,4 +1,4 @@
-import { computed, effect, inject, Injectable, signal } from '@angular/core';
+import { computed, effect, inject, Injectable, signal, untracked } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { forkJoin, map, Observable, of, switchMap } from 'rxjs';
 import { transformExtent } from 'ol/proj';
@@ -40,6 +40,12 @@ export class RouteSelectionService {
 
   readonly selectedRouteIds = signal<string[]>([], { equal: sameItems });
 
+  /** Whether the view moves to fit the routes each time the selection changes. Create mode turns it off. */
+  readonly fitView = signal(true);
+
+  /** Whether the routes' stops are shown. Game mode shows the game's own stations instead. */
+  readonly showStops = signal(true);
+
   private readonly selectedRoutes = rxResource({
     params: () => this.selectedRouteIds().length > 0 ? this.selectedRouteIds() : undefined,
     stream: ({ params: routeIds }) => this.loadRoutes(routeIds)
@@ -69,8 +75,8 @@ export class RouteSelectionService {
         return;
       }
       const { linesByRoute, stopIds } = this.selectedRoutes.value();
-      this.stopsLayer.setVisibleStopIds(stopIds);
-      if (map) this.routeShapesLayer.setRouteShapes(map, linesByRoute);
+      this.stopsLayer.setVisibleStopIds(this.showStops() ? stopIds : []);
+      if (map) this.routeShapesLayer.setRouteShapes(map, linesByRoute, untracked(this.fitView));
     });
 
     // "Routes in view" replaces the selection once its routes are known

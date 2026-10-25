@@ -48,9 +48,9 @@
   transition: transform 220ms ease, visibility 0s;
 }
 
-// Keep the title and menu switcher in place; only the list below them scrolls
+// Keep the title and switchers in place; only the list below them scrolls
 .controls-panel.has-scrolling-list {
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto minmax(0, 1fr);
   align-content: stretch;
   overflow-y: hidden;
 }
@@ -69,6 +69,43 @@
   align-content: center;
   font-size: 18px;
   font-weight: 650;
+}
+
+// Overview / Create / Play: links, as each mode has its own address
+.mode-switcher {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  padding: 3px;
+  border: 1px solid var(--control-border);
+  border-radius: 6px;
+  background: #eef3f4;
+
+  a {
+    display: grid;
+    min-height: 38px;
+    place-items: center;
+    border-radius: 4px;
+    color: var(--control-muted);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+
+    &:hover {
+      color: var(--control-ink);
+    }
+
+    &:focus-visible {
+      outline: 3px solid var(--control-accent);
+      outline-offset: 1px;
+    }
+
+    &[aria-current='page'] {
+      background: #ffffff;
+      box-shadow: 0 1px 3px rgb(23 43 50 / 16%);
+      color: #075761;
+    }
+  }
 }
 
 .menu-switcher {

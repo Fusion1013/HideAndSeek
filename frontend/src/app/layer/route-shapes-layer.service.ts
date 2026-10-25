@@ -49,10 +49,11 @@ export class RouteShapesLayerService extends BaseLayerService {
     }
   }
 
-  /** Draws each route's lines, given as [longitude, latitude] points in order, and fits the view to them. */
+  /** Draws each route's lines, given as [longitude, latitude] points in order, and (unless told not to) fits the view to them. */
   public setRouteShapes(
     map: OlMap,
-    linesByRoute: ReadonlyMap<string, readonly (readonly number[])[][]>
+    linesByRoute: ReadonlyMap<string, readonly (readonly number[])[][]>,
+    fitView = true
   ): void {
     const features: Feature<LineString>[] = [];
     for (const [routeId, lines] of linesByRoute) {
@@ -71,7 +72,7 @@ export class RouteShapesLayerService extends BaseLayerService {
 
     this.source.clear(true);
     this.source.addFeatures(features);
-    if (features.length === 0) return;
+    if (features.length === 0 || !fitView) return;
 
     const extent = this.source.getExtent();
     if (!extent) return;

@@ -1,3 +1,8 @@
+server:
+  # The client's address from X-Forwarded-For, as set by the proxies in front (Caddy, then nginx); trusted only
+  # from private network addresses, so clients cannot set their own (see RateLimitConfig)
+  forward-headers-strategy: native
+
 spring:
   application:
     name: jetlag-backend
@@ -12,17 +17,25 @@ spring:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/jetlag}
     username: ${SPRING_DATASOURCE_USERNAME:jetlag}
     password: ${SPRING_DATASOURCE_PASSWORD:jetlag}
-  sql:
-    init:
-      # Run schema.sql (enables PostGIS) against PostgreSQL too, not only embedded databases
-      mode: always
+  mvc:
+    problemdetails:
+      # Errors as RFC 7807 bodies, whose "detail" carries the reason given to ResponseStatusException
+      enabled: true
+  flyway:
+    # Databases created before Flyway already have the GTFS and Overpass tables: mark them as version 0 so
+    # V1 (PostGIS and the game tables) still runs on them
+    baseline-on-migrate: true
+    baseline-version: 0
   jpa:
     open-in-view: false
     hibernate:
+      # Only for the GTFS and Overpass tables; Flyway owns the game tables (see FlywayOwnedTables)
       ddl-auto: update
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+        hbm2ddl:
+          schema_filter_provider: com.jetlag.config.FlywayOwnedTables
         jdbc:
           batch_size: 1000
         order_inserts: true
@@ -41,6 +54,19 @@ gtfs:
     enabled: true
     initial-delay-ms: 10000
     fixed-delay-ms: 86400000
+
+game:
+  cleanup:
+    # A game with no activity for this long is ended
+    idle-after: PT24H
+    # A finished game, with its players' positions, is deleted after this long
+    keep-finished-for: P7D
+    interval: PT1H
+  rate-limits:
+    # Requests per client IP per minute; beyond that, 429 Too Many Requests
+    join-per-minute: 10
+    create-game-per-minute: 5
+    create-template-per-minute: 10
 
 overpass:
   base-url: https://overpass-api.de/api/interpreter

@@ -10,6 +10,16 @@
 }
 
 .controls-panel {
+  // Each mode's panel comes through the router outlet. Neither wrapper is a box of its own, so a tab is laid
+  // out by the panel's grid exactly as if it were placed there directly.
+  router-outlet {
+    display: none;
+  }
+
+  .mode-panel {
+    display: contents;
+  }
+
   // A tab's content
   .menu-content {
     display: grid;
@@ -106,7 +116,10 @@
 
   button:focus-visible,
   select:focus-visible,
-  input:focus-visible {
+  input:focus-visible,
+  a:focus-visible,
+  // Headings that receive focus when the control that led to them goes away, and lists focusable to scroll them
+  [tabindex]:focus-visible {
     outline: 3px solid var(--control-accent);
     outline-offset: 2px;
   }
@@ -124,6 +137,53 @@
     &.is-empty {
       border-color: transparent;
     }
+  }
+
+  // The main action of a tab (create, join, start), and one that cannot be undone (delete, end)
+  .panel-actions button.primary-action {
+    border-color: #075761;
+    background: #087e8b;
+    color: #ffffff;
+    font-weight: 600;
+
+    &:hover {
+      background: #075761;
+    }
+  }
+
+  .panel-actions button.danger-action {
+    border-color: #a32222;
+    background: #a32222;
+    color: #ffffff;
+
+    &:hover {
+      background: #851b1b;
+    }
+  }
+
+  // Asks before an action that cannot be undone
+  .confirm-box {
+    display: grid;
+    gap: 8px;
+    padding: 10px 12px;
+    border-left: 3px solid #a32222;
+    background: #fff0ee;
+
+    p {
+      margin: 0;
+      color: #6f1d1d;
+      font-size: 13px;
+    }
+  }
+
+  // Read by screen readers only
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 
   .status-text {

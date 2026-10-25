@@ -91,6 +91,24 @@ constructor({ accessToken, apiKeys, basePath, credentials, encodeParam, encoder,
         }
         this.encodeParam = encodeParam ?? (param => this.defaultEncodeParam(param));
         this.credentials = credentials ?? {};
+
+        // init default templateOwnerToken credential
+        if (!this.credentials['templateOwnerToken']) {
+            this.credentials['templateOwnerToken'] = () => {
+                return typeof this.accessToken === 'function'
+                    ? this.accessToken()
+                    : this.accessToken;
+            };
+        }
+
+        // init default playerToken credential
+        if (!this.credentials['playerToken']) {
+            this.credentials['playerToken'] = () => {
+                return typeof this.accessToken === 'function'
+                    ? this.accessToken()
+                    : this.accessToken;
+            };
+        }
     }
 
     /**

@@ -28,3 +28,13 @@ export function formatDuration(seconds: number): string {
   const remainingMinutes = minutes % 60;
   return remainingMinutes > 0 ? `${hours} hr ${remainingMinutes} min` : `${hours} hr`;
 }
+
+/** How long ago something happened, rounded down: "just now", "4 min ago" or "1 hr 5 min ago". */
+export function formatAge(milliseconds: number): string {
+  const minutes = Math.floor(Math.max(0, milliseconds) / 60_000);
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  return remainingMinutes > 0 ? `${hours} hr ${remainingMinutes} min ago` : `${hours} hr ago`;
+}

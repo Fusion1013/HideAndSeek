@@ -1,17 +1,25 @@
 import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import {
-  LucideBusFront, LucideLayers, LucideLocateFixed, LucideMapPin, LucidePanelRightClose, LucidePanelRightOpen, LucideRoute,
-  LucideRuler
+  LucideBusFront, LucideEyeOff, LucideLayers, LucideLocateFixed, LucideMapPin, LucideMessageCircleQuestionMark, LucidePanelRightClose, LucidePanelRightOpen, LucideRoute,
+  LucideRuler, LucideSquareDashed, LucideUsers
 } from '@lucide/angular';
 
+import { ModeService } from '../mode/mode.service';
 import { ControlsPanelService } from './controls-panel.service';
 
-/** The slide-in panel beside the map: its toggle, the tab buttons, and the active tab (projected content). */
+/**
+ * The slide-in panel beside the map: its toggle, the mode links, the current mode's tab buttons, and the active
+ * tab (projected content).
+ */
 @Component({
   selector: 'app-controls-panel',
   templateUrl: './controls-panel.component.html',
   styleUrl: './controls-panel.component.scss',
-  imports: [LucideBusFront, LucideLayers, LucideLocateFixed, LucideMapPin, LucidePanelRightClose, LucidePanelRightOpen, LucideRoute, LucideRuler],
+  imports: [
+    RouterLink, LucideBusFront, LucideEyeOff, LucideLayers, LucideLocateFixed, LucideMapPin, LucideMessageCircleQuestionMark, LucideMessageCircleQuestionMark, LucidePanelRightClose, LucidePanelRightOpen,
+    LucideRoute, LucideRuler, LucideSquareDashed, LucideUsers
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ControlsPanelComponent {
@@ -19,4 +27,5 @@ export class ControlsPanelComponent {
   readonly stationAvailable = input(false);
 
   protected readonly controls = inject(ControlsPanelService);
+  protected readonly mode = inject(ModeService).mode;
 }

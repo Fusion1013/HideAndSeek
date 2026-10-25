@@ -1,34 +1,30 @@
 import { afterNextRender, ChangeDetectionStrategy, Component, DestroyRef, effect, ElementRef, inject, signal, viewChild } from '@angular/core';
 import type MapBrowserEvent from 'ol/MapBrowserEvent';
 
+import { RouterOutlet } from '@angular/router';
 import type { StopDTO, VehiclePosition } from '../api/generated';
 import { ControlsPanelComponent } from '../controls/controls-panel.component';
 import { ControlsPanelService } from '../controls/controls-panel.service';
 import { ClosestLocationsService } from '../distance/closest-locations.service';
-import { DistancesPanelComponent } from '../distance/distances-panel.component';
-import { LayersPanelComponent } from '../layer/layers-panel.component';
 import { StationMeasurementService } from '../layer/station-measurement.service';
 import { VehicleLayerService } from '../layer/vehicle-layer.service';
-import { MeasurePanelComponent } from '../shape/measure-panel.component';
-import { StationPanelComponent } from '../station/station-panel.component';
+import { ModeService } from '../mode/mode.service';
 import { StationTimetableService } from '../station/station-timetable.service';
 import { RouteCatalogService } from '../transit/route-catalog.service';
 import { RouteSelectionService } from '../transit/route-selection.service';
-import { TransitPanelComponent } from '../transit/transit-panel.component';
 import { isMappableVehicle } from '../vehicle/vehicle-position';
 import { VehicleSelectionService } from '../vehicle/vehicle-selection.service';
-import { VehiclesPanelComponent } from '../vehicle/vehicles-panel.component';
 import { MapService } from './map.service';
 
-/** The map with its controls panel: creates the map and decides what a click on it means. */
+/**
+ * The map with its controls panel: creates the map and decides what a click on it means. The map stays while
+ * the mode changes; the current mode's route fills the panel.
+ */
 @Component({
   selector: 'app-map',
   templateUrl: './map.component.html',
   styleUrl: './map.component.scss',
-  imports: [
-    ControlsPanelComponent, DistancesPanelComponent, LayersPanelComponent, MeasurePanelComponent, StationPanelComponent,
-    TransitPanelComponent, VehiclesPanelComponent
-  ],
+  imports: [ControlsPanelComponent, RouterOutlet],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MapComponent {
@@ -37,6 +33,7 @@ export class MapComponent {
   private readonly stationMeasurement = inject(StationMeasurementService);
   private readonly closestLocations = inject(ClosestLocationsService);
   private readonly vehicleSelection = inject(VehicleSelectionService);
+  private readonly modeService = inject(ModeService);
   protected readonly controls = inject(ControlsPanelService);
   protected readonly routeCatalog = inject(RouteCatalogService);
   protected readonly routeSelection = inject(RouteSelectionService);
@@ -59,12 +56,13 @@ export class MapComponent {
   }
 
   /**
-   * A click on the map selects the stop or vehicle under it. Anywhere else it deselects vehicles, or adds
-   * a distance point when the Station tab is waiting for one.
+   * In Overview mode, a click on the map selects the stop or vehicle under it. Anywhere else it deselects
+   * vehicles, or adds a distance point when the Station tab is waiting for one. The other modes handle their
+   * own clicks.
    */
   onMapSingleClick(event: MapBrowserEvent): void {
     const map = this.mapService.getMap();
-    if (!map) return;
+    if (!map || this.modeService.mode() !== 'overview') return;
 
     const stop = map.forEachFeatureAtPixel(event.pixel, feature =>
       isStopDTO(feature.get('stop')) ? feature : undefined)?.get('stop') as StopDTO | undefined;
