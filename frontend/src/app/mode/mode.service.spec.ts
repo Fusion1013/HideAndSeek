@@ -63,7 +63,7 @@ describe('ModeService', () => {
     controls.select('vehicles');
 
     await navigate('/create');
-    expect(controls.tabs()).toEqual(['template', 'layers']);
+    expect(controls.tabs()).toEqual(['template', 'templates', 'layers']);
     expect(controls.activeMenu()).toBe('template');
 
     controls.select('layers');
@@ -74,5 +74,21 @@ describe('ModeService', () => {
 
     await navigate('/');
     expect(controls.activeMenu()).toBe('layers');
+  });
+
+  it('marks tabs waiting for the player, only while their mode is shown', async () => {
+    const controls = TestBed.inject(ControlsPanelService);
+    await navigate('/game/abc');
+    controls.setAvailable('questions', true);
+    controls.setAttention('questions', true);
+    expect(controls.needsAttention('questions')).toBe(true);
+    expect(controls.anyAttention()).toBe(true);
+
+    await navigate('/');
+    expect(controls.anyAttention()).toBe(false);
+
+    await navigate('/game/abc');
+    controls.setAttention('questions', false);
+    expect(controls.anyAttention()).toBe(false);
   });
 });

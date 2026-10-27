@@ -4,26 +4,31 @@ import { RouterLink } from '@angular/router';
 
 import { GameTemplateControllerService } from '../api/generated';
 import { AccessTokenStore } from '../auth/access-token.store';
+import { ControlsPanelService } from '../controls/controls-panel.service';
 
 /** The templates this browser created (it holds their owner tokens), as links to edit them. */
 @Component({
   selector: 'app-template-list',
   imports: [RouterLink],
   template: `
-    @if (templates.hasValue() && templates.value().length > 0) {
-      <nav class="panel-section" aria-labelledby="template-list-heading">
-        <h3 id="template-list-heading" class="panel-heading">Your templates</h3>
+    @if (templates.error()) {
+      <p class="load-error" role="alert">Your templates could not be loaded.</p>
+    } @else if (templates.isLoading()) {
+      <p class="status-text">Loading your templates…</p>
+    } @else if (templates.hasValue() && templates.value().length > 0) {
+      <nav aria-labelledby="template-list-heading">
         <ul class="template-links">
           @for (template of templates.value(); track template.id) {
             <li>
-              <a [routerLink]="['/create', template.id]">{{ template.name }}</a>
+              <!-- Opens the template in the Template tab -->
+              <a [routerLink]="['/create', template.id]" (click)="controls.select('template')">{{ template.name }}</a>
               <span>{{ template.routes.length }} {{ template.routes.length === 1 ? 'route' : 'routes' }}</span>
             </li>
           }
         </ul>
       </nav>
-    } @else if (templates.error()) {
-      <p class="load-error" role="alert">Your templates could not be loaded.</p>
+    } @else {
+      <p class="status-text">No templates yet. The templates you create in this browser are listed here.</p>
     }
   `,
   styleUrl: './create-panel.scss',
@@ -32,6 +37,7 @@ import { AccessTokenStore } from '../auth/access-token.store';
 export class TemplateListComponent {
   private readonly templateApi = inject(GameTemplateControllerService);
   private readonly tokens = inject(AccessTokenStore);
+  protected readonly controls = inject(ControlsPanelService);
 
   private readonly ids = this.tokens.ids('templates');
 

@@ -1,14 +1,13 @@
 import { afterRenderEffect, ChangeDetectionStrategy, Component, ElementRef, inject, viewChild } from '@angular/core';
 
-import { StationMeasurementService } from '../layer/station-measurement.service';
-import type { StationMeasurePoint } from '../layer/station-measurement.service';
-import { formatDistance } from '../shared/format';
-import { RouteCatalogService } from '../transit/route-catalog.service';
+import type { StopDTO } from '../api/generated';
 import { ControlsPanelService } from '../controls/controls-panel.service';
+import { ReachabilityService } from '../shape/reachability.service';
+import { RouteCatalogService } from '../transit/route-catalog.service';
 import type { StationTimetableRow } from './station-timetable';
 import { StationTimetableService } from './station-timetable.service';
 
-/** The Station tab: the selected stop, its timetable, and distances measured from it. */
+/** The Station tab: the selected stop and its timetable, and the tools that start from it. */
 @Component({
   selector: 'app-station-panel',
   templateUrl: './station-panel.component.html',
@@ -17,11 +16,9 @@ import { StationTimetableService } from './station-timetable.service';
 })
 export class StationPanelComponent {
   protected readonly timetable = inject(StationTimetableService);
-  private readonly controls = inject(ControlsPanelService);
-  protected readonly measurement = inject(StationMeasurementService);
+  protected readonly controls = inject(ControlsPanelService);
+  private readonly reachability = inject(ReachabilityService);
   private readonly catalog = inject(RouteCatalogService);
-
-  protected readonly formatDistance = formatDistance;
 
   private readonly timetableViewport = viewChild<ElementRef<HTMLDivElement>>('timetableViewport');
 
@@ -49,14 +46,9 @@ export class StationPanelComponent {
     return row.tripShortName || this.catalog.route(row.routeId)?.routeShortName || row.tripId || 'Unknown';
   }
 
-  protected setRadius(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    if (!this.measurement.setRadiusMeters(input.valueAsNumber)) {
-      input.value = String(this.measurement.radiusMeters());
-    }
-  }
-
-  protected removePoint(point: StationMeasurePoint): void {
-    this.measurement.removeMeasurePoint(point.id);
+  /** Makes the station the start of the reachable stations search, and opens that tab. */
+  protected findReachable(stop: StopDTO): void {
+    this.reachability.setOrigin(stop);
+    this.controls.select('reachability');
   }
 }

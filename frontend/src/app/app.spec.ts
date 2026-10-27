@@ -45,14 +45,14 @@ describe('App', () => {
 
   it('should render transit line controls in overview mode', async () => {
     const compiled = await render('/');
-    expect(compiled.querySelector('#line-select')).toBeTruthy();
+    expect(compiled.querySelector('#line-list')).toBeTruthy();
     expect(compiled.querySelector('.mode-switcher [aria-current="page"]')?.textContent).toBe('Overview');
     await expectNoAxeViolations(compiled);
   });
 
   it('should show the template tab in create mode', async () => {
     const compiled = await render('/create');
-    expect(compiled.querySelector('#line-select')).toBeNull();
+    expect(compiled.querySelector('#line-list')).toBeNull();
     expect(compiled.querySelector('#template-heading')?.textContent).toBe('New template');
     expect(compiled.querySelector('.mode-switcher [aria-current="page"]')?.textContent).toBe('Create');
     await expectNoAxeViolations(compiled);

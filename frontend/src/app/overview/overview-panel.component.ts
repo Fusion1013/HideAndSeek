@@ -4,6 +4,7 @@ import { ControlsPanelService } from '../controls/controls-panel.service';
 import { DistancesPanelComponent } from '../distance/distances-panel.component';
 import { LayersPanelComponent } from '../layer/layers-panel.component';
 import { MeasurePanelComponent } from '../shape/measure-panel.component';
+import { ReachabilityPanelComponent } from '../shape/reachability-panel.component';
 import { StationPanelComponent } from '../station/station-panel.component';
 import { TransitPanelComponent } from '../transit/transit-panel.component';
 import { VehiclesPanelComponent } from '../vehicle/vehicles-panel.component';
@@ -12,8 +13,8 @@ import { VehiclesPanelComponent } from '../vehicle/vehicles-panel.component';
 @Component({
   selector: 'app-overview-panel',
   imports: [
-    DistancesPanelComponent, LayersPanelComponent, MeasurePanelComponent, StationPanelComponent, TransitPanelComponent,
-    VehiclesPanelComponent
+    DistancesPanelComponent, LayersPanelComponent, MeasurePanelComponent, ReachabilityPanelComponent, StationPanelComponent,
+    TransitPanelComponent, VehiclesPanelComponent
   ],
   template: `
     @switch (controls.activeMenu()) {
@@ -28,6 +29,9 @@ import { VehiclesPanelComponent } from '../vehicle/vehicles-panel.component';
       }
       @case ('measure') {
         <app-measure-panel />
+      }
+      @case ('reachability') {
+        <app-reachability-panel />
       }
       @case ('layers') {
         <app-layers-panel />

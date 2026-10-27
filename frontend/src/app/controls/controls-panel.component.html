@@ -2,8 +2,8 @@
 	id="map-controls-toggle"
 	class="controls-toggle"
 	type="button"
-	[attr.aria-label]="controls.open() ? 'Close map controls' : 'Open map controls'"
-	[attr.title]="controls.open() ? 'Close map controls' : 'Open map controls'"
+	[attr.aria-label]="toggleLabel()"
+	[attr.title]="toggleLabel()"
 	[attr.aria-expanded]="controls.open()"
 	aria-controls="map-controls-panel"
 	(click)="controls.toggle()"
@@ -12,6 +12,9 @@
 		<svg lucidePanelRightClose [size]="20" aria-hidden="true"></svg>
 	} @else {
 		<svg lucidePanelRightOpen [size]="20" aria-hidden="true"></svg>
+		@if (controls.anyAttention()) {
+			<span class="attention-dot"></span>
+		}
 	}
 </button>
 
@@ -45,15 +48,23 @@
 			</button>
 		}
 		@if (controls.hasTab('questions')) {
-			<button type="button" aria-label="Questions" [attr.aria-pressed]="controls.activeMenu() === 'questions'" (click)="controls.select('questions')">
+			<button type="button" [attr.aria-label]="controls.needsAttention('questions') ? 'Questions, one waits for your answer' : 'Questions'"
+				[attr.aria-pressed]="controls.activeMenu() === 'questions'" (click)="controls.select('questions')">
 				<svg lucideMessageCircleQuestionMark [size]="20" aria-hidden="true"></svg>
 				<span class="tab-label">Questions</span>
+				@if (controls.needsAttention('questions')) {
+					<span class="attention-dot"></span>
+				}
 			</button>
 		}
 		@if (controls.hasTab('hiding')) {
-			<button type="button" aria-label="Hiding station" [attr.aria-pressed]="controls.activeMenu() === 'hiding'" (click)="controls.select('hiding')">
+			<button type="button" [attr.aria-label]="controls.needsAttention('hiding') ? 'Hiding station, not chosen yet' : 'Hiding station'"
+				[attr.aria-pressed]="controls.activeMenu() === 'hiding'" (click)="controls.select('hiding')">
 				<svg lucideEyeOff [size]="20" aria-hidden="true"></svg>
 				<span class="tab-label">Hiding</span>
+				@if (controls.needsAttention('hiding')) {
+					<span class="attention-dot"></span>
+				}
 			</button>
 		}
 		@if (controls.hasTab('transit')) {
@@ -80,6 +91,24 @@
 				<span class="tab-label">Measure</span>
 			</button>
 		}
+		@if (controls.hasTab('reachability')) {
+			<button type="button" aria-label="Reachable stations" [attr.aria-pressed]="controls.activeMenu() === 'reachability'" (click)="controls.select('reachability')">
+				<svg lucideTimer [size]="20" aria-hidden="true"></svg>
+				<span class="tab-label">Reach</span>
+			</button>
+		}
+		@if (controls.hasTab('share')) {
+			<button type="button" aria-label="Share template" [attr.aria-pressed]="controls.activeMenu() === 'share'" (click)="controls.select('share')">
+				<svg lucideShare2 [size]="20" aria-hidden="true"></svg>
+				<span class="tab-label">Share</span>
+			</button>
+		}
+		@if (controls.hasTab('templates')) {
+			<button type="button" aria-label="Your templates" [attr.aria-pressed]="controls.activeMenu() === 'templates'" (click)="controls.select('templates')">
+				<svg lucideFolderOpen [size]="20" aria-hidden="true"></svg>
+				<span class="tab-label">Saved</span>
+			</button>
+		}
 		@if (controls.hasTab('layers')) {
 			<button type="button" aria-label="Map layers" [attr.aria-pressed]="controls.activeMenu() === 'layers'" (click)="controls.select('layers')">
 				<svg lucideLayers [size]="20" aria-hidden="true"></svg>
@@ -87,9 +116,9 @@
 			</button>
 		}
 		@if (controls.hasTab('distances')) {
-			<button type="button" aria-label="Distances" [attr.aria-pressed]="controls.activeMenu() === 'distances'" (click)="controls.select('distances')">
+			<button type="button" aria-label="Nearest places" [attr.aria-pressed]="controls.activeMenu() === 'distances'" (click)="controls.select('distances')">
 				<svg lucideLocateFixed [size]="20" aria-hidden="true"></svg>
-				<span class="tab-label">Distances</span>
+				<span class="tab-label">Nearest</span>
 			</button>
 		}
 	</nav>

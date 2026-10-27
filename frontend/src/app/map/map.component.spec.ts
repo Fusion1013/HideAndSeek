@@ -19,6 +19,7 @@ import { TransitService as TransitDataService } from '../transit/transit.service
 import { TransitService as TransitApiService } from '../api/generated/api/transit.service';
 import { AgencyRouteControllerService, RouteControllerService, ShapeControllerService, StopControllerService, StopTimeControllerService, TripControllerService } from '../api/generated';
 import { StationMeasurementService } from '../layer/station-measurement.service';
+import { ReachabilityService } from '../shape/reachability.service';
 import Feature from 'ol/Feature';
 import View from 'ol/View';
 import type { VehiclePosition } from '../api/generated/model/vehiclePosition';
@@ -78,7 +79,7 @@ describe('MapComponent', () => {
     fixture.detectChanges();
     expect(panel.getAttribute('aria-hidden')).toBe('false');
     expect(controlsToggle.getAttribute('aria-label')).toBe('Close map controls');
-    expect(fixture.nativeElement.querySelector('#line-select')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('#line-list')).toBeTruthy();
     expect(fixture.nativeElement.querySelector('section[aria-labelledby="measure-heading"]')).toBeNull();
 
     const menuButtons = fixture.nativeElement.querySelectorAll('.menu-switcher button') as NodeListOf<HTMLButtonElement>;
@@ -87,7 +88,7 @@ describe('MapComponent', () => {
     expect(vehiclesMenuButton).toBeTruthy();
     vehiclesMenuButton?.click();
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('#line-select')).toBeNull();
+    expect(fixture.nativeElement.querySelector('#line-list')).toBeNull();
     expect(fixture.nativeElement.querySelector('[aria-label="Vehicle positions"]')).toBeTruthy();
 
     const measureMenuButton = Array.from(menuButtons)
@@ -95,7 +96,7 @@ describe('MapComponent', () => {
     expect(measureMenuButton).toBeTruthy();
     measureMenuButton?.click();
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('#line-select')).toBeNull();
+    expect(fixture.nativeElement.querySelector('#line-list')).toBeNull();
     expect(fixture.nativeElement.querySelector('section[aria-labelledby="measure-heading"]')).toBeTruthy();
 
     controlsToggle.click();
@@ -108,7 +109,7 @@ describe('MapComponent', () => {
     controlsToggle.click();
     fixture.detectChanges();
 
-    const options = fixture.nativeElement.querySelectorAll('#line-select option') as NodeListOf<HTMLOptionElement>;
+    const options = fixture.nativeElement.querySelectorAll('#line-list .route-name') as NodeListOf<HTMLElement>;
     expect(Array.from(options, option => option.textContent?.trim())).toEqual([
       'Alpha - 2',
       'Alpha - 10',
@@ -125,7 +126,7 @@ describe('MapComponent', () => {
     search.value = 'ALPHA 10';
     search.dispatchEvent(new Event('input'));
     fixture.detectChanges();
-    let options = fixture.nativeElement.querySelectorAll('#line-select option') as NodeListOf<HTMLOptionElement>;
+    let options = fixture.nativeElement.querySelectorAll('#line-list .route-name') as NodeListOf<HTMLElement>;
     expect(Array.from(options, option => option.textContent?.trim())).toEqual(['Alpha - 10']);
 
     search.value = '';
@@ -138,7 +139,7 @@ describe('MapComponent', () => {
     modeFilter.dispatchEvent(new Event('change'));
     fixture.detectChanges();
 
-    options = fixture.nativeElement.querySelectorAll('#line-select option') as NodeListOf<HTMLOptionElement>;
+    options = fixture.nativeElement.querySelectorAll('#line-list .route-name') as NodeListOf<HTMLElement>;
     expect(Array.from(options, option => option.textContent?.trim())).toEqual(['Alpha - 2', 'Alpha - 10']);
     expect(Array.from(modeFilter.options).map(option => option.textContent?.trim())).toEqual(['All modes', 'Rail', 'Bus']);
 
@@ -156,7 +157,7 @@ describe('MapComponent', () => {
     expect(search.value).toBe('');
     expect(agencyFilter.value).toBe('');
     expect(modeFilter.value).toBe('');
-    expect(fixture.nativeElement.querySelectorAll('#line-select option')).toHaveLength(3);
+    expect(fixture.nativeElement.querySelectorAll('#line-list .route-name')).toHaveLength(3);
   });
 
   it('selects a clicked stop and keeps its station tab available while selected', () => {
@@ -190,6 +191,44 @@ describe('MapComponent', () => {
     stationTab.click();
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('[aria-label="Selected station details"]')).toBeTruthy();
+  });
+
+  it('keeps the Measure tab open when a stop is clicked there, to measure from it', () => {
+    const stop = { stopId: 'station-1', stopName: 'Central Station', latitude: 57.7, longitude: 12.0 };
+    const stopFeature = new Feature({ stop });
+    vi.spyOn(TestBed.inject(MapService), 'getMap').mockReturnValue({
+      forEachFeatureAtPixel: (_pixel: unknown, callback: (feature: Feature) => unknown) => callback(stopFeature)
+    } as never);
+    const controls = TestBed.inject(ControlsPanelService);
+    controls.show('measure');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('#station-radius')).toBeNull();
+
+    component.onMapSingleClick({ pixel: [1, 1], coordinate: [100, 200] } as never);
+    TestBed.tick();
+    fixture.detectChanges();
+
+    expect(controls.activeMenu()).toBe('measure');
+    const distances = fixture.nativeElement.querySelector('[aria-labelledby="station-distances-heading"]') as HTMLElement;
+    expect(distances.textContent).toContain('Central Station');
+    expect(fixture.nativeElement.querySelector('#station-radius')).toBeTruthy();
+  });
+
+  it('starts the reachable stations search from the selected station', () => {
+    const stop = { stopId: 'station-1', stopName: 'Central Station', latitude: 57.7, longitude: 12.0 };
+    TestBed.inject(StationTimetableService).select(stop);
+    const controls = TestBed.inject(ControlsPanelService);
+    controls.show('station');
+    fixture.detectChanges();
+
+    const button = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
+      .find(candidate => candidate.textContent?.trim() === 'Reachable from here');
+    button?.click();
+    fixture.detectChanges();
+
+    expect(controls.activeMenu()).toBe('reachability');
+    expect(TestBed.inject(ReachabilityService).origin()?.stopId).toBe('station-1');
+    expect(fixture.nativeElement.querySelector('#reachability-heading')).toBeTruthy();
   });
 
   it('loads and chronologically displays station times with trip short names', async () => {
@@ -356,11 +395,9 @@ describe('MapComponent', () => {
     const menuButtons = fixture.nativeElement.querySelectorAll('.menu-switcher button') as NodeListOf<HTMLButtonElement>;
     Array.from(menuButtons).find(button => button.getAttribute('aria-label') === 'Vehicles')?.click();
     fixture.detectChanges();
-    const vehicleSelect = fixture.nativeElement.querySelector('#vehicle-select') as HTMLSelectElement;
-    expect(vehicleSelect).toBeTruthy();
-    expect(vehicleSelect.options[0].textContent?.trim()).toContain('10 · Alpha');
-    vehicleSelect.options[0].selected = true;
-    vehicleSelect.dispatchEvent(new Event('change'));
+    const vehicleRows = fixture.nativeElement.querySelectorAll('#vehicle-list label') as NodeListOf<HTMLLabelElement>;
+    expect(vehicleRows[0].textContent?.trim()).toContain('10 · Alpha');
+    vehicleRows[0].querySelector('input')!.click();
     await vi.waitFor(() => expect(setVehicleRouteShape).toHaveBeenCalledWith(shapes));
 
     expect(focus).toHaveBeenCalledWith(vehicle.longitude, vehicle.latitude);
@@ -368,7 +405,7 @@ describe('MapComponent', () => {
     expect(TestBed.inject(VehicleSelectionService).selectedVehicles()).toEqual([vehicle]);
   });
 
-  it('keeps multiple vehicle options selected together', () => {
+  it('keeps several vehicles selected together', () => {
     const firstVehicle = { id: 'vehicle-1', tripId: 'trip-1', routeId: 'alpha-10', latitude: 57.7, longitude: 12 };
     const secondVehicle = { id: 'vehicle-2', tripId: 'trip-2', routeId: 'beta-a', latitude: 57.8, longitude: 12.1 };
     TestBed.inject(TransitDataService).vehiclePositions.set([firstVehicle, secondVehicle]);
@@ -381,15 +418,41 @@ describe('MapComponent', () => {
     Array.from(menuButtons).find(button => button.getAttribute('aria-label') === 'Vehicles')?.click();
     fixture.detectChanges();
 
-    const vehicleSelect = fixture.nativeElement.querySelector('#vehicle-select') as HTMLSelectElement;
-    expect(vehicleSelect.multiple).toBe(true);
-    vehicleSelect.options[0].selected = true;
-    vehicleSelect.options[1].selected = true;
-    vehicleSelect.dispatchEvent(new Event('change'));
+    const checkboxes = () => fixture.nativeElement.querySelectorAll('#vehicle-list input') as NodeListOf<HTMLInputElement>;
+    checkboxes()[0].click();
+    fixture.detectChanges();
+    checkboxes()[1].click();
     fixture.detectChanges();
 
     expect(TestBed.inject(VehicleSelectionService).selectedVehicles()).toHaveLength(2);
-    expect(Array.from(vehicleSelect.selectedOptions)).toHaveLength(2);
+    expect(Array.from(checkboxes()).filter(checkbox => checkbox.checked)).toHaveLength(2);
+  });
+
+  it('narrows the vehicle list by search and to the selected routes', () => {
+    const firstVehicle = { id: 'vehicle-1', tripId: 'trip-1', routeId: 'alpha-10', latitude: 57.7, longitude: 12 };
+    const secondVehicle = { id: 'vehicle-2', tripId: 'trip-2', routeId: 'beta-a', latitude: 57.8, longitude: 12.1 };
+    TestBed.inject(TransitDataService).vehiclePositions.set([firstVehicle, secondVehicle]);
+    TestBed.inject(ControlsPanelService).show('vehicles');
+    fixture.detectChanges();
+    const rows = () => Array.from(fixture.nativeElement.querySelectorAll('#vehicle-list label') as NodeListOf<HTMLElement>,
+      row => row.textContent?.trim());
+    expect(rows()).toHaveLength(2);
+
+    const search = fixture.nativeElement.querySelector('#vehicle-search') as HTMLInputElement;
+    search.value = 'vehicle-2';
+    search.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(rows()).toEqual([expect.stringContaining('vehicle-2')]);
+
+    search.value = '';
+    search.dispatchEvent(new Event('input'));
+    TestBed.inject(RouteSelectionService).select(['alpha-10']);
+    fixture.detectChanges();
+    const onRoutes = Array.from(fixture.nativeElement.querySelectorAll('.check-field input') as NodeListOf<HTMLInputElement>)
+      .find(input => input.closest('label')?.textContent?.includes('Only on the routes'))!;
+    onRoutes.click();
+    fixture.detectChanges();
+    expect(rows()).toEqual([expect.stringContaining('vehicle-1')]);
   });
 
   it('resolves a route short name for a vehicle that only has a trip ID', async () => {
@@ -411,8 +474,8 @@ describe('MapComponent', () => {
     expect(setVehicleTripRouteIds).toHaveBeenCalledWith(new Map([['trip-only', 'alpha-10']]));
     TestBed.inject(ControlsPanelService).show('vehicles');
     fixture.detectChanges();
-    const option = fixture.nativeElement.querySelector('#vehicle-select option') as HTMLOptionElement;
-    expect(option.textContent?.trim()).toBe('10 · Alpha · trip-only-vehicle');
+    const row = fixture.nativeElement.querySelector('#vehicle-list .vehicle-label') as HTMLElement;
+    expect(row.textContent?.trim()).toBe('10 · Alpha · trip-only-vehicle');
   });
 
   it('opens the vehicle tab and draws its route when a vehicle marker is clicked', async () => {

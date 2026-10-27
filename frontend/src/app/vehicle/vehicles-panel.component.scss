@@ -1,3 +1,40 @@
 :host {
   display: contents;
 }
+
+.vehicle-list {
+  max-height: 40dvh;
+  // Room for the checkbox focus outline, which would otherwise be clipped by the scroll container
+  margin: 0 -6px;
+  padding: 0 6px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  list-style: none;
+
+  label {
+    display: flex;
+    min-height: 36px;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid var(--control-border);
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  input {
+    flex: none;
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    accent-color: var(--control-accent);
+  }
+
+  .status-text {
+    padding-block: 6px;
+  }
+}
+
+.vehicle-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

@@ -1,10 +1,5 @@
 <section class="menu-content" aria-label="Transit line visibility">
-	<div class="panel-actions">
-		<button type="button" (click)="selectShown()">Select shown</button>
-		<button type="button" (click)="selection.selectRoutesInView()">Routes in view</button>
-		<button type="button" (click)="selectNone()">None</button>
-	</div>
-	<div class="route-filters" aria-label="Filter routes">
+	<div class="route-filters" role="group" aria-label="Filter routes">
 		<div class="control-field">
 			<label for="route-search">Search routes</label>
 			<input
@@ -35,27 +30,36 @@
 				</select>
 			</label>
 		</div>
-		<div class="panel-actions">
-			<button type="button" [disabled]="filters.activeFilterCount() === 0" (click)="filters.clear()">
-				Clear filters
-			</button>
+		<div class="filter-footer">
+			<label class="check-field">
+				<input type="checkbox" [checked]="chosenOnly()" (change)="setChosenOnly($event)">
+				Only selected routes
+			</label>
+			<div class="panel-actions">
+				<button type="button" [disabled]="filters.activeFilterCount() === 0 && !chosenOnly()" (click)="clearFilters()">
+					Clear filters
+				</button>
+			</div>
 		</div>
 	</div>
 	<div class="panel-heading">
-		<label for="line-select">Routes</label>
-		<span>{{ selection.selectedRouteIds().length }} selected · {{ filters.filteredRoutes().length }} shown</span>
+		<h3 id="routes-heading">Routes</h3>
+		<span aria-live="polite">{{ selection.selectedRouteIds().length }} selected · {{ shown().length }} shown</span>
 	</div>
-	<select
-		id="line-select"
-		multiple
-		size="13"
-		aria-label="Select transit lines to display"
-		(change)="onRoutesChange($event)"
-	>
-		@for (route of filters.filteredRoutes(); track route.routeId) {
-			<option [value]="route.routeId" [selected]="selection.selectedRouteIds().includes(route.routeId ?? '')">
-				{{ routeListLabel(route) }}
-			</option>
-		}
-	</select>
+	<div class="panel-actions">
+		<button type="button" (click)="selectShown()">Select shown</button>
+		<button type="button" (click)="selection.selectRoutesInView()">Routes in view</button>
+		<button type="button" (click)="selectNone()">None</button>
+	</div>
+	<app-route-checklist
+		listId="line-list"
+		[routes]="listed()"
+		[chosen]="chosen()"
+		label="Transit lines to show on the map"
+		emptyText="No routes match the filters."
+		(toggled)="toggle($event.routeId, $event.chosen)"
+	/>
+	@if (shown().length > listed().length) {
+		<p class="status-text">{{ shown().length - listed().length }} more; search or filter to narrow the list.</p>
+	}
 </section>

@@ -22,8 +22,21 @@ export class DistancesPanelComponent {
   protected readonly formatDistance = formatDistance;
   protected readonly layerLabels: ReadonlyMap<MapLayerId, string> = new Map(MAP_LAYERS.map(layer => [layer.id, layer.label]));
 
+  protected waitingText(): string {
+    switch (this.closest.positionSource()) {
+      case 'gps': return 'Waiting for a GPS position...';
+      case 'center': return 'Waiting for the map...';
+      case 'mouse': return 'Move the mouse over the map.';
+    }
+  }
+
   protected setPositionSource(event: Event): void {
     this.closest.positionSource.set((event.target as HTMLSelectElement).value as PositionSource);
+  }
+
+  /** A circle around each closest place, through the position. */
+  protected setShowCircles(event: Event): void {
+    this.closest.showCircles.set((event.target as HTMLInputElement).checked);
   }
 
   protected gpsErrorMessage(error: GeolocationError): string {

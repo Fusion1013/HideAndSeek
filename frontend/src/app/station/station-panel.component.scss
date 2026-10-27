@@ -90,24 +90,6 @@
   }
 }
 
-.station-measure-points {
-  display: grid;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-
-  li {
-    display: grid;
-    grid-template-columns: 1fr auto auto;
-    align-items: center;
-    gap: 8px;
-    min-height: 42px;
-    border-bottom: 1px solid var(--control-border);
-    font-size: 12px;
-  }
-}
-
-.station-measure-points button,
 .station-heading button {
   min-height: 36px;
   padding: 6px 8px;

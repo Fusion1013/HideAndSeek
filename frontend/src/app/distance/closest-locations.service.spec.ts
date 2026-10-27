@@ -1,9 +1,11 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import Feature from 'ol/Feature';
-import { LineString } from 'ol/geom';
+import { LineString, Polygon } from 'ol/geom';
 import type { Geometry } from 'ol/geom';
+import type VectorLayer from 'ol/layer/Vector';
 import type OlMap from 'ol/Map';
+import { toLonLat } from 'ol/proj';
 import { fromLonLat } from 'ol/proj';
 import View from 'ol/View';
 import { ClosestLocationsService } from './closest-locations.service';
@@ -76,6 +78,46 @@ describe('ClosestLocationsService', () => {
     expect(line.latitude).toBeCloseTo(57.71, 3);
     expect(line.distanceMeters).toBeGreaterThan(1000);   // 0.01° of latitude is about 1.1 km
     expect(line.distanceMeters).toBeLessThan(1200);
+  });
+
+  it('draws a circle around the closest place, through the position, while asked to', () => {
+    const service = TestBed.inject(ClosestLocationsService);
+    const addLayer = vi.fn();
+    service.initialize({ addLayer, on: vi.fn(), getView: () => new View() } as unknown as OlMap);
+    const source = (addLayer.mock.calls[0][0] as VectorLayer).getSource()!;
+    const circles = () => source.getFeatures().filter(feature => feature.get('kind') === 'circle');
+    TestBed.inject(ControlsPanelService).select('distances');
+    service.positionSource.set('gps');
+    position.set({ longitude: 12, latitude: 57.7, accuracyMeters: 5, timestamp: 0 });
+    visibleLayerIds.set(new Set<MapLayerId>(['zoos']));
+    TestBed.tick();
+    expect(circles()).toHaveLength(0);
+
+    service.showCircles.set(true);
+    TestBed.tick();
+    const [circle] = circles();
+    const ring = (circle.getGeometry() as Polygon).getCoordinates()[0].map(coordinate => toLonLat(coordinate));
+    // Centred on the near zoo (12.01, 57.7); its edge reaches the position at (12, 57.7)
+    const west = ring.reduce((min, point) => point[0] < min[0] ? point : min);
+    expect(west[0]).toBeCloseTo(12, 3);
+    expect(west[1]).toBeCloseTo(57.7, 3);
+
+    service.showCircles.set(false);
+    TestBed.tick();
+    expect(circles()).toHaveLength(0);
+  });
+
+  it('measures from the centre of the map, following it as the map moves', () => {
+    const service = TestBed.inject(ClosestLocationsService);
+    const view = new View({ center: fromLonLat([13, 58]), zoom: 10 });
+    service.initialize({ addLayer: vi.fn(), on: vi.fn(), getView: () => view } as unknown as OlMap);
+    TestBed.inject(ControlsPanelService).select('distances');
+    service.positionSource.set('center');
+    visibleLayerIds.set(new Set<MapLayerId>(['zoos']));
+    expect(service.results().map(result => [result.name, Math.round(result.distanceMeters)])).toEqual([['Far zoo', 0]]);
+
+    view.setCenter(fromLonLat([12, 57.7]));
+    expect(service.results().map(result => result.name)).toEqual(['Near zoo']);
   });
 
   it('computes nothing while inactive', () => {

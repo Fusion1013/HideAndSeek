@@ -1,11 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, DOCUMENT, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DOCUMENT, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import type { PlayerDTO } from '../api/generated';
 import type { GeolocationError } from '../position/geolocation.service';
 import { ControlsPanelService } from '../controls/controls-panel.service';
 import { injectFocusAfterRender } from '../shared/focus';
-import { formatElapsed } from '../shared/format';
+import { GameClock } from './game-clock.service';
 import { GameMapService } from './game-map.service';
 import { clockTime, GameRecapComponent } from './game-recap.component';
 import { GameRole, GameSessionService } from './game-session.service';
@@ -64,6 +64,18 @@ const ROLE_LABELS: Record<GameRole, string> = { SEEKER: 'Seeker', HIDER: 'Hider'
         </p>
       </section>
 
+      <!-- What matters most in each phase comes first: inviting in the lobby, then the questions and the hunt -->
+      @if (game.status === 'LOBBY') {
+        <section class="panel-section" aria-labelledby="invite-heading">
+          <h3 id="invite-heading" class="panel-heading">Invite players</h3>
+          <p class="invite-code" aria-label="Invite code {{ spokenCode() }}">{{ game.inviteCode }}</p>
+          <div class="panel-actions">
+            <button type="button" (click)="copyInviteLink()">Copy invite link</button>
+            <span class="status-text" role="status">{{ copyStatus() }}</span>
+          </div>
+        </section>
+      }
+
       @if (session.me()?.role === 'HIDER' && session.pendingQuestion(); as question) {
         <section class="panel-section waiting-question" aria-labelledby="waiting-heading">
           <h3 id="waiting-heading" class="panel-heading">A question is waiting for your answer</h3>
@@ -74,15 +86,21 @@ const ROLE_LABELS: Record<GameRole, string> = { SEEKER: 'Seeker', HIDER: 'Hider'
         </section>
       }
 
-      @if (reporter.sharing()) {
-        <section class="panel-section" aria-labelledby="sharing-heading">
-          <h3 id="sharing-heading" class="panel-heading">Your position</h3>
-          @if (reporter.gpsError(); as gpsError) {
-            <p class="load-error" role="alert">{{ gpsErrorMessage(gpsError) }}</p>
-          } @else if (reporter.sendFailed()) {
-            <p class="load-error" role="alert">Your position could not be sent. Trying again…</p>
+      @if (game.status === 'SEEKING' && (session.me()?.role === 'SEEKER' || session.isHost())) {
+        <section class="panel-section" aria-labelledby="found-heading">
+          <h3 id="found-heading" class="panel-heading">Found the hiders?</h3>
+          @if (confirmingFound()) {
+            <div class="confirm-box found-confirm" role="group" aria-labelledby="found-question">
+              <p id="found-question">Did you find the hiders? This stops the clock and ends the game for everyone.</p>
+              <div class="panel-actions">
+                <button type="button" class="primary-action" [disabled]="session.busy()" (click)="foundHiders()">We found them</button>
+                <button id="found-keep" type="button" (click)="askFound(false)">Not yet</button>
+              </div>
+            </div>
           } @else {
-            <p class="status-text">{{ reporter.hasPosition() ? sharingText() : 'Finding your position…' }}</p>
+            <div class="panel-actions">
+              <button id="found-ask" type="button" [disabled]="session.busy()" (click)="askFound(true)">We found them…</button>
+            </div>
           }
         </section>
       }
@@ -98,14 +116,16 @@ const ROLE_LABELS: Record<GameRole, string> = { SEEKER: 'Seeker', HIDER: 'Hider'
         </section>
       }
 
-      @if (game.status === 'LOBBY') {
-        <section class="panel-section" aria-labelledby="invite-heading">
-          <h3 id="invite-heading" class="panel-heading">Invite players</h3>
-          <p class="invite-code" aria-label="Invite code {{ spokenCode() }}">{{ game.inviteCode }}</p>
-          <div class="panel-actions">
-            <button type="button" (click)="copyInviteLink()">Copy invite link</button>
-            <span class="status-text" role="status">{{ copyStatus() }}</span>
-          </div>
+      @if (reporter.sharing()) {
+        <section class="panel-section" aria-labelledby="sharing-heading">
+          <h3 id="sharing-heading" class="panel-heading">Your position</h3>
+          @if (reporter.gpsError(); as gpsError) {
+            <p class="load-error" role="alert">{{ gpsErrorMessage(gpsError) }}</p>
+          } @else if (reporter.sendFailed()) {
+            <p class="load-error" role="alert">Your position could not be sent. Trying again…</p>
+          } @else {
+            <p class="status-text">{{ reporter.hasPosition() ? sharingText() : 'Finding your position…' }}</p>
+          }
         </section>
       }
 
@@ -141,27 +161,6 @@ const ROLE_LABELS: Record<GameRole, string> = { SEEKER: 'Seeker', HIDER: 'Hider'
         <p class="load-error" role="alert">{{ session.error() }}</p>
       }
 
-      @if (game.status === 'SEEKING' && (session.me()?.role === 'SEEKER' || session.isHost())) {
-        <section class="panel-section" aria-labelledby="found-heading">
-          <h3 id="found-heading" class="panel-heading">Found the hiders?</h3>
-          @if (confirmingFound()) {
-            <div class="confirm-box found-confirm" role="group" aria-labelledby="found-question">
-              <p id="found-question">Did you find the hiders? This stops the clock and ends the game for everyone.</p>
-              <div class="panel-actions">
-                <button type="button" class="primary-action" [disabled]="session.busy()" (click)="foundHiders()">We found them</button>
-                <button id="found-keep" type="button" (click)="askFound(false)">Not yet</button>
-              </div>
-            </div>
-          } @else {
-            <div class="panel-actions">
-              <button id="found-ask" type="button" [disabled]="session.busy()" (click)="askFound(true)">We found them…</button>
-            </div>
-          }
-        </section>
-      }
-
-      <p class="status-text"><a routerLink="/join">All your games</a></p>
-
       @if (session.isHost()) {
         <section class="panel-section" aria-label="Host controls">
           @if (game.status === 'LOBBY') {
@@ -194,6 +193,8 @@ const ROLE_LABELS: Record<GameRole, string> = { SEEKER: 'Seeker', HIDER: 'Hider'
           }
         </section>
       }
+
+      <p class="status-text"><a routerLink="/join">All your games</a></p>
       }
     }
   `,
@@ -212,8 +213,9 @@ export class GameViewComponent {
   protected readonly confirmingEnd = signal(false);
   protected readonly confirmingFound = signal(false);
   protected readonly copyStatus = signal('');
-  /** The device's clock, ticking each second for the countdown. */
-  private readonly now = signal(Date.now());
+  private readonly clock = inject(GameClock);
+  protected readonly countdown = this.clock.countdown;
+  protected readonly seekingTime = this.clock.seekingTime;
 
   protected readonly phaseTitle = computed(() => {
     switch (this.session.game()?.status) {
@@ -241,20 +243,6 @@ export class GameViewComponent {
     return '';
   });
 
-  private readonly remainingMs = computed(() => {
-    const endsAt = this.session.game()?.hidingEndsAt;
-    return endsAt ? Math.max(0, Date.parse(endsAt) - this.session.serverNow(this.now())) : 0;
-  });
-
-  /** The hiding time left: "12:05", or "1:02:05" for over an hour. Rounded up, so it reaches 0:00 as time runs out. */
-  protected readonly countdown = computed(() => formatElapsed(Math.ceil(this.remainingMs() / 1000) * 1000));
-
-  /** How long the seekers have been seeking, counting up from the moment they set off. */
-  protected readonly seekingTime = computed(() => {
-    const startedAt = this.session.game()?.seekingStartedAt;
-    return startedAt ? formatElapsed(this.session.serverNow(this.now()) - Date.parse(startedAt)) : '';
-  });
-
   protected readonly hidingEndsAtLabel = computed(() => {
     const endsAt = this.session.game()?.hidingEndsAt;
     return endsAt ? new Date(endsAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
@@ -277,11 +265,6 @@ export class GameViewComponent {
 
   /** The code letter by letter, so screen readers do not try to say it as a word. */
   protected readonly spokenCode = computed(() => (this.session.game()?.inviteCode ?? '').split('').join(' '));
-
-  constructor() {
-    const ticker = setInterval(() => this.now.set(Date.now()), 1000);
-    inject(DestroyRef).onDestroy(() => clearInterval(ticker));
-  }
 
   protected gpsErrorMessage(error: GeolocationError): string {
     switch (error) {

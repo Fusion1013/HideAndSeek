@@ -1,6 +1,7 @@
 import { computed, effect, inject, Injectable, signal } from '@angular/core';
 import Feature, { FeatureLike } from 'ol/Feature';
 import { Geometry, LineString, Point } from 'ol/geom';
+import { circular } from 'ol/geom/Polygon';
 import VectorLayer from 'ol/layer/Vector';
 import type MapBrowserEvent from 'ol/MapBrowserEvent';
 import OlMap from 'ol/Map';
@@ -17,7 +18,8 @@ import type { MapLayerId } from '../layer/layer.service';
 import { GeolocationService } from '../position/geolocation.service';
 import { formatDistance } from '../shared/format';
 
-export type PositionSource = 'mouse' | 'gps';
+/** Where distances are measured from: the mouse, the GPS position, or the centre of the map on screen. */
+export type PositionSource = 'mouse' | 'gps' | 'center';
 
 export interface ClosestLocation {
   layerId: MapLayerId;
@@ -31,7 +33,7 @@ export interface ClosestLocation {
   distanceMeters: number;
 }
 
-type LonLat = readonly [longitude: number, latitude: number];
+export type LonLat = readonly [longitude: number, latitude: number];
 
 /**
  * For each visible measurable layer, finds the place closest to the user's position and draws a line to it.
@@ -53,6 +55,7 @@ export class ClosestLocationsService {
   private map: OlMap | null = null;
 
   private readonly mouseLonLat = signal<LonLat | null>(null);
+  private readonly centerLonLat = signal<LonLat | null>(null);
   /** Bumped when a point layer loads or drops features, so results are recomputed. */
   private readonly featuresVersion = signal(0);
 
@@ -62,9 +65,15 @@ export class ClosestLocationsService {
    */
   readonly active = computed(() => this.controls.activeMenu() === 'distances');
   readonly positionSource = signal<PositionSource>('mouse');
+  /**
+   * Also draws, around each closest place, the circle through the position: every point on it is as far from
+   * that place as the player is.
+   */
+  readonly showCircles = signal(false);
 
   readonly origin = computed<LonLat | null>(() => {
     if (this.positionSource() === 'mouse') return this.mouseLonLat();
+    if (this.positionSource() === 'center') return this.centerLonLat();
     const position = this.geolocation.position();
     return position ? [position.longitude, position.latitude] : null;
   });
@@ -104,8 +113,21 @@ export class ClosestLocationsService {
     effect(() => {
       const active = this.active();
       this.layer.setVisible(active);
-      this.render(active ? this.origin() : null, this.results());
+      this.render(active ? this.origin() : null, this.results(), this.showCircles());
     });
+  }
+
+  /**
+   * The place on a layer closest to a position, whichever tab is open; null while the layer is off or none of
+   * its places are loaded. Recomputed as the layer's places load.
+   */
+  nearest(layerId: MapLayerId, origin: LonLat): ClosestLocation | null {
+    this.featuresVersion();
+    if (!this.layerService.visibleLayerIds().has(layerId)) return null;
+    const layer = this.layerService.getDistanceLayers().get(layerId);
+    if (!layer) return null;
+    const projection = this.map?.getView().getProjection() ?? 'EPSG:3857';
+    return findClosest(layerId, layer.color, layer.getFeatures(), origin, projection);
   }
 
   initialize(map: OlMap): void {
@@ -113,6 +135,10 @@ export class ClosestLocationsService {
     this.map = map;
     map.addLayer(this.layer);
     map.on('pointermove', this.handlePointerMove);
+    // Followed while the map is dragged or zoomed, not only once it settles
+    const view = map.getView();
+    view.on('change:center', this.updateCenter);
+    this.updateCenter();
     for (const layer of this.layerService.getDistanceLayers().values()) {
       layer.onFeaturesChange(() => this.featuresVersion.update(version => version + 1));
     }
@@ -124,7 +150,15 @@ export class ClosestLocationsService {
     this.mouseLonLat.set([longitude, latitude]);
   };
 
-  private render(origin: LonLat | null, results: readonly ClosestLocation[]): void {
+  private readonly updateCenter = (): void => {
+    const view = this.map?.getView();
+    const center = view?.getCenter();
+    if (!view || !center) return;
+    const [longitude, latitude] = toLonLat(center, view.getProjection());
+    this.centerLonLat.set([longitude, latitude]);
+  };
+
+  private render(origin: LonLat | null, results: readonly ClosestLocation[], circles: boolean): void {
     this.source.clear(true);
     if (!origin || !this.map) return;
 
@@ -136,6 +170,14 @@ export class ClosestLocationsService {
       color: result.color,
       label: formatDistance(result.distanceMeters)
     }));
+    if (circles) {
+      // Made on the sphere, so the edge passes through the position wherever on the map it is
+      features.push(...results.map(result => new Feature({
+        geometry: circular([result.longitude, result.latitude], result.distanceMeters, 128).transform('EPSG:4326', projection),
+        kind: 'circle',
+        color: result.color
+      })));
+    }
     features.push(new Feature({ geometry: new Point(originCoordinate), kind: 'origin' }));
     this.source.addFeatures(features);
   }
@@ -150,8 +192,11 @@ export class ClosestLocationsService {
   });
   private readonly lineStyles = new Map<string, Style>();
 
+  private readonly circleStyles = new Map<string, Style>();
+
   private getStyle(feature: FeatureLike): Style {
     if (feature.get('kind') === 'origin') return this.originStyle;
+    if (feature.get('kind') === 'circle') return this.circleStyle(String(feature.get('color') ?? DEFAULT_LINE_COLOR));
 
     const label = String(feature.get('label') ?? '');
     const color = String(feature.get('color') ?? DEFAULT_LINE_COLOR);
@@ -173,9 +218,29 @@ export class ClosestLocationsService {
     }
     return style;
   }
+
+  private circleStyle(color: string): Style {
+    let style = this.circleStyles.get(color);
+    if (!style) {
+      style = new Style({
+        stroke: new Stroke({ color, width: 2 }),
+        fill: new Fill({ color: withAlpha(color, 0.08) }),
+        zIndex: 0
+      });
+      this.circleStyles.set(color, style);
+    }
+    return style;
+  }
 }
 
 const DEFAULT_LINE_COLOR = '#172b32';
+
+/** A layer's color as a faint fill: "#rrggbb" with an alpha, other colors left as they are. */
+function withAlpha(color: string, alpha: number): string {
+  if (!/^#[0-9a-f]{6}$/i.test(color)) return color;
+  const channels = [1, 3, 5].map(index => parseInt(color.slice(index, index + 2), 16));
+  return `rgba(${channels.join(', ')}, ${alpha})`;
+}
 
 function findClosest(
   layerId: MapLayerId,

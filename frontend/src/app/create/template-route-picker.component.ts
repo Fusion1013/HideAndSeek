@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 
-import { routeColor } from '../layer/route-shapes-layer.service';
 import { isNonEmptyString } from '../shared/guards';
 import { RouteCatalogService } from '../transit/route-catalog.service';
+import { RouteChecklistComponent } from '../transit/route-checklist.component';
 import { compareText, normalizeSearchText, routeTypeLabel } from '../transit/route-labels';
 import { TemplateEditorService } from './template-editor.service';
 
@@ -15,32 +15,21 @@ interface PickableRoute {
   available: boolean;
   /** False for a chosen route that serves no stop inside the area (e.g. the area shrank). */
   inArea: boolean;
+  /** Why a chosen route may not count: no longer in the timetable, or outside the area. */
+  note: string | undefined;
   searchText: string;
 }
 
 /** The routes that count in a game from this template: those serving stops inside the area, to tick. */
 @Component({
   selector: 'app-template-route-picker',
+  imports: [RouteChecklistComponent],
   template: `
     @if (!editor.canEdit()) {
       <!-- Read-only: just the chosen routes, as a list that can be scrolled by keyboard -->
       <section class="panel-section" aria-labelledby="chosen-routes-heading">
         <h3 id="chosen-routes-heading" class="panel-heading">Routes <span>{{ editor.routeIds().length }} chosen</span></h3>
-        <ul class="route-checklist read-only" aria-labelledby="chosen-routes-heading" tabindex="0">
-          @for (route of chosenRoutes(); track route.routeId) {
-            <li>
-              <span class="layer-swatch" [style.background-color]="color(route.routeId)" aria-hidden="true"></span>
-              <span class="route-name">
-                {{ route.label }}
-                @if (!route.available) {
-                  <span class="route-note">no longer in the timetable</span>
-                }
-              </span>
-            </li>
-          } @empty {
-            <li class="status-text">No routes chosen.</li>
-          }
-        </ul>
+        <app-route-checklist [routes]="chosenRoutes()" label="Chosen routes" [readOnly]="true" emptyText="No routes chosen." />
       </section>
     } @else {
     <fieldset class="panel-section" [disabled]="editor.busy()">
@@ -84,24 +73,8 @@ interface PickableRoute {
         }
 
         <p class="status-text" aria-live="polite">{{ shown().length }} shown</p>
-        <ul class="route-checklist" aria-label="Routes in the play area">
-          @for (route of shown(); track route.routeId) {
-            <li>
-              <label>
-                <input type="checkbox" [checked]="chosen().has(route.routeId)" (change)="toggle(route.routeId, $event)">
-                <span class="layer-swatch" [style.background-color]="color(route.routeId)" aria-hidden="true"></span>
-                <span class="route-name">
-                  {{ route.label }}
-                  @if (!route.available) {
-                    <span class="route-note">no longer in the timetable</span>
-                  } @else if (!route.inArea) {
-                    <span class="route-note">outside the area</span>
-                  }
-                </span>
-              </label>
-            </li>
-          }
-        </ul>
+        <app-route-checklist [routes]="shown()" [chosen]="chosen()" label="Routes in the play area"
+          (toggled)="toggle($event.routeId, $event.chosen)" />
       }
     </fieldset>
     }
@@ -118,7 +91,6 @@ export class TemplateRoutePickerComponent {
   protected readonly chosenOnly = signal(false);
 
   protected readonly routeTypeLabel = routeTypeLabel;
-  protected readonly color = routeColor;
 
   protected readonly chosen = computed<ReadonlySet<string>>(() => new Set(this.editor.routeIds()));
 
@@ -143,6 +115,7 @@ export class TemplateRoutePickerComponent {
         routeType,
         available: route !== undefined,
         inArea: inArea.has(routeId),
+        note: route === undefined ? 'no longer in the timetable' : inArea.has(routeId) ? undefined : 'outside the area',
         searchText: normalizeSearchText([label, route?.routeLongName, routeId, routeTypeLabel(routeType)]
           .filter(isNonEmptyString).join(' '))
       });
@@ -166,8 +139,7 @@ export class TemplateRoutePickerComponent {
       && (!this.chosenOnly() || chosen.has(route.routeId)));
   });
 
-  protected toggle(routeId: string, event: Event): void {
-    const checked = (event.target as HTMLInputElement).checked;
+  protected toggle(routeId: string, checked: boolean): void {
     const routeIds = this.editor.routeIds();
     this.editor.setRouteIds(checked ? [...routeIds, routeId] : routeIds.filter(id => id !== routeId));
   }

@@ -1,6 +1,12 @@
 <div class="map-shell">
 	<div #mapElement class="map"></div>
 
+	@if (mapOverlay.status(); as status) {
+		<div class="map-status">
+			<ng-container *ngComponentOutlet="status.component; injector: status.injector" />
+		</div>
+	}
+
 	@if (mapOverlay.overlay(); as overlay) {
 		<div class="map-overlay" [class.beside-panel]="controls.open()">
 			<ng-container *ngComponentOutlet="overlay.component; injector: overlay.injector" />

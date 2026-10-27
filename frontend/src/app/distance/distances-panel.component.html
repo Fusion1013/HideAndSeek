@@ -4,7 +4,12 @@
 		<select id="distance-position-source" [value]="closest.positionSource()" (change)="setPositionSource($event)">
 			<option value="mouse">Mouse</option>
 			<option value="gps">GPS</option>
+			<option value="center">Screen center</option>
 		</select>
+	</label>
+	<label class="check-field">
+		<input type="checkbox" [checked]="closest.showCircles()" (change)="setShowCircles($event)">
+		Display circle
 	</label>
 	<h3 id="closest-locations-heading">Closest locations</h3>
 	@if (closest.openLayerIds().length === 0) {
@@ -16,7 +21,7 @@
 		<p class="status-text" role="alert">{{ gpsErrorMessage(error) }}</p>
 	} @else if (!closest.origin()) {
 		<p class="status-text" role="status">
-			{{ closest.positionSource() === 'gps' ? 'Waiting for a GPS position...' : 'Move the mouse over the map.' }}
+			{{ waitingText() }}
 		</p>
 	} @else if (closest.results().length === 0) {
 		<p class="status-text" role="status">Loading places...</p>

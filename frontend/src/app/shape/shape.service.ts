@@ -79,6 +79,9 @@ export class ShapeService {
   }
 
   public setDrawMode(mode: DrawMode): void {
+    // The drawing tools are made with the shapes layer, the first time either is needed
+    const map = this.mapService.getMap();
+    if (!this.layer && map) this.initialize(map);
     this.drawMode.set(mode);
     this.drawLine?.setActive(mode === 'line');
     this.drawCircle?.setActive(mode === 'circle');

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, effect, inject, input, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, effect, inject, input, signal, untracked } from '@angular/core';
 import { ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
@@ -12,7 +12,10 @@ import { MAX_TEMPLATE_NAME_LENGTH, TemplateEditorService } from './template-edit
 import { TemplateListComponent } from './template-list.component';
 import { TemplateRoutePickerComponent } from './template-route-picker.component';
 
-/** Create mode: setting up a game template, new or (with a template ID in the address) existing. */
+/**
+ * Create mode: setting up a game template, new or (with a template ID in the address) existing, in the Template
+ * tab; sharing a saved one as an image or a game in the Share tab; and the templates this browser made.
+ */
 @Component({
   selector: 'app-create-panel',
   imports: [
@@ -33,10 +36,6 @@ import { TemplateRoutePickerComponent } from './template-route-picker.component'
 
           <p class="status-text" role="status">{{ editor.notice() }}</p>
 
-          @if (!templateId()) {
-            <app-template-list />
-          }
-
           @if (editor.status() === 'loading') {
             <p class="status-text">Loading the template…</p>
           } @else if (editor.loadError() === 'not-found') {
@@ -46,10 +45,6 @@ import { TemplateRoutePickerComponent } from './template-route-picker.component'
           } @else {
             @if (!editor.canEdit()) {
               <p class="status-text">This template was created in another browser, so it can only be viewed here.</p>
-            }
-            <!-- One notice for everything that waits on a save: exporting and hosting below -->
-            @if (editor.dirty() && templateId()) {
-              <p class="unsaved-notice">Unsaved changes. Save them before exporting an image or creating a game.</p>
             }
 
             <div class="control-field">
@@ -71,12 +66,16 @@ import { TemplateRoutePickerComponent } from './template-route-picker.component'
             }
 
             @if (editor.canEdit()) {
-              <div class="panel-actions template-actions">
+              @if (editor.dirty() && templateId()) {
+                <p class="unsaved-notice">Unsaved changes. Exporting and creating a game use the saved template.</p>
+              }
+              <div class="panel-actions">
                 <button type="button" class="primary-action" [disabled]="editor.busy()" (click)="editor.save()">
                   {{ editor.status() === 'saving' ? 'Saving…' : templateId() ? 'Save changes' : 'Create template' }}
                 </button>
               </div>
 
+              <!-- Last, away from the everyday actions, as it cannot be undone -->
               @if (templateId()) {
                 @if (confirmingDelete()) {
                   <div class="confirm-box" role="group" aria-labelledby="delete-question">
@@ -95,20 +94,45 @@ import { TemplateRoutePickerComponent } from './template-route-picker.component'
                 }
               }
             }
-
-            @if (templateId(); as templateId) {
-              @if (editor.area(); as area) {
-                <section class="panel-section" aria-labelledby="export-heading-panel">
-                  <h3 id="export-heading-panel" class="panel-heading">Image of the play area</h3>
-                  <div class="panel-actions">
-                    <button type="button" [disabled]="editor.dirty()" (click)="exportDialog.open()">Export as PNG…</button>
-                  </div>
-                  <app-export-image-dialog #exportDialog [templateId]="templateId" [name]="editor.name.value" [area]="area" />
-                </section>
-              }
-              <app-host-game [templateId]="templateId" [disabled]="editor.dirty()" />
-            }
           }
+        </section>
+      }
+      @case ('share') {
+        <!-- Offered once the template is saved and loaded (see the constructor) -->
+        @if (templateId(); as templateId) {
+          <section class="menu-content" aria-labelledby="share-heading">
+            <div class="panel-heading">
+              <h3 id="share-heading">Share the template</h3>
+              <span>{{ editor.name.value }}</span>
+            </div>
+            @if (editor.dirty()) {
+              <div class="unsaved-notice">
+                <p>The template has unsaved changes. Save them first, so the image and the game get them.</p>
+                <div class="panel-actions">
+                  <button type="button" (click)="controls.select('template')">Back to the template</button>
+                </div>
+              </div>
+            }
+            @if (editor.area(); as area) {
+              <section class="panel-section" aria-labelledby="export-heading-panel">
+                <h3 id="export-heading-panel" class="panel-heading">Image of the play area</h3>
+                <div class="panel-actions">
+                  <button type="button" [disabled]="editor.dirty()" (click)="exportDialog.open()">Export as PNG…</button>
+                </div>
+                <app-export-image-dialog #exportDialog [templateId]="templateId" [name]="editor.name.value" [area]="area" />
+              </section>
+            }
+            <app-host-game [templateId]="templateId" [disabled]="editor.dirty()" />
+          </section>
+        }
+      }
+      @case ('templates') {
+        <section class="menu-content" aria-labelledby="template-list-heading">
+          <div class="panel-heading">
+            <h3 id="template-list-heading">Your templates</h3>
+            <a routerLink="/create" (click)="controls.select('template')">New template</a>
+          </div>
+          <app-template-list />
         </section>
       }
       @case ('layers') {
@@ -137,6 +161,11 @@ export default class CreatePanelComponent {
       const templateId = this.templateId();
       if (templateId) untracked(() => this.editor.load(templateId));
     });
+
+    // Sharing (an image, a game) needs a saved template that has loaded
+    effect(() => this.controls.setAvailable('share',
+      !!this.templateId() && this.editor.status() !== 'loading' && this.editor.loadError() === null));
+    inject(DestroyRef).onDestroy(() => this.controls.setAvailable('share', false));
   }
 
   /** Shows or hides the confirmation, moving focus to its safe choice or back to the button that opened it. */

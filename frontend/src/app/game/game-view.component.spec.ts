@@ -17,6 +17,7 @@ import { GameMapService } from './game-map.service';
 import { GameSessionService, RECONNECT_DELAYS_MS, STREAM_SILENCE_MS } from './game-session.service';
 import { LocationReporter } from './location-reporter.service';
 import { GameReplayService } from './replay/game-replay.service';
+import { GameClock } from './game-clock.service';
 import { GameViewComponent } from './game-view.component';
 import { expectNoAxeViolations } from '../../testing/axe';
 
@@ -98,6 +99,7 @@ describe('GameViewComponent', () => {
         provideRouter([]),
         // Provided by the game page in the app
         GameSessionService,
+        GameClock,
         GameReplayService,
         GameMapService,
         LocationReporter,

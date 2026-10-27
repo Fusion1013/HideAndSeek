@@ -63,7 +63,7 @@ export class MapComponent {
   }
 
   /**
-   * In Overview mode, a click on the map selects the stop or vehicle under it, or makes the stop the start of
+   * In Overview mode, a click on the map selects the stop or vehicle under it (staying on the Measure tab if open), or makes the stop the start of
    * the reachable stations search while one is being picked. Anywhere else it deselects
    * vehicles, or adds a distance point when the Station tab is waiting for one. The other modes handle their
    * own clicks.
@@ -78,7 +78,8 @@ export class MapComponent {
       if (this.reachability.pickStop(stop)) return;
       this.vehicleSelection.clear();
       this.stationTimetable.select(stop);
-      this.controls.show('station');
+      // Choosing the station to measure from keeps the Measure tab open
+      this.controls.show(this.controls.activeMenu() === 'measure' ? 'measure' : 'station');
       return;
     }
 

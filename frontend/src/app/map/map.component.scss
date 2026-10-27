@@ -29,6 +29,15 @@
   }
 }
 
+// A small status beside the map's zoom buttons, below the controls panel when it is open over it
+.map-status {
+  position: absolute;
+  z-index: 2;
+  top: 8px;
+  left: 48px;
+  max-width: calc(100% - 120px);
+}
+
 // Where there is room beside the open panel; on narrower screens the panel covers the overlay until closed
 @media (min-width: 900px) {
   .map-overlay.beside-panel {

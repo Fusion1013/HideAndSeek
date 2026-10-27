@@ -1,13 +1,13 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
 
-import { ReachabilityPanelComponent } from './reachability-panel.component';
+import { StationDistancesComponent } from '../station/station-distances.component';
 import { ShapeService } from './shape.service';
 import type { DrawMode } from './shape.service';
 
-/** The Measure tab: draw lines and circles on the map, and delete them; find the stations reachable in a time. */
+/** The Measure tab: draw lines and circles on the map, and delete them; measure from the selected station. */
 @Component({
   selector: 'app-measure-panel',
-  imports: [ReachabilityPanelComponent],
+  imports: [StationDistancesComponent],
   template: `
     <section class="menu-content measure-tools panel-section" aria-labelledby="measure-heading">
       <div class="panel-heading">
@@ -23,7 +23,9 @@ import type { DrawMode } from './shape.service';
         <button type="button" [disabled]="shapes.shapeCount() === 0" (click)="shapes.clearShapes()">Delete all</button>
       </div>
     </section>
-    <app-reachability-panel />
+    @if (stationDistances()) {
+      <app-station-distances />
+    }
   `,
   styles: `
     :host {
@@ -38,6 +40,9 @@ import type { DrawMode } from './shape.service';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MeasurePanelComponent {
+  /** Distances from a selected station; only Overview selects stations. */
+  readonly stationDistances = input(true);
+
   protected readonly shapes = inject(ShapeService);
 
   /** Picking the active mode again switches drawing off. */

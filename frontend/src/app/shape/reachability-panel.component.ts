@@ -8,7 +8,7 @@ import { ReachabilityRoutePickerComponent } from './reachability-route-picker.co
 import { ReachabilityRouteService } from './reachability-route.service';
 import { MAX_REACHABILITY_MINUTES, REACHABILITY_COLORS, ReachabilityService } from './reachability.service';
 
-/** Part of the Measure tab: which stations can be reached from a station, leaving at a time, within a duration. */
+/** The Reachable tab: which stations can be reached from a station, leaving at a time, within a duration. */
 @Component({
   selector: 'app-reachability-panel',
   imports: [ReactiveFormsModule, ReachabilityRoutePickerComponent, ReachabilityRouteCardComponent],

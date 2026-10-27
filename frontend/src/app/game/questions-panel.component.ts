@@ -6,6 +6,7 @@ import type { QuestionDTO } from '../api/generated';
 import { formatAge, formatApproximateDistance } from '../shared/format';
 import { injectFocusAfterRender } from '../shared/focus';
 import { GameSessionService } from './game-session.service';
+import { NearestPlaceComponent } from './nearest-place.component';
 import { answerText, QUESTION_CATEGORIES, QUESTION_KINDS, questionKind, questionText, QuestionType } from './questions';
 
 /**
@@ -14,7 +15,7 @@ import { answerText, QUESTION_CATEGORIES, QUESTION_KINDS, questionKind, question
  */
 @Component({
   selector: 'app-questions-panel',
-  imports: [ReactiveFormsModule],
+  imports: [NearestPlaceComponent, ReactiveFormsModule],
   template: `
     @if (pending(); as question) {
       <section class="panel-section pending-question" aria-labelledby="pending-heading">
@@ -25,6 +26,10 @@ import { answerText, QUESTION_CATEGORIES, QUESTION_KINDS, questionKind, question
         <p class="question-text">{{ text(question) }}</p>
         <p class="visually-hidden">Answer by {{ clock(question.deadlineAt) }}.</p>
         @if (isHider()) {
+          @if (question.params.category; as category) {
+            <app-nearest-place [category]="category" [canUse]="hasPlaceChoice(question)"
+              (use)="placeForm.controls.name.setValue($event)" />
+          }
           <div class="panel-actions">
             @for (option of kind(question.type).choices; track option.choice) {
               @if (option.choice === 'PLACE') {
@@ -197,6 +202,10 @@ export class QuestionsPanelComponent {
       this.placeForm.reset();
       this.focus('history-heading');
     }
+  }
+
+  protected hasPlaceChoice(question: QuestionDTO): boolean {
+    return questionKind(question.type).choices.some(choice => choice.choice === 'PLACE');
   }
 
   protected timeLeft(question: QuestionDTO): string {

@@ -1,11 +1,16 @@
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, Injector, input, untracked } from '@angular/core';
 
 import { ControlsPanelService } from '../controls/controls-panel.service';
+import { ClosestLocationsService } from '../distance/closest-locations.service';
+import { DistancesPanelComponent } from '../distance/distances-panel.component';
 import { injectFocusAfterRender } from '../shared/focus';
 import { LayersPanelComponent } from '../layer/layers-panel.component';
 import { MapOverlayService } from '../map/map-overlay.service';
+import { MeasurePanelComponent } from '../shape/measure-panel.component';
+import { GameClock } from './game-clock.service';
 import { GameMapService } from './game-map.service';
 import { GameSessionService } from './game-session.service';
+import { GameStatusComponent } from './game-status.component';
 import { GameViewComponent } from './game-view.component';
 import { HidingPanelComponent } from './hiding-panel.component';
 import { JoinGameComponent } from './join-game.component';
@@ -22,9 +27,10 @@ import { LocationReporter } from './location-reporter.service';
 @Component({
   selector: 'app-game-panel',
   imports: [
-    GameViewComponent, HidingPanelComponent, JoinGameComponent, LayersPanelComponent, MyGamesComponent, QuestionsPanelComponent
+    DistancesPanelComponent, GameViewComponent, HidingPanelComponent, JoinGameComponent, LayersPanelComponent, MeasurePanelComponent,
+    MyGamesComponent, QuestionsPanelComponent
   ],
-  providers: [GameSessionService, GameReplayService, GameMapService, LocationReporter],
+  providers: [GameSessionService, GameClock, GameReplayService, GameMapService, LocationReporter],
   template: `
     @switch (controls.activeMenu()) {
       @case ('game') {
@@ -46,6 +52,12 @@ import { LocationReporter } from './location-reporter.service';
         <div class="menu-content">
           <app-hiding-panel />
         </div>
+      }
+      @case ('measure') {
+        <app-measure-panel [stationDistances]="false" />
+      }
+      @case ('distances') {
+        <app-distances-panel />
       }
       @case ('layers') {
         <app-layers-panel />
@@ -75,6 +87,12 @@ export default class GamePanelComponent {
       this.controls.setAvailable('questions', !!role && started);
       this.controls.setAvailable('hiding', role === 'HIDER');
     });
+    // What waits for the player is marked on its tab: a question for the hiders to answer, a station to choose
+    effect(() => {
+      const hider = session.me()?.role === 'HIDER';
+      this.controls.setAttention('questions', hider && !!session.pendingQuestion());
+      this.controls.setAttention('hiding', session.canChooseStation() && !session.hidingStation());
+    });
     // When the game finishes, its recap is shown, wherever the player was, and focus moves to it: whatever
     // they were using has gone
     const focus = injectFocusAfterRender();
@@ -88,17 +106,35 @@ export default class GamePanelComponent {
       if (session.game()) wasFinished = finished;
     });
 
-    // A finished game's replay slider, along the bottom of the map
+    // A running game's phase and clock, over the map, for when the panel is closed
     const mapOverlay = inject(MapOverlayService);
+    const running = computed(() => {
+      const status = session.game()?.status;
+      return !!this.gameId() && (status === 'HIDING' || status === 'SEEKING');
+    });
+    effect(onCleanup => {
+      if (!running()) return;
+      onCleanup(untracked(() => mapOverlay.show({ component: GameStatusComponent, injector }, 'status')));
+    });
+
+    // A finished game's replay slider, along the bottom of the map
     const finished = computed(() => !!this.gameId() && session.game()?.status === 'FINISHED');
     effect(onCleanup => {
       if (!finished()) return;
       onCleanup(untracked(() => mapOverlay.show({ component: GameTimelineComponent, injector })));
     });
 
+    // Out playing, the nearest places are measured from where the player is, not from the mouse
+    const closest = inject(ClosestLocationsService);
+    const overviewSource = closest.positionSource();
+    closest.positionSource.set('gps');
+
     inject(DestroyRef).onDestroy(() => {
       this.controls.setAvailable('questions', false);
       this.controls.setAvailable('hiding', false);
+      this.controls.setAttention('questions', false);
+      this.controls.setAttention('hiding', false);
+      closest.positionSource.set(overviewSource);
     });
 
     effect(() => {

@@ -4,79 +4,10 @@
   display: contents;
 }
 
-.check-field {
-  display: flex;
-  min-height: 32px;
-  align-items: center;
-  gap: 10px;
-  color: var(--control-ink);
-  font-size: 14px;
-  cursor: pointer;
-
-  input {
-    width: 18px;
-    height: 18px;
-    margin: 0;
-    accent-color: var(--control-accent);
-  }
-}
-
 .route-filter-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
-}
-
-.route-checklist {
-  max-height: 40dvh;
-  margin: 0;
-  // Room for the checkbox focus outline, which would otherwise be clipped by the scroll container
-  padding: 0 6px;
-  margin-inline: -6px;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  list-style: none;
-
-  label {
-    display: flex;
-    min-height: 32px;
-    align-items: center;
-    gap: 10px;
-    border-bottom: 1px solid var(--control-border);
-    color: var(--control-ink);
-    font-size: 14px;
-    cursor: pointer;
-  }
-
-  input {
-    flex: none;
-    width: 18px;
-    height: 18px;
-    margin: 0;
-    accent-color: var(--control-accent);
-  }
-}
-
-// A read-only list has no checkboxes to line up with
-.route-checklist.read-only li {
-  display: flex;
-  min-height: 32px;
-  align-items: center;
-  gap: 10px;
-  border-bottom: 1px solid var(--control-border);
-  font-size: 14px;
-}
-
-.route-name {
-  min-width: 0;
-  padding-block: 4px;
-  overflow-wrap: anywhere;
-}
-
-.route-note {
-  display: block;
-  color: var(--control-warning-ink);
-  font-size: 12px;
 }
 
 .template-links {
@@ -116,10 +47,16 @@
 
 // Changes not saved yet, which exporting and hosting wait for
 .unsaved-notice {
+  display: grid;
+  gap: 8px;
   margin: 0;
   padding: 10px 12px;
   border-left: 3px solid var(--control-warning);
   background: var(--control-warning-surface);
   color: var(--control-warning-ink);
   font-size: 13px;
+}
+
+.unsaved-notice p {
+  margin: 0;
 }
