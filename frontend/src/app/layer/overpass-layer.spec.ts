@@ -1,4 +1,4 @@
-import { LineString } from 'ol/geom';
+import { LineString, Polygon } from 'ol/geom';
 import type VectorLayer from 'ol/layer/Vector';
 import OlMap from 'ol/Map';
 import { get as getProjection } from 'ol/proj';
@@ -53,5 +53,27 @@ describe('OverpassLayer', () => {
     expect(searchPlaces).toHaveBeenCalledTimes(2);
     expect(source.getFeatureById('WAY/1')).toBe(feature);
     expect((feature.getGeometry() as LineString).getCoordinates()).toHaveLength(5);
+  });
+
+  it('loads Voronoi cells from their own endpoint and draws them as polygons', () => {
+    const square = [[[12, 57], [13, 57], [13, 58], [12, 58], [12, 57]]];
+    const searchVoronoiCells = vi.fn(() => of({
+      content: [{ osmType: 'NODE', osmId: 2, longitude: 12.5, latitude: 57.5, geometry: { type: 'Polygon', coordinates: square } }],
+      page: 0, size: 1000, totalElements: 1, totalPages: 1
+    }));
+    const searchPlaces = vi.fn();
+
+    const view = new View({ center: [1_336_000, 7_900_000], resolution: 100 });
+    const map = { addLayer: vi.fn(), getView: () => view, on: vi.fn() } as unknown as OlMap;
+    const cells = MAP_LAYERS.find(definition => definition.id === 'airport_regions')!.overpass;
+    const overpassLayer = new OverpassLayer({ searchPlaces, searchVoronoiCells } as unknown as OverpassService, cells);
+    const source = (overpassLayer.load(map)[0] as VectorLayer<VectorSource>).getSource()!;
+
+    source.loadFeatures([1_330_000, 7_890_000, 1_340_000, 7_910_000], 100, getProjection('EPSG:3857')!);
+
+    expect(searchPlaces).not.toHaveBeenCalled();
+    expect(searchVoronoiCells).toHaveBeenCalledOnce();
+    expect((searchVoronoiCells.mock.calls[0] as unknown[])[0]).toBe('COMMERCIAL_AIRPORT');
+    expect(source.getFeatureById('NODE/2')!.getGeometry()).toBeInstanceOf(Polygon);
   });
 });

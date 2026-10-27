@@ -17,11 +17,20 @@ import { OverpassLocationDTO, OverpassLocationPage, OverpassService } from '../a
 
 export type LoadStrategy = 'all' | 'bbox';
 
+/** What each feature's geometry is: the place itself, or the region where it is the closest of its category. */
+export type OverpassLayerSource = 'places' | 'voronoi-cells';
+
 /** Everything that distinguishes one Overpass category's layer from another. */
 export interface OverpassLayerConfig {
   category: OverpassLocationDTO.CategoryEnum;
   color: string;
   style: OverpassStyle;
+  /**
+   * 'places' (default): the places themselves. 'voronoi-cells': each place's Voronoi cell, the area where it is
+   * the closest place of the category. Cells always come with their geometry, so set `includeGeometry` too.
+   * Only categories stored as points on the backend have cells.
+   */
+  source?: OverpassLayerSource;
   /**
    * 'all' (default): load the whole category once (good for small categories like airports).
    * 'bbox': load only what is in view, fetching more as the user pans and zooms.
@@ -137,8 +146,20 @@ export class OverpassLayer extends BaseLayerService {
     return source;
   }
 
-  /** The only method that touches the generated client. Adjust if its signature differs. */
+  /** The only method that touches the generated client. Adjust if its signatures differ. */
   private fetchPage(page: number, bounds: LonLatBounds | undefined, tolerance: number): Observable<OverpassLocationPage> {
+    if (this.config.source === 'voronoi-cells') {
+      return this.overpassApi.searchVoronoiCells(
+        this.config.category,
+        bounds?.south,
+        bounds?.west,
+        bounds?.north,
+        bounds?.east,
+        page,
+        PAGE_SIZE,
+        tolerance > 0 ? tolerance : undefined
+      );
+    }
     return this.overpassApi.searchPlaces(
       this.config.category,
       bounds?.south,

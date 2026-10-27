@@ -293,4 +293,143 @@ export class OverpassService extends BaseService {
         );
     }
 
+    /**
+     * Search Voronoi cells
+     * Returns a page of places of a point category, each with its Voronoi cell as its geometry: the area where it is the closest place of that category. A bounding box, which requires all four of south, west, north and east, matches the cells that overlap it.
+     * @endpoint get /api/overpass/voronoi-cells
+     * @param category A category stored as points
+     * @param south Southern latitude of the bounding box, -90 to 90
+     * @param west Western longitude of the bounding box, -180 to 180
+     * @param north Northern latitude of the bounding box, -90 to 90
+     * @param east Eastern longitude of the bounding box, -180 to 180
+     * @param page Zero-based page index
+     * @param size Page size, between 1 and 1000 (larger values are capped)
+     * @param simplify Simplify each cell to this tolerance in degrees. Omit or use 0 for full detail
+     * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
+     * @param reportProgress flag to report request and response progress.
+     * @param options additional options
+     */
+    public searchVoronoiCells(category: 'COMMERCIAL_AIRPORT' | 'HIGH_SPEED_RAIL_LINE' | 'RAIL_STATION' | 'ADMIN_DIVISION_1' | 'ADMIN_DIVISION_2' | 'ADMIN_DIVISION_4' | 'BODY_OF_WATER' | 'COASTLINE' | 'MOUNTAIN' | 'PARK' | 'ZOO' | 'AQUARIUM' | 'GOLF_COURSE' | 'MUSEUM' | 'MOVIE_THEATRE' | 'HOSPITAL' | 'LIBRARY' | 'FOREIGN_CONSULATE' | 'OTHER', south?: number, west?: number, north?: number, east?: number, page?: number, size?: number, simplify?: number, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<OverpassLocationPage>;
+    public searchVoronoiCells(category: 'COMMERCIAL_AIRPORT' | 'HIGH_SPEED_RAIL_LINE' | 'RAIL_STATION' | 'ADMIN_DIVISION_1' | 'ADMIN_DIVISION_2' | 'ADMIN_DIVISION_4' | 'BODY_OF_WATER' | 'COASTLINE' | 'MOUNTAIN' | 'PARK' | 'ZOO' | 'AQUARIUM' | 'GOLF_COURSE' | 'MUSEUM' | 'MOVIE_THEATRE' | 'HOSPITAL' | 'LIBRARY' | 'FOREIGN_CONSULATE' | 'OTHER', south?: number, west?: number, north?: number, east?: number, page?: number, size?: number, simplify?: number, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<OverpassLocationPage>>;
+    public searchVoronoiCells(category: 'COMMERCIAL_AIRPORT' | 'HIGH_SPEED_RAIL_LINE' | 'RAIL_STATION' | 'ADMIN_DIVISION_1' | 'ADMIN_DIVISION_2' | 'ADMIN_DIVISION_4' | 'BODY_OF_WATER' | 'COASTLINE' | 'MOUNTAIN' | 'PARK' | 'ZOO' | 'AQUARIUM' | 'GOLF_COURSE' | 'MUSEUM' | 'MOVIE_THEATRE' | 'HOSPITAL' | 'LIBRARY' | 'FOREIGN_CONSULATE' | 'OTHER', south?: number, west?: number, north?: number, east?: number, page?: number, size?: number, simplify?: number, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<OverpassLocationPage>>;
+    public searchVoronoiCells(category: 'COMMERCIAL_AIRPORT' | 'HIGH_SPEED_RAIL_LINE' | 'RAIL_STATION' | 'ADMIN_DIVISION_1' | 'ADMIN_DIVISION_2' | 'ADMIN_DIVISION_4' | 'BODY_OF_WATER' | 'COASTLINE' | 'MOUNTAIN' | 'PARK' | 'ZOO' | 'AQUARIUM' | 'GOLF_COURSE' | 'MUSEUM' | 'MOVIE_THEATRE' | 'HOSPITAL' | 'LIBRARY' | 'FOREIGN_CONSULATE' | 'OTHER', south?: number, west?: number, north?: number, east?: number, page?: number, size?: number, simplify?: number, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
+        if (category === null || category === undefined) {
+            throw new Error('Required parameter category was null or undefined when calling searchVoronoiCells.');
+        }
+
+        let localVarQueryParameters = new OpenApiHttpParams(this.encoder);
+
+        localVarQueryParameters = this.addToHttpParams(
+            localVarQueryParameters,
+            'category',
+            <any>category,
+            QueryParamStyle.Form,
+            true,
+        );
+
+
+        localVarQueryParameters = this.addToHttpParams(
+            localVarQueryParameters,
+            'south',
+            <any>south,
+            QueryParamStyle.Form,
+            true,
+        );
+
+
+        localVarQueryParameters = this.addToHttpParams(
+            localVarQueryParameters,
+            'west',
+            <any>west,
+            QueryParamStyle.Form,
+            true,
+        );
+
+
+        localVarQueryParameters = this.addToHttpParams(
+            localVarQueryParameters,
+            'north',
+            <any>north,
+            QueryParamStyle.Form,
+            true,
+        );
+
+
+        localVarQueryParameters = this.addToHttpParams(
+            localVarQueryParameters,
+            'east',
+            <any>east,
+            QueryParamStyle.Form,
+            true,
+        );
+
+
+        localVarQueryParameters = this.addToHttpParams(
+            localVarQueryParameters,
+            'page',
+            <any>page,
+            QueryParamStyle.Form,
+            true,
+        );
+
+
+        localVarQueryParameters = this.addToHttpParams(
+            localVarQueryParameters,
+            'size',
+            <any>size,
+            QueryParamStyle.Form,
+            true,
+        );
+
+
+        localVarQueryParameters = this.addToHttpParams(
+            localVarQueryParameters,
+            'simplify',
+            <any>simplify,
+            QueryParamStyle.Form,
+            true,
+        );
+
+
+        let localVarHeaders = this.defaultHeaders;
+
+        const localVarHttpHeaderAcceptSelected: string | undefined = options?.httpHeaderAccept ?? this.configuration.selectHeaderAccept([
+            'application/json'
+        ]);
+        if (localVarHttpHeaderAcceptSelected !== undefined) {
+            localVarHeaders = localVarHeaders.set('Accept', localVarHttpHeaderAcceptSelected);
+        }
+
+        const localVarHttpContext: HttpContext = options?.context ?? new HttpContext();
+
+        const localVarTransferCache: boolean = options?.transferCache ?? true;
+
+
+        let responseType_: 'text' | 'json' | 'blob' = 'json';
+        if (localVarHttpHeaderAcceptSelected) {
+            if (localVarHttpHeaderAcceptSelected.startsWith('text')) {
+                responseType_ = 'text';
+            } else if (this.configuration.isJsonMime(localVarHttpHeaderAcceptSelected)) {
+                responseType_ = 'json';
+            } else {
+                responseType_ = 'blob';
+            }
+        }
+
+        let localVarPath = `/api/overpass/voronoi-cells`;
+        const { basePath, withCredentials } = this.configuration;
+        return this.httpClient.request<OverpassLocationPage>('get', `${basePath}${localVarPath}`,
+            {
+                context: localVarHttpContext,
+                params: localVarQueryParameters.toHttpParams(),
+                responseType: <any>responseType_,
+                ...(withCredentials ? { withCredentials } : {}),
+                headers: localVarHeaders,
+                observe: observe,
+                ...(localVarTransferCache !== undefined ? { transferCache: localVarTransferCache } : {}),
+                reportProgress: reportProgress
+            }
+        );
+    }
+
 }

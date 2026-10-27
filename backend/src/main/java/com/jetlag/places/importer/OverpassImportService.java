@@ -31,12 +31,15 @@ class OverpassImportService {
   private final OverpassClient overpassClient;
   private final OverpassLocationRepository overpassLocationRepository;
   private final OverpassGeometryRepository overpassGeometryRepository;
+  private final OverpassVoronoiService overpassVoronoiService;
 
   OverpassImportService(OverpassClient overpassClient, OverpassLocationRepository overpassLocationRepository,
-                        OverpassGeometryRepository overpassGeometryRepository) {
+                        OverpassGeometryRepository overpassGeometryRepository,
+                        OverpassVoronoiService overpassVoronoiService) {
     this.overpassClient = overpassClient;
     this.overpassLocationRepository = overpassLocationRepository;
     this.overpassGeometryRepository = overpassGeometryRepository;
+    this.overpassVoronoiService = overpassVoronoiService;
   }
 
   @Transactional
@@ -45,8 +48,14 @@ class OverpassImportService {
 
     nImported += update(category, generation);
 
+    // The cells are handled with plain SQL, which does not see changes still pending in the persistence context
+    overpassLocationRepository.flush();
+    // Cells reference their place, so they go before stale places do, and are built again from what is left
+    overpassVoronoiService.deleteCells(category);
     overpassGeometryRepository.deleteNotInGeneration(generation, category);
     int nDeleted = overpassLocationRepository.deleteNotInGeneration(generation, category);
+
+    if (category.hasVoronoiCells()) overpassVoronoiService.buildCells(category);
 
     return nImported;
   }

@@ -92,5 +92,11 @@ public enum OverpassLocationCategory {
   }
 
   public boolean hasGeometry() { return outMode == OutMode.GEOM; }
+
+  /**
+   * Whether each place gets the cell where it is the closest place of this category. Only for categories
+   * stored as points: closest to a line or area is a different shape, not built.
+   */
+  public boolean hasVoronoiCells() { return isSearchable() && !hasGeometry(); }
   public String outStatement() { return outMode.statement(); }
 }

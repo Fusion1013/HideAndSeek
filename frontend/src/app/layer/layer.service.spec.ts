@@ -21,11 +21,14 @@ describe('LayerService', () => {
     service.loadLayers(map);
   });
 
-  it('has unique layer ids, labels and Overpass categories', () => {
+  it('has unique layer ids, labels and Overpass sources', () => {
     expect(new Set(MAP_LAYERS.map(layer => layer.id)).size).toBe(MAP_LAYERS.length);
     expect(new Set(MAP_LAYERS.map(layer => layer.label)).size).toBe(MAP_LAYERS.length);
-    const categories = MAP_LAYERS.flatMap(layer => 'overpass' in layer ? [layer.overpass.category] : []);
-    expect(new Set(categories).size).toBe(categories.length);
+    // A category can have one layer of places and one of Voronoi cells
+    const sources = MAP_LAYERS.flatMap(layer => 'overpass' in layer
+      ? [`${layer.overpass.category} ${'source' in layer.overpass ? layer.overpass.source : 'places'}`]
+      : []);
+    expect(new Set(sources).size).toBe(sources.length);
   });
 
   it('gives each layer at most one way of being created', () => {

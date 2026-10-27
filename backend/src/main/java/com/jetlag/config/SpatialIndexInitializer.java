@@ -30,5 +30,11 @@ public class SpatialIndexInitializer {
     } catch (RuntimeException e) {
       logger.warn("Could not create the spatial index on overpass_geometry", e);
     }
+    try {
+      jdbcTemplate.execute(
+        "CREATE INDEX IF NOT EXISTS overpass_voronoi_cell_geometry_gist ON overpass_voronoi_cell USING GIST (geometry)");
+    } catch (RuntimeException e) {
+      logger.warn("Could not create the spatial index on overpass_voronoi_cell", e);
+    }
   }
 }

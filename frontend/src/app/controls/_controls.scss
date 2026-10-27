@@ -188,6 +188,10 @@
     &.is-empty {
       border-color: transparent;
     }
+
+    &.is-outline {
+      border-width: 2px;
+    }
   }
 
   // The main action of a tab (create, join, start), and one that cannot be undone (delete, end)

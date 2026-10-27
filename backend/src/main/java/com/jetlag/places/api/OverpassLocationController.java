@@ -91,6 +91,57 @@ public class OverpassLocationController {
   }
 
   @Operation(
+    operationId = "searchVoronoiCells",
+    summary = "Search Voronoi cells",
+    description = "Returns a page of places of a point category, each with its Voronoi cell as its geometry: the "
+      + "area where it is the closest place of that category. A bounding box, which requires all four of "
+      + "south, west, north and east, matches the cells that overlap it.")
+  @ApiResponses({
+    @ApiResponse(responseCode = "200",
+      description = "A page of places, each with its cell as geometry",
+      content = @Content(
+        mediaType = MediaType.APPLICATION_JSON_VALUE,
+        schema = @Schema(implementation = OverpassLocationPage.class))),
+    @ApiResponse(responseCode = "400",
+      description = "Incomplete or invalid bounding box, or a category without cells",
+      content = @Content)
+  })
+  @GetMapping("/voronoi-cells")
+  public OverpassLocationPage searchVoronoiCells(
+    @Parameter(description = "A category stored as points", required = true)
+    @RequestParam OverpassLocationCategory category,
+    @Parameter(description = "Southern latitude of the bounding box, -90 to 90", example = "57.7")
+    @RequestParam(required = false) Double south,
+    @Parameter(description = "Western longitude of the bounding box, -180 to 180", example = "14.0")
+    @RequestParam(required = false) Double west,
+    @Parameter(description = "Northern latitude of the bounding box, -90 to 90", example = "57.9")
+    @RequestParam(required = false) Double north,
+    @Parameter(description = "Eastern longitude of the bounding box, -180 to 180", example = "14.3")
+    @RequestParam(required = false) Double east,
+    @Parameter(description = "Zero-based page index")
+    @RequestParam(defaultValue = "0") int page,
+    @Parameter(description = "Page size, between 1 and 1000 (larger values are capped)")
+    @RequestParam(defaultValue = "100") int size,
+    @Parameter(description = "Simplify each cell to this tolerance in degrees. Omit or use 0 for full detail",
+      example = "0.0001")
+    @RequestParam(defaultValue = "0") double simplify) {
+
+    if (!category.hasVoronoiCells()) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, category + " has no Voronoi cells");
+    }
+    Bounds bounds = parseBounds(south, west, north, east);
+    Pageable pageable = PageRequest.of(
+      Math.max(page, 0),
+      Math.min(Math.max(size, 1), MAX_PAGE_SIZE),
+      Sort.by("id"));
+
+    Page<OverpassLocationEntity> result = overpassService.searchWithVoronoiCell(category, bounds, pageable);
+    Map<Long, String> cells = overpassService.findVoronoiCellGeoJson(
+      result.getContent().stream().map(OverpassLocationEntity::getId).toList(), simplify);
+    return OverpassLocationPage.of(result, p -> OverpassLocationDTO.from(p, cells.get(p.getId())));
+  }
+
+  @Operation(
     operationId = "getPlace",
     summary = "Get a place by id",
     description = "Returns a single place by its internal id.")

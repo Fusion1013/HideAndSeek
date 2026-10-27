@@ -37,7 +37,14 @@ type BaseMapChoice = BaseMapId | 'none';
             [checked]="layerService.visibleLayerIds().has(layer.id)"
             (change)="setVisible(layer.id, $event)"
           >
-          <span class="layer-swatch" [class.is-empty]="!layer.color" [style.background-color]="layer.color" aria-hidden="true"></span>
+          <span
+            class="layer-swatch"
+            [class.is-empty]="!layer.color"
+            [class.is-outline]="layer.outline"
+            [style.background-color]="layer.outline ? null : layer.color"
+            [style.border-color]="layer.outline ? layer.color : null"
+            aria-hidden="true"
+          ></span>
           <span>{{ layer.label }}</span>
         </label>
       }
@@ -112,7 +119,9 @@ export class LayersPanelComponent {
   protected readonly layers = MAP_LAYERS.filter(layer => layer.id !== 'base-map').map(layer => ({
     id: layer.id,
     label: layer.label,
-    color: 'overpass' in layer ? layer.overpass.color : undefined
+    color: 'overpass' in layer ? layer.overpass.color : undefined,
+    // Cell layers tile the map with outlines, so their swatch is an outline too
+    outline: 'overpass' in layer && layer.overpass.style.kind === 'cells'
   }));
 
   protected chooseBaseMap(choice: BaseMapChoice): void {

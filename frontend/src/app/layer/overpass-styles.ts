@@ -11,7 +11,9 @@ export type OverpassStyle =
   /** A colored line, optionally on a white casing so it stands out from the base map. */
   | { kind: 'line'; width: number; casing?: boolean }
   /** A tinted, outlined shape. Places stored without one show as a small dot. */
-  | { kind: 'area' };
+  | { kind: 'area' }
+  /** A faintly tinted region with an outline, for Voronoi cells that tile the map side by side. */
+  | { kind: 'cells' };
 
 export type OverpassStyleFunction = (feature: FeatureLike) => Style | Style[];
 
@@ -21,6 +23,7 @@ export function createOverpassStyle(style: OverpassStyle, color: string): Overpa
     case 'point': return pointStyle(color);
     case 'line': return lineStyle(color, style.width, style.casing ?? false);
     case 'area': return areaStyle(color);
+    case 'cells': return cellStyle(color);
   }
 }
 
@@ -72,6 +75,17 @@ function areaStyle(color: string): OverpassStyleFunction {
       stroke: new Stroke({ color: '#ffffff', width: 1.5 })
     }),
     zIndex: 100
+  });
+  return () => style;
+}
+
+function cellStyle(color: string): OverpassStyleFunction {
+  const [red, green, blue] = asArray(color);
+  // Neighbouring cells share their edges, so each edge is drawn twice: a thin line is enough
+  const style = new Style({
+    fill: new Fill({ color: [red, green, blue, 0.08] }),
+    stroke: new Stroke({ color, width: 1.5 }),
+    zIndex: 50
   });
   return () => style;
 }

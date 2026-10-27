@@ -5,6 +5,7 @@ import com.jetlag.places.model.OverpassLocationEntity;
 import com.jetlag.places.model.OverpassLocationCategory;
 import com.jetlag.places.repository.OverpassGeometryRepository;
 import com.jetlag.places.repository.OverpassLocationRepository;
+import com.jetlag.places.repository.OverpassVoronoiCellRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -21,11 +22,14 @@ class OverpassSearchService {
 
   private final OverpassLocationRepository overpassLocationRepository;
   private final OverpassGeometryRepository overpassGeometryRepository;
+  private final OverpassVoronoiCellRepository overpassVoronoiCellRepository;
 
   OverpassSearchService(OverpassLocationRepository overpassLocationRepository,
-                        OverpassGeometryRepository overpassGeometryRepository) {
+                        OverpassGeometryRepository overpassGeometryRepository,
+                        OverpassVoronoiCellRepository overpassVoronoiCellRepository) {
     this.overpassLocationRepository = overpassLocationRepository;
     this.overpassGeometryRepository = overpassGeometryRepository;
+    this.overpassVoronoiCellRepository = overpassVoronoiCellRepository;
   }
 
   /**
@@ -62,6 +66,28 @@ class OverpassSearchService {
   public Map<Long, String> findGeoJson(Collection<Long> locationIds, double tolerance) {
     if (locationIds.isEmpty()) return Map.of();
     return overpassGeometryRepository.findGeoJsonByIdIn(locationIds, Math.max(tolerance, 0)).stream()
+      .collect(Collectors.toMap(
+        OverpassGeometryRepository.GeoJsonRow::getId, OverpassGeometryRepository.GeoJsonRow::getGeoJson));
+  }
+
+  /** Places of a category with a Voronoi cell, optionally only those whose cell overlaps the bounds. */
+  @Transactional
+  public Page<OverpassLocationEntity> searchWithVoronoiCell(
+    OverpassLocationCategory category, Bounds bounds, Pageable pageable) {
+    if (bounds == null) return overpassLocationRepository.findWithVoronoiCell(category.name(), pageable);
+    return overpassLocationRepository.findWithVoronoiCellIntersecting(
+      category.name(), bounds.south(), bounds.west(), bounds.north(), bounds.east(), pageable);
+  }
+
+  /**
+   * GeoJSON Voronoi cells for the given places, keyed by place id.
+   *
+   * @param tolerance simplification tolerance in degrees; 0 for full detail
+   */
+  @Transactional
+  public Map<Long, String> findVoronoiCellGeoJson(Collection<Long> locationIds, double tolerance) {
+    if (locationIds.isEmpty()) return Map.of();
+    return overpassVoronoiCellRepository.findGeoJsonByIdIn(locationIds, Math.max(tolerance, 0)).stream()
       .collect(Collectors.toMap(
         OverpassGeometryRepository.GeoJsonRow::getId, OverpassGeometryRepository.GeoJsonRow::getGeoJson));
   }

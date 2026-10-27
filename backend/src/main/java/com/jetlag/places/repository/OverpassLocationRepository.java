@@ -63,6 +63,37 @@ public interface OverpassLocationRepository extends JpaRepository<OverpassLocati
     @Param("north") double north, @Param("east") double east,
     Pageable pageable);
 
+  /** Places with a Voronoi cell built for the category. */
+  @Query(value = """
+        SELECT l.* FROM overpass_location l
+        JOIN overpass_voronoi_cell c ON c.overpass_location_id = l.id
+        WHERE c.category = :category
+        """,
+    countQuery = """
+        SELECT count(*) FROM overpass_voronoi_cell c WHERE c.category = :category
+        """,
+    nativeQuery = true)
+  Page<OverpassLocationEntity> findWithVoronoiCell(@Param("category") String category, Pageable pageable);
+
+  /** Places whose Voronoi cell for the category overlaps the bounding box. */
+  @Query(value = """
+        SELECT l.* FROM overpass_location l
+        JOIN overpass_voronoi_cell c ON c.overpass_location_id = l.id
+        WHERE c.category = :category
+          AND c.geometry && ST_MakeEnvelope(:west, :south, :east, :north, 4326)
+        """,
+    countQuery = """
+        SELECT count(*) FROM overpass_voronoi_cell c
+        WHERE c.category = :category
+          AND c.geometry && ST_MakeEnvelope(:west, :south, :east, :north, 4326)
+        """,
+    nativeQuery = true)
+  Page<OverpassLocationEntity> findWithVoronoiCellIntersecting(
+    @Param("category") String category,
+    @Param("south") double south, @Param("west") double west,
+    @Param("north") double north, @Param("east") double east,
+    Pageable pageable);
+
   @Modifying
   @Query("""
         DELETE FROM OverpassLocationEntity overpassLocation
