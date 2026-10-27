@@ -19,6 +19,8 @@ import { OpenApiHttpParams, QueryParamStyle } from '../query.params';
 // @ts-ignore
 import { CreatedTemplateDTO } from '../model/createdTemplateDTO';
 // @ts-ignore
+import { StationDTO } from '../model/stationDTO';
+// @ts-ignore
 import { TemplateDTO } from '../model/templateDTO';
 // @ts-ignore
 import { TemplateRequest } from '../model/templateRequest';
@@ -209,6 +211,63 @@ export class GameTemplateControllerService extends BaseService {
         let localVarPath = `/api/templates/${this.configuration.encodeParam({name: "templateId", value: templateId, in: "path", style: "simple", explode: false, dataType: "string", dataFormat: "uuid"})}`;
         const { basePath, withCredentials } = this.configuration;
         return this.httpClient.request<TemplateDTO>('get', `${basePath}${localVarPath}`,
+            {
+                context: localVarHttpContext,
+                responseType: <any>responseType_,
+                ...(withCredentials ? { withCredentials } : {}),
+                headers: localVarHeaders,
+                observe: observe,
+                ...(localVarTransferCache !== undefined ? { transferCache: localVarTransferCache } : {}),
+                reportProgress: reportProgress
+            }
+        );
+    }
+
+    /**
+     * Get the stations a game from this template would have
+     * Served by the template\&#39;s routes and inside its area, as the timetable is now. A game copies them when it is created.
+     * @endpoint get /api/templates/{templateId}/stations
+     * @param templateId 
+     * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
+     * @param reportProgress flag to report request and response progress.
+     * @param options additional options
+     */
+    public getTemplateStations(templateId: string, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<Array<StationDTO>>;
+    public getTemplateStations(templateId: string, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<Array<StationDTO>>>;
+    public getTemplateStations(templateId: string, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<Array<StationDTO>>>;
+    public getTemplateStations(templateId: string, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
+        if (templateId === null || templateId === undefined) {
+            throw new Error('Required parameter templateId was null or undefined when calling getTemplateStations.');
+        }
+
+        let localVarHeaders = this.defaultHeaders;
+
+        const localVarHttpHeaderAcceptSelected: string | undefined = options?.httpHeaderAccept ?? this.configuration.selectHeaderAccept([
+            'application/json'
+        ]);
+        if (localVarHttpHeaderAcceptSelected !== undefined) {
+            localVarHeaders = localVarHeaders.set('Accept', localVarHttpHeaderAcceptSelected);
+        }
+
+        const localVarHttpContext: HttpContext = options?.context ?? new HttpContext();
+
+        const localVarTransferCache: boolean = options?.transferCache ?? true;
+
+
+        let responseType_: 'text' | 'json' | 'blob' = 'json';
+        if (localVarHttpHeaderAcceptSelected) {
+            if (localVarHttpHeaderAcceptSelected.startsWith('text')) {
+                responseType_ = 'text';
+            } else if (this.configuration.isJsonMime(localVarHttpHeaderAcceptSelected)) {
+                responseType_ = 'json';
+            } else {
+                responseType_ = 'blob';
+            }
+        }
+
+        let localVarPath = `/api/templates/${this.configuration.encodeParam({name: "templateId", value: templateId, in: "path", style: "simple", explode: false, dataType: "string", dataFormat: "uuid"})}/stations`;
+        const { basePath, withCredentials } = this.configuration;
+        return this.httpClient.request<Array<StationDTO>>('get', `${basePath}${localVarPath}`,
             {
                 context: localVarHttpContext,
                 responseType: <any>responseType_,

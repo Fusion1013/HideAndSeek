@@ -17,8 +17,9 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Playing a running game: the stations, the seekers' positions and the hiders' station. The seekers' positions
- * and the station are recorded as events for the hiders only.
+ * Playing a running game: the stations, the players' positions and the hiders' station. The seekers' positions
+ * and the station are recorded as events for the hiders only. Every position is also kept for the replay; a
+ * hider's is shown to nobody while the game runs.
  */
 @Service
 public class GamePlayService {
@@ -36,15 +37,17 @@ public class GamePlayService {
   private final GamePlayerRepository playerRepository;
   private final GameStations stations;
   private final HidingSpots hidingSpots;
+  private final GamePositions positions;
   private final GameEventLog eventLog;
   private final Clock clock;
 
   public GamePlayService(GameRepository gameRepository, GamePlayerRepository playerRepository, GameStations stations,
-                         HidingSpots hidingSpots, GameEventLog eventLog, Clock clock) {
+                         HidingSpots hidingSpots, GamePositions positions, GameEventLog eventLog, Clock clock) {
     this.gameRepository = gameRepository;
     this.playerRepository = playerRepository;
     this.stations = stations;
     this.hidingSpots = hidingSpots;
+    this.positions = positions;
     this.eventLog = eventLog;
     this.clock = clock;
   }
@@ -55,7 +58,10 @@ public class GamePlayService {
     return stations.list(player.getGame().getId());
   }
 
-  /** A seeker's position, while the game runs. Reports too close to the previous one are accepted but not passed on. */
+  /**
+   * A player's position, while the game runs. A seeker's is passed on to the hiders; a hider's is only kept for the
+   * replay. Reports too close to the previous one are accepted but neither kept nor passed on.
+   */
   @Transactional
   public void reportLocation(GamePlayerEntity reporter, GameRequests.LocationRequest request) {
     double longitude = request.longitude();
@@ -69,19 +75,22 @@ public class GamePlayService {
     }
 
     GameEntity game = lock(reporter);
-    GamePlayerEntity seeker = playerRepository.findById(reporter.getId()).orElseThrow();
-    if (seeker.getRole() != PlayerRole.SEEKER) {
-      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only seekers share their position");
+    GamePlayerEntity player = playerRepository.findById(reporter.getId()).orElseThrow();
+    if (player.getRole() == null) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only players with a role share their position");
     }
     if (game.getStatus() != GameStatus.HIDING && game.getStatus() != GameStatus.SEEKING) {
       throw new ResponseStatusException(HttpStatus.CONFLICT, "Positions are only shared while the game runs");
     }
 
     Instant now = clock.instant();
-    if (seeker.getLastLocationAt() != null && seeker.getLastLocationAt().plus(MIN_REPORT_INTERVAL).isAfter(now)) return;
-    seeker.setLastLocation(WGS84.createPoint(new Coordinate(longitude, latitude)), accuracy, now);
+    if (player.getLastLocationAt() != null && player.getLastLocationAt().plus(MIN_REPORT_INTERVAL).isAfter(now)) return;
+    player.setLastLocation(WGS84.createPoint(new Coordinate(longitude, latitude)), accuracy, now);
     playerRepository.flush();
-    eventLog.record(game.getId(), SEEKER_LOCATION_EVENT, EventAudience.HIDERS, SeekerLocationDTO.from(seeker));
+    positions.record(game.getId(), player.getId(), longitude, latitude, accuracy, now);
+    if (player.getRole() == PlayerRole.SEEKER) {
+      eventLog.record(game.getId(), SEEKER_LOCATION_EVENT, EventAudience.HIDERS, SeekerLocationDTO.from(player));
+    }
   }
 
   /** A hider chooses where the hiders hide, or changes it, until the hiding time is up. */

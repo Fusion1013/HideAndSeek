@@ -6,15 +6,15 @@ import { GameSessionService } from './game-session.service';
 
 /** Positions closer together than this are not sent; the server would not pass them on anyway. */
 export const MIN_SEND_INTERVAL_MS = 10_000;
-/** The position is sent again this often while it does not change, so hiders can tell it is still current. */
+/** The position is sent again this often while it does not change, so hiders can tell a seeker's is still current. */
 export const RESEND_INTERVAL_MS = 30_000;
 
 /**
- * Shares a seeker's GPS position with the hiders while the game runs (hiding and seeking). Only seekers: no
- * other player's position is ever sent. One per game page.
+ * Sends the player's GPS position while the game runs (hiding and seeking). A seeker's is shared with the hiders;
+ * a hider's is shown to nobody until the game is over, in its replay. One per game page.
  */
 @Injectable()
-export class SeekerLocationReporter {
+export class LocationReporter {
   private readonly session = inject(GameSessionService);
   private readonly geolocation = inject(GeolocationService);
   private readonly playApi = inject(GamePlayControllerService);
@@ -24,7 +24,7 @@ export class SeekerLocationReporter {
   /** Whether this player's position is being shared now. */
   readonly sharing = computed(() => {
     const status = this.session.game()?.status;
-    return this.session.me()?.role === 'SEEKER' && (status === 'HIDING' || status === 'SEEKING');
+    return !!this.session.me()?.role && (status === 'HIDING' || status === 'SEEKING');
   });
   readonly gpsError = this.geolocation.error;
   readonly hasPosition = computed(() => this.geolocation.position() !== null);

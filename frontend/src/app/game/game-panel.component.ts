@@ -1,7 +1,9 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, effect, inject, Injector, input, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, Injector, input, untracked } from '@angular/core';
 
 import { ControlsPanelService } from '../controls/controls-panel.service';
+import { injectFocusAfterRender } from '../shared/focus';
 import { LayersPanelComponent } from '../layer/layers-panel.component';
+import { MapOverlayService } from '../map/map-overlay.service';
 import { GameMapService } from './game-map.service';
 import { GameSessionService } from './game-session.service';
 import { GameViewComponent } from './game-view.component';
@@ -9,7 +11,9 @@ import { HidingPanelComponent } from './hiding-panel.component';
 import { JoinGameComponent } from './join-game.component';
 import { MyGamesComponent } from './my-games.component';
 import { QuestionsPanelComponent } from './questions-panel.component';
-import { SeekerLocationReporter } from './seeker-location-reporter.service';
+import { GameReplayService } from './replay/game-replay.service';
+import { GameTimelineComponent } from './replay/game-timeline.component';
+import { LocationReporter } from './location-reporter.service';
 
 /**
  * Game mode: joining a game with its invite code (/join), then playing it (/game/:gameId). The game, its map and
@@ -20,7 +24,7 @@ import { SeekerLocationReporter } from './seeker-location-reporter.service';
   imports: [
     GameViewComponent, HidingPanelComponent, JoinGameComponent, LayersPanelComponent, MyGamesComponent, QuestionsPanelComponent
   ],
-  providers: [GameSessionService, GameMapService, SeekerLocationReporter],
+  providers: [GameSessionService, GameReplayService, GameMapService, LocationReporter],
   template: `
     @switch (controls.activeMenu()) {
       @case ('game') {
@@ -71,6 +75,27 @@ export default class GamePanelComponent {
       this.controls.setAvailable('questions', !!role && started);
       this.controls.setAvailable('hiding', role === 'HIDER');
     });
+    // When the game finishes, its recap is shown, wherever the player was, and focus moves to it: whatever
+    // they were using has gone
+    const focus = injectFocusAfterRender();
+    let wasFinished: boolean | undefined;
+    effect(() => {
+      const finished = session.game()?.status === 'FINISHED';
+      if (finished && wasFinished === false) {
+        untracked(() => this.controls.show('game'));
+        focus('recap-heading');
+      }
+      if (session.game()) wasFinished = finished;
+    });
+
+    // A finished game's replay slider, along the bottom of the map
+    const mapOverlay = inject(MapOverlayService);
+    const finished = computed(() => !!this.gameId() && session.game()?.status === 'FINISHED');
+    effect(onCleanup => {
+      if (!finished()) return;
+      onCleanup(untracked(() => mapOverlay.show({ component: GameTimelineComponent, injector })));
+    });
+
     inject(DestroyRef).onDestroy(() => {
       this.controls.setAvailable('questions', false);
       this.controls.setAvailable('hiding', false);
@@ -83,7 +108,7 @@ export default class GamePanelComponent {
         session.follow(gameId);
         // Created here rather than by a tab, so the map and the position sharing run whichever tab is open
         injector.get(GameMapService);
-        injector.get(SeekerLocationReporter);
+        injector.get(LocationReporter);
       });
     });
   }

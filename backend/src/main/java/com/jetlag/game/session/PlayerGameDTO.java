@@ -18,7 +18,8 @@ public record PlayerGameDTO(
   @Schema(description = "The server's clock, for counting down without trusting the device's",
     requiredMode = Schema.RequiredMode.REQUIRED)
   Instant serverTime,
-  @Schema(description = "Hiders only: their station, once chosen. Always null for anyone else.")
+  @Schema(description = "Hiders only, until the game is over: their station, once chosen. Null for anyone else "
+    + "while the game runs; revealed to everyone once it is finished.")
   HidingStationDTO hidingStation,
   @Schema(description = "Hiders only: where each seeker was last seen. Always empty for anyone else.",
     requiredMode = Schema.RequiredMode.REQUIRED)

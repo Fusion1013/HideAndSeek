@@ -3,8 +3,10 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Observable, of, Subject } from 'rxjs';
 
-import { GameControllerService, GamePlayControllerService, QuestionControllerService } from '../api/generated';
-import type { GameDTO, PlayerGameDTO } from '../api/generated';
+import {
+  GameControllerService, GamePlayControllerService, GameTimelineControllerService, QuestionControllerService
+} from '../api/generated';
+import type { GameDTO, GameTimelineDTO, PlayerGameDTO } from '../api/generated';
 import { TOKEN_STORAGE } from '../auth/access-token.store';
 import { MapService } from '../map/map.service';
 import { GeolocationService } from '../position/geolocation.service';
@@ -13,7 +15,8 @@ import type { SseMessage } from '../shared/sse-parser';
 import { GameEventStream, GameStreamError, STREAM_OPEN } from './game-event-stream.service';
 import { GameMapService } from './game-map.service';
 import { GameSessionService, RECONNECT_DELAYS_MS, STREAM_SILENCE_MS } from './game-session.service';
-import { SeekerLocationReporter } from './seeker-location-reporter.service';
+import { LocationReporter } from './location-reporter.service';
+import { GameReplayService } from './replay/game-replay.service';
 import { GameViewComponent } from './game-view.component';
 import { expectNoAxeViolations } from '../../testing/axe';
 
@@ -37,12 +40,32 @@ function game(overrides: Partial<GameDTO> = {}): GameDTO {
   };
 }
 
+/** Seeking for ten minutes, with Ada (the host) hiding and Grace seeking. */
+function seeking(overrides: Partial<GameDTO> = {}): GameDTO {
+  return game({
+    status: 'SEEKING',
+    hidingStartedAt: new Date(NOW - 40 * 60_000).toISOString(),
+    hidingEndsAt: new Date(NOW - 10 * 60_000).toISOString(),
+    seekingStartedAt: new Date(NOW - 10 * 60_000).toISOString(),
+    players: [
+      { id: 'p1', displayName: 'Ada', host: true, role: 'HIDER' },
+      { id: 'p2', displayName: 'Grace', host: false, role: 'SEEKER' }
+    ],
+    ...overrides
+  });
+}
+
+/** An empty timeline; the replay itself has its own tests. */
+function timelineFor(gameId: string): Observable<GameTimelineDTO> {
+  return of({ game: game({ id: gameId, status: 'FINISHED', outcome: 'ENDED' }), tracks: [], events: [] });
+}
+
 function view(state: GameDTO, myPlayerId = 'p1', extra: Partial<PlayerGameDTO> = {}): PlayerGameDTO {
   return { game: state, myPlayerId, serverTime: new Date(Date.now()).toISOString(), seekerLocations: [], questions: [], ...extra };
 }
 
 describe('GameViewComponent', () => {
-  let gameApi: Record<'setPlayerRole' | 'startGame' | 'endGame', ReturnType<typeof vi.fn>>;
+  let gameApi: Record<'setPlayerRole' | 'startGame' | 'endGame' | 'foundHiders', ReturnType<typeof vi.fn>>;
   /** One per stream opened, in order; with the Last-Event-ID it was opened with. */
   let streams: { subject: Subject<SseMessage>; lastEventId: string | null; closed: boolean }[];
   let playApi: Record<'getGameStations' | 'reportLocation' | 'chooseHidingStation', ReturnType<typeof vi.fn>>;
@@ -58,7 +81,8 @@ describe('GameViewComponent', () => {
       setPlayerRole: vi.fn((_game: string, playerId: string, { role }: { role?: 'SEEKER' | 'HIDER' }) =>
         of(view(game({ players: game().players.map(player => player.id === playerId ? { ...player, role } : player) })))),
       startGame: vi.fn(() => of(view(game()))),
-      endGame: vi.fn(() => of(view(game({ status: 'FINISHED' }))))
+      endGame: vi.fn(() => of(view(game({ status: 'FINISHED', outcome: 'ENDED' })))),
+      foundHiders: vi.fn(() => of(view(game({ status: 'FINISHED', outcome: 'FOUND' }))))
     };
     playApi = {
       getGameStations: vi.fn(() => of([])),
@@ -74,8 +98,10 @@ describe('GameViewComponent', () => {
         provideRouter([]),
         // Provided by the game page in the app
         GameSessionService,
+        GameReplayService,
         GameMapService,
-        SeekerLocationReporter,
+        LocationReporter,
+        { provide: GameTimelineControllerService, useValue: { getGameTimeline: (gameId: string) => timelineFor(gameId) } },
         { provide: GameControllerService, useValue: gameApi },
         { provide: GamePlayControllerService, useValue: playApi },
         { provide: QuestionControllerService, useValue: {} },
@@ -114,7 +140,7 @@ describe('GameViewComponent', () => {
   function render(gameId = 'g1'): void {
     fixture = TestBed.createComponent(GameViewComponent);
     TestBed.inject(GameSessionService).follow(gameId);
-    TestBed.inject(SeekerLocationReporter);
+    TestBed.inject(LocationReporter);
     fixture.detectChanges();
     element = fixture.nativeElement as HTMLElement;
   }
@@ -131,6 +157,12 @@ describe('GameViewComponent', () => {
 
   function text(selector: string): string {
     return element.querySelector(selector)?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+  }
+
+  /** The recap's facts, as "term: value". */
+  function facts(): string[] {
+    return [...element.querySelectorAll('.recap-facts div')]
+      .map(row => `${row.querySelector('dt')?.textContent?.trim()}: ${row.querySelector('dd')?.textContent?.trim()}`);
   }
 
   function button(label: string): HTMLButtonElement {
@@ -240,6 +272,101 @@ describe('GameViewComponent', () => {
     expect(streams).toHaveLength(3);
   });
 
+  it('counts the seeking time up from when the seekers set off', () => {
+    // The device is a minute behind the server; the seekers set off ten minutes ago, by the server's clock
+    vi.setSystemTime(NOW - 60_000);
+    render();
+    send(STREAM_OPEN, { id: '5', type: 'snapshot', data: JSON.stringify({
+      ...view(seeking(), 'p1'), serverTime: new Date(NOW).toISOString()
+    }) });
+
+    expect(text('.phase-title')).toBe('The seekers are on their way');
+    expect(text('.countdown')).toBe('10:00');
+    vi.advanceTimersByTime(65_000);
+    fixture.detectChanges();
+    expect(text('.countdown')).toBe('11:05');
+  });
+
+  it('lets a seeker say the hiders were found, after asking, and then shows the recap', async () => {
+    render();
+    send(STREAM_OPEN, snapshot('5', seeking(), 'p2'));
+    expect(button('End game…')).toBeUndefined();
+
+    button('We found them…').click();
+    fixture.detectChanges();
+    expect(text('#found-question')).toContain('ends the game for everyone');
+    expect(document.activeElement?.id).toBe('found-keep');
+    button('Not yet').click();
+    fixture.detectChanges();
+    expect(document.activeElement?.id).toBe('found-ask');
+
+    button('We found them…').click();
+    fixture.detectChanges();
+    button('We found them').click();
+    fixture.detectChanges();
+    expect(gameApi.foundHiders).toHaveBeenCalledWith('g1');
+    expect(text('#recap-heading')).toBe('Game recap');
+    expect(streams[0].closed).toBe(true);
+  });
+
+  it('recaps a found game: the time, where the hiders were, who played and what was asked', async () => {
+    render();
+    const finished = seeking({
+      status: 'FINISHED',
+      outcome: 'FOUND',
+      finishedAt: new Date(NOW + 72 * 60_000 + 5_000).toISOString()
+    });
+    send(STREAM_OPEN, { id: '9', type: 'snapshot', data: JSON.stringify(view(finished, 'p2', {
+      hidingStation: {
+        station: { stationId: 'k', name: 'Korsvägen', longitude: 11.99, latitude: 57.69 },
+        chosenBy: 'p1', chosenAt: new Date(NOW - 50 * 60_000).toISOString()
+      },
+      questions: [
+        {
+          id: 'q1', type: 'RADAR', params: { distanceMeters: 2000 }, status: 'ANSWERED', askedBy: 'p2',
+          askedAt: new Date(NOW + 5 * 60_000).toISOString(), deadlineAt: new Date(NOW + 10 * 60_000).toISOString(),
+          answer: { choice: 'YES' }
+        },
+        {
+          id: 'q2', type: 'MATCHING', params: { category: 'parks' }, status: 'PENDING', askedBy: 'p2',
+          askedAt: new Date(NOW + 70 * 60_000).toISOString(), deadlineAt: new Date(NOW + 75 * 60_000).toISOString()
+        }
+      ]
+    })) });
+
+    expect(text('.phase-title')).toBe('The seekers found the hiders');
+    expect(text('.recap-time-label')).toBe('Found after');
+    // Ten minutes of seeking before the snapshot's time, and 72 min 5 s after it
+    expect(text('.countdown')).toBe('1:22:05');
+    expect(facts()).toContain('Hiding station: Korsvägen');
+    await vi.advanceTimersByTimeAsync(0);
+    fixture.detectChanges();
+    expect(button('Watch on the map')).toBeDefined();
+    expect(facts()).toContain('Hiders: Ada');
+    expect(facts()).toContain('Seekers: Grace');
+    expect(text('[aria-labelledby=recap-questions-heading] .panel-heading')).toContain('1 answered · 1 not');
+    expect([...element.querySelectorAll('.question-history li')].map(item =>
+      [...item.querySelectorAll('p')].slice(0, 2).map(line => line.textContent?.trim()))).toEqual([
+      ['Are you within 2.0 km of us?', 'Yes'],
+      ['Is your nearest park the same as ours?', 'Not answered before the end']
+    ]);
+    // A finished game no longer changes: the time stays as it ended
+    vi.advanceTimersByTime(60_000);
+    fixture.detectChanges();
+    expect(text('.countdown')).toBe('1:22:05');
+
+    vi.useRealTimers();
+    await expectNoAxeViolations(element);
+  });
+
+  it('recaps a game ended before the seekers set off', () => {
+    render();
+    send(STREAM_OPEN, snapshot('5', game({ status: 'FINISHED', outcome: 'ENDED', finishedAt: new Date(NOW).toISOString() })));
+    expect(text('.phase-title')).toBe('The host ended the game');
+    expect(text('.recap-result')).toContain('The game ended before the seekers set off.');
+    expect(facts()).toContain('Hiding station: None was chosen');
+  });
+
   it('gives up a stream that has gone silent and opens a new one', () => {
     render();
     send(STREAM_OPEN, snapshot('5', game()));
@@ -277,7 +404,10 @@ describe('GameViewComponent', () => {
       playerId: 'p1', longitude: 11.97, latitude: 57.7, accuracyMeters: 10, recordedAt: new Date(NOW).toISOString()
     }) });
     expect(text('.seeker-line')).toBe('Ada 3 min ago');
-    expect(element.querySelector('[aria-labelledby=sharing-heading]')).toBeNull();
+    // A hider's position is kept for the replay only
+    gpsPosition.set({ longitude: 11.99, latitude: 57.69, accuracyMeters: 5, timestamp: NOW });
+    fixture.detectChanges();
+    expect(text('[aria-labelledby=sharing-heading]')).toContain('Nobody sees it while the game runs');
     vi.useRealTimers();
     await expectNoAxeViolations(element);
   });
@@ -304,9 +434,9 @@ describe('GameViewComponent', () => {
 
   it('stops following a finished game', () => {
     render();
-    send(STREAM_OPEN, snapshot('5', game({ status: 'FINISHED' })));
+    send(STREAM_OPEN, snapshot('5', game({ status: 'FINISHED', outcome: 'ENDED' })));
 
-    expect(text('.phase-title')).toBe('The game is over');
+    expect(text('.phase-title')).toBe('The host ended the game');
     expect(streams[0].closed).toBe(true);
     vi.advanceTimersByTime(60_000);
     expect(streams).toHaveLength(1);

@@ -42,9 +42,17 @@ public class GamePhases {
         """, UUID.class, Timestamp.from(cutoff));
   }
 
+  /** Deletes the events of these types from finished games; returns how many. */
+  public int trimFinished(List<String> eventTypes) {
+    return jdbcTemplate.update("""
+        DELETE FROM game_event event USING game
+        WHERE game.id = event.game_id AND game.status = 'FINISHED' AND event.type = ANY (?)
+        """, (Object) eventTypes.toArray(String[]::new));
+  }
+
   /**
    * Deletes the games that finished before {@code cutoff}, with everything that belongs to them: players and
-   * their positions, stations, hiding spot, questions and events. Returns how many games were deleted.
+   * their positions and tracks, stations, hiding spot, questions and events. Returns how many games were deleted.
    */
   public int deleteFinishedBefore(Instant cutoff) {
     return jdbcTemplate.update("DELETE FROM game WHERE status = 'FINISHED' AND finished_at < ?", Timestamp.from(cutoff));

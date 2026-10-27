@@ -25,6 +25,10 @@ export interface GameDTO {
     seekingStartedAt?: string;
     finishedAt?: string;
     /**
+     * How the game ended; set once it is finished
+     */
+    outcome?: GameDTO.OutcomeEnum;
+    /**
      * The play area\'s outline as a closed ring of [longitude, latitude] positions
      */
     boundary: Array<Array<number>>;
@@ -46,6 +50,12 @@ export namespace GameDTO {
         Finished: 'FINISHED',
     } as const;
     export type StatusEnum = typeof StatusEnum[keyof typeof StatusEnum];
+    export const OutcomeEnum = {
+        Found: 'FOUND',
+        Ended: 'ENDED',
+        Abandoned: 'ABANDONED',
+    } as const;
+    export type OutcomeEnum = typeof OutcomeEnum[keyof typeof OutcomeEnum];
 }
 
 

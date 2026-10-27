@@ -2,6 +2,7 @@ package com.jetlag.game.template;
 
 import com.jetlag.game.auth.BearerToken;
 import com.jetlag.game.auth.GameAuthConfig;
+import com.jetlag.game.session.StationDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -76,6 +77,21 @@ public class GameTemplateController {
   )
   public TemplateDTO getTemplate(@PathVariable UUID templateId) {
     return templateService.get(templateId);
+  }
+
+  @GetMapping("/{templateId}/stations")
+  @Operation(
+    operationId = "getTemplateStations",
+    summary = "Get the stations a game from this template would have",
+    description = "Served by the template's routes and inside its area, as the timetable is now. A game copies them "
+      + "when it is created.",
+    responses = {
+      @ApiResponse(responseCode = "200", description = "The stations, by name"),
+      @ApiResponse(responseCode = "404", description = "No such template")
+    }
+  )
+  public List<StationDTO> getTemplateStations(@PathVariable UUID templateId) {
+    return templateService.stations(templateId);
   }
 
   @PutMapping("/{templateId}")

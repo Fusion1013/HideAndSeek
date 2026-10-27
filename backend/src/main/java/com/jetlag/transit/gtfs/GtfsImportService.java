@@ -2,6 +2,8 @@ package com.jetlag.transit.gtfs;
 
 import com.jetlag.config.TrafiklabProperties;
 import com.jetlag.transit.repository.AgencyRepository;
+import com.jetlag.transit.repository.CalendarDateRepository;
+import com.jetlag.transit.repository.CalendarRepository;
 import com.jetlag.transit.repository.GtfsRepository;
 import com.jetlag.transit.repository.RouteRepository;
 import com.jetlag.transit.repository.ShapeRepository;
@@ -9,6 +11,8 @@ import com.jetlag.transit.repository.StopRepository;
 import com.jetlag.transit.repository.StopTimeRepository;
 import com.jetlag.transit.repository.TripRepository;
 import com.jetlag.transit.model.AgencyEntity;
+import com.jetlag.transit.model.CalendarDateEntity;
+import com.jetlag.transit.model.CalendarEntity;
 import com.jetlag.transit.model.RouteEntity;
 import com.jetlag.transit.model.StopEntity;
 import com.jetlag.transit.model.StopTimeEntity;
@@ -63,6 +67,8 @@ public class GtfsImportService {
   private final StopTimeRepository stopTimeRepository;
   private final ShapeRepository shapeRepository;
   private final AgencyRepository agencyRepository;
+  private final CalendarRepository calendarRepository;
+  private final CalendarDateRepository calendarDateRepository;
 
   public GtfsImportService(
     @Qualifier("trafiklabRestClient") RestClient trafiklab,
@@ -75,7 +81,9 @@ public class GtfsImportService {
     TripRepository tripRepository,
     StopTimeRepository stopTimeRepository,
     ShapeRepository shapeRepository,
-    AgencyRepository agencyRepository
+    AgencyRepository agencyRepository,
+    CalendarRepository calendarRepository,
+    CalendarDateRepository calendarDateRepository
   ) {
     this.trafiklab = trafiklab;
     this.properties = properties;
@@ -88,6 +96,8 @@ public class GtfsImportService {
     this.stopTimeRepository = stopTimeRepository;
     this.shapeRepository = shapeRepository;
     this.agencyRepository = agencyRepository;
+    this.calendarRepository = calendarRepository;
+    this.calendarDateRepository = calendarDateRepository;
   }
 
   public int importData() throws IOException {
@@ -111,7 +121,9 @@ public class GtfsImportService {
         batchWriter.deleteStale(tripRepository, generation) +
         batchWriter.deleteStale(agencyRepository, generation) +
         batchWriter.deleteStale(stopTimeRepository, generation) +
-        batchWriter.deleteStale(shapeRepository, generation);
+        batchWriter.deleteStale(shapeRepository, generation) +
+        batchWriter.deleteStale(calendarRepository, generation) +
+        batchWriter.deleteStale(calendarDateRepository, generation);
 
       routeStopsView.refresh();
 
@@ -209,6 +221,10 @@ public class GtfsImportService {
             importedCount += shapeLineImporter.importShapes(parser, generation);
           } else if (fileName.equalsIgnoreCase("agency.txt")) {
             importedCount += parse("agencies", parser, generation, agencyRepository, AgencyEntity::new);
+          } else if (fileName.equalsIgnoreCase("calendar.txt")) {
+            importedCount += parse("calendar", parser, generation, calendarRepository, CalendarEntity::new);
+          } else if (fileName.equalsIgnoreCase("calendar_dates.txt")) {
+            importedCount += parse("calendar_dates", parser, generation, calendarDateRepository, CalendarDateEntity::new);
           }
         }
       }

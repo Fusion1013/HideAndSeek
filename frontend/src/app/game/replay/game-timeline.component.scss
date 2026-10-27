@@ -1,0 +1,205 @@
+// Colours match the map: hiders orange (as their station), seekers blue, questions purple
+$hider: #a85d00;
+$seeker: #2d5bb8;
+$question: #7b3fa0;
+$answer: #2e7d32;
+$phase: #17232b;
+
+:host {
+  display: block;
+  width: min(820px, 100%);
+}
+
+.timeline {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 10px 14px 12px;
+  border: 1px solid var(--control-border);
+  border-radius: 6px;
+  background: #ffffff;
+  color: var(--control-ink);
+  box-shadow: 0 4px 16px rgb(23 43 50 / 18%);
+  font: 14px/1.4 system-ui, sans-serif;
+}
+
+.timeline-error {
+  color: #a32222;
+  font-weight: 600;
+}
+
+.timeline-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+
+  h2 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 650;
+  }
+}
+
+.timeline-time {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  color: var(--control-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.timeline-elapsed {
+  color: var(--control-ink);
+  font-weight: 650;
+}
+
+.timeline-legend {
+  display: flex;
+  gap: 12px;
+  margin: 0 0 0 auto;
+  padding: 0;
+  color: var(--control-muted);
+  font-size: 13px;
+  list-style: none;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+}
+
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.swatch-hider { background: $hider; }
+.swatch-seeker { background: $seeker; }
+.swatch-question { background: $question; }
+
+.timeline-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.icon-button {
+  display: grid;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid #aebdc0;
+  border-radius: 5px;
+  background: #ffffff;
+  color: var(--control-ink);
+  cursor: pointer;
+
+  svg {
+    fill: currentColor;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linejoin: round;
+  }
+
+  &:hover {
+    background: #eef4f5;
+  }
+}
+
+.play-button {
+  border-color: #075761;
+  background: #087e8b;
+  color: #ffffff;
+
+  &:hover {
+    background: #075761;
+  }
+}
+
+button,
+input,
+select {
+  &:focus-visible {
+    outline: 3px solid var(--control-accent);
+    outline-offset: 2px;
+  }
+}
+
+// The marks sit under the slider's track; the slider takes every click and key
+.timeline-track {
+  position: relative;
+  flex: 1;
+  min-width: 80px;
+  height: 36px;
+
+  input {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    background: transparent;
+    accent-color: #087e8b;
+    cursor: pointer;
+  }
+}
+
+// Inset by about half the thumb, so a mark lines up with the thumb's centre at the same moment
+.timeline-marks {
+  position: absolute;
+  inset: 0 8px;
+}
+
+.mark {
+  position: absolute;
+  top: 4px;
+  width: 3px;
+  height: 9px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: $phase;
+}
+
+.mark-question { background: $question; }
+.mark-answer { background: $answer; }
+.mark-station { background: $hider; }
+
+.timeline-speed select {
+  height: 36px;
+  max-width: 140px;
+  border: 1px solid #aebdc0;
+  border-radius: 5px;
+  background: #ffffff;
+  color: var(--control-ink);
+  font: inherit;
+  font-size: 13px;
+}
+
+.timeline-event {
+  min-height: 1.4em;
+  margin: 0;
+  color: var(--control-ink);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .timeline-legend {
+    display: none;
+  }
+
+  .timeline-speed select {
+    max-width: 96px;
+  }
+}

@@ -305,3 +305,51 @@
     color: #8a4b00;
   }
 }
+
+.recap-time-label {
+  color: var(--control-muted);
+  font-size: 13px;
+}
+
+.recap-facts {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+
+  div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--control-border);
+  }
+
+  dt {
+    color: var(--control-muted);
+    font-size: 14px;
+  }
+
+  dd {
+    margin: 0;
+    font-weight: 600;
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+}
+
+// A link that leads on, looking like the panel's buttons
+.button-link {
+  display: inline-grid;
+  min-height: 42px;
+  padding: 0 14px;
+  place-items: center;
+  border: 1px solid #aebdc0;
+  border-radius: 5px;
+  background: #ffffff;
+  color: var(--control-ink);
+  text-decoration: none;
+
+  &:hover {
+    background: #eaf1f1;
+  }
+}

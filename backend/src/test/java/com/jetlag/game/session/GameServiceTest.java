@@ -12,6 +12,13 @@ import com.jetlag.game.question.QuestionService;
 import com.jetlag.game.question.QuestionType;
 import com.jetlag.game.template.GameTemplateService;
 import com.jetlag.game.template.TemplateRequest;
+import com.jetlag.game.timeline.GameTimelineDTO;
+import com.jetlag.game.timeline.GameTimelineService;
+import com.jetlag.game.timeline.PlayerTrackDTO;
+import com.jetlag.game.timeline.TimelineEventDTO;
+import com.jetlag.game.timeline.TimelineEventType;
+import com.jetlag.game.timeline.TimelineSource;
+import com.jetlag.game.timeline.TrackPointDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +28,8 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -47,8 +56,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Testcontainers(disabledWithoutDocker = true)
 @Import({GameService.class, GameStations.class, GamePhases.class, GameEventLog.class, PlayerViews.class,
-  HidingSpots.class, GamePlayService.class, QuestionService.class, GameTemplateService.class,
-  GameServiceTest.TestClock.class})
+  HidingSpots.class, GamePositions.class, GamePlayService.class, QuestionService.class, GameTemplateService.class,
+  GameServiceTest.TestClock.class, GameServiceTest.Timeline.class})
 class GameServiceTest {
 
   @Container
@@ -65,6 +74,13 @@ class GameServiceTest {
     MutableClock clock() {
       return new MutableClock(Instant.parse("2026-10-25T12:00:00Z"));
     }
+  }
+
+  /** The timeline service and every source of its events, as the application finds them. */
+  @TestConfiguration
+  @ComponentScan(basePackageClasses = GameTimelineService.class, useDefaultFilters = false, includeFilters =
+    @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = {GameTimelineService.class, TimelineSource.class}))
+  static class Timeline {
   }
 
   /** A clock the test moves forward. */
@@ -118,6 +134,9 @@ class GameServiceTest {
 
   @Autowired
   private QuestionService questions;
+
+  @Autowired
+  private GameTimelineService timelines;
 
   private UUID templateId;
 
@@ -286,7 +305,7 @@ class GameServiceTest {
   }
 
   @Test
-  void seekersShareTheirPositionWithTheHidersOnly() {
+  void seekersShareTheirPositionWithTheHidersOnlyAndHidersWithNobody() {
     JoinedGameDTO[] players = gameWithSeekerAndHider();
     JoinedGameDTO seeker = players[0];
     JoinedGameDTO hider = players[1];
@@ -294,7 +313,9 @@ class GameServiceTest {
     assertStatus(() -> play.reportLocation(playerOf(seeker), here), HttpStatus.CONFLICT);
 
     games.start(playerOf(seeker));
-    assertStatus(() -> play.reportLocation(playerOf(hider), here), HttpStatus.FORBIDDEN);
+    // Kept for the replay, but shown to nobody while the game runs
+    play.reportLocation(playerOf(hider), new GameRequests.LocationRequest(11.99, 57.69, 5f));
+    assertThat(eventLog.after(seeker.gameId(), 0, 100)).noneMatch(event -> event.payload().contains("57.69"));
     assertStatus(() -> play.reportLocation(playerOf(seeker), new GameRequests.LocationRequest(200, 57.7, null)),
       HttpStatus.BAD_REQUEST);
     play.reportLocation(playerOf(seeker), here);
@@ -316,8 +337,129 @@ class GameServiceTest {
     assertThat(locations).hasSize(2).extracting(GameEvent::audience).containsOnly(EventAudience.HIDERS);
     assertThat(games.get(playerOf(hider)).seekerLocations().getFirst().longitude()).isEqualTo(11.99);
 
+    assertThat(games.get(playerOf(seeker)).seekerLocations()).isEmpty();
+    assertStatus(() -> timelines.timeline(playerOf(seeker)), HttpStatus.CONFLICT);
+
     games.end(playerOf(seeker));
     assertStatus(() -> play.reportLocation(playerOf(seeker), here), HttpStatus.CONFLICT);
+  }
+
+  @Test
+  void aFinishedGamesTimelineHasEveryonesTracksAndWhatHappenedInOrder() {
+    JoinedGameDTO[] players = gameWithSeekerAndHider();
+    JoinedGameDTO seeker = players[0];
+    JoinedGameDTO hider = players[1];
+    Instant start = clock.instant();
+    games.start(playerOf(seeker));
+    play.reportLocation(playerOf(hider), new GameRequests.LocationRequest(11.97, 57.70, 5f));
+    play.chooseHidingStation(playerOf(hider), "central");
+    clock.advance(Duration.ofMinutes(10));
+    play.reportLocation(playerOf(hider), new GameRequests.LocationRequest(11.99, 57.69, 5f));
+    play.chooseHidingStation(playerOf(hider), "korsvagen");
+    clock.advance(Duration.ofMinutes(35));
+    games.advancePhases();
+    play.reportLocation(playerOf(seeker), new GameRequests.LocationRequest(11.95, 57.71, 20f));
+    clock.advance(Duration.ofMinutes(2));
+    QuestionDTO radar = questions.ask(playerOf(seeker), new QuestionRequests.AskRequest(QuestionType.RADAR, null, 2000));
+    clock.advance(Duration.ofMinutes(1));
+    questions.answer(playerOf(hider), radar.id(), new QuestionRequests.AnswerRequest("YES", null));
+    clock.advance(Duration.ofMinutes(1));
+    QuestionDTO matching = questions.ask(playerOf(seeker), new QuestionRequests.AskRequest(QuestionType.MATCHING, "parks", null));
+    clock.advance(Duration.ofMinutes(6));
+    questions.expireOverdue();
+    games.found(playerOf(seeker));
+
+    GameTimelineDTO timeline = timelines.timeline(playerOf(seeker));
+
+    assertThat(timeline.game().outcome()).isEqualTo(GameOutcome.FOUND);
+    assertThat(timeline.events()).extracting(TimelineEventDTO::type).containsExactly(
+      TimelineEventType.HIDING_STARTED,
+      TimelineEventType.HIDING_STATION_CHOSEN,
+      TimelineEventType.HIDING_STATION_CHOSEN,
+      TimelineEventType.SEEKING_STARTED,
+      TimelineEventType.QUESTION_ASKED,
+      TimelineEventType.QUESTION_ANSWERED,
+      TimelineEventType.QUESTION_ASKED,
+      TimelineEventType.QUESTION_EXPIRED,
+      TimelineEventType.GAME_ENDED);
+    assertThat(timeline.events().getFirst().at()).isEqualTo(start);
+    assertThat(timeline.events()).filteredOn(event -> event.type() == TimelineEventType.HIDING_STATION_CHOSEN)
+      .extracting(event -> event.hidingStation().station().name()).containsExactly("Centralstationen", "Korsvägen");
+    assertThat(timeline.events().get(5).question().answer()).isEqualTo(new QuestionAnswer("YES", null));
+    assertThat(timeline.events().get(5).playerId()).isEqualTo(hider.playerId());
+    assertThat(timeline.events().get(7).question().id()).isEqualTo(matching.id());
+
+    assertThat(timeline.tracks()).extracting(PlayerTrackDTO::playerId)
+      .containsExactlyInAnyOrder(seeker.playerId(), hider.playerId());
+    assertThat(timeline.tracks()).filteredOn(track -> track.playerId().equals(hider.playerId())).singleElement()
+      .satisfies(track -> assertThat(track.points()).extracting(TrackPointDTO::longitude).containsExactly(11.97, 11.99));
+    // The hiders see the same
+    assertThat(timelines.timeline(playerOf(hider)).events()).hasSize(9);
+  }
+
+  @Test
+  void keepsFinishedGamesButTrimsTheEventsOnlyNeededWhileTheyRan() {
+    JoinedGameDTO[] players = gameWithSeekerAndHider();
+    games.start(playerOf(players[0]));
+    play.reportLocation(playerOf(players[0]), new GameRequests.LocationRequest(11.97, 57.70, 10f));
+    play.chooseHidingStation(playerOf(players[1]), "central");
+    assertThat(games.trimFinishedGames()).isZero();
+    games.end(playerOf(players[0]));
+
+    assertThat(games.trimFinishedGames()).isEqualTo(1);
+    assertThat(eventLog.after(players[0].gameId(), 0, 100)).extracting(GameEvent::type)
+      .doesNotContain(GamePlayService.SEEKER_LOCATION_EVENT).contains(GamePlayService.HIDING_STATION_EVENT);
+    assertThat(timelines.timeline(playerOf(players[0])).tracks()).singleElement()
+      .extracting(PlayerTrackDTO::playerId).isEqualTo(players[0].playerId());
+  }
+
+  @Test
+  void theSeekersFindTheHidersWhileSeekingAndEveryoneThenSeesTheStation() {
+    JoinedGameDTO[] players = gameWithSeekerAndHider();
+    JoinedGameDTO seeker = players[0];
+    JoinedGameDTO hider = players[1];
+    games.start(playerOf(seeker));
+    play.chooseHidingStation(playerOf(hider), "korsvagen");
+    assertStatus(() -> games.found(playerOf(seeker)), HttpStatus.CONFLICT);
+    assertThat(games.get(playerOf(seeker)).hidingStation()).isNull();
+
+    clock.advance(Duration.ofMinutes(45));
+    games.advancePhases();
+    clock.advance(Duration.ofMinutes(72));
+    assertStatus(() -> games.found(playerOf(hider)), HttpStatus.FORBIDDEN);
+    GameDTO found = games.found(playerOf(seeker)).game();
+
+    assertThat(found.status()).isEqualTo(GameStatus.FINISHED);
+    assertThat(found.outcome()).isEqualTo(GameOutcome.FOUND);
+    assertThat(Duration.between(found.seekingStartedAt(), found.finishedAt())).isEqualTo(Duration.ofMinutes(72));
+    assertThat(games.get(playerOf(seeker)).hidingStation().station().name()).isEqualTo("Korsvägen");
+
+    // The final state, then the station for everyone
+    List<GameEvent> events = eventLog.after(seeker.gameId(), 0, 100);
+    assertThat(events.get(events.size() - 2).type()).isEqualTo(GameService.GAME_EVENT);
+    assertThat(events.getLast().type()).isEqualTo(GamePlayService.HIDING_STATION_EVENT);
+    assertThat(events.getLast().audience()).isEqualTo(EventAudience.ALL);
+    assertThat(events.subList(0, events.size() - 1)).noneMatch(event ->
+      event.audience() == EventAudience.ALL && event.payload().contains("Korsvägen"));
+  }
+
+  @Test
+  void recordsHowAGameEnded() {
+    JoinedGameDTO host = games.create(new GameRequests.CreateGameRequest(templateId, "Ada", 45));
+    assertThat(games.get(playerOf(host)).game().outcome()).isNull();
+    assertThat(games.end(playerOf(host)).game().outcome()).isEqualTo(GameOutcome.ENDED);
+
+    JoinedGameDTO idle = games.create(new GameRequests.CreateGameRequest(templateId, "Grace", 45));
+    clock.advance(Duration.ofHours(25));
+    games.finishIdleGames(Duration.ofHours(24));
+    assertThat(games.get(playerOf(idle)).game().outcome()).isEqualTo(GameOutcome.ABANDONED);
+  }
+
+  @Test
+  void showsATemplateTheStationsItsGamesWillHave() {
+    assertThat(templates.stations(templateId)).extracting(StationDTO::name).containsExactly("Centralstationen", "Korsvägen");
+    JoinedGameDTO host = games.create(new GameRequests.CreateGameRequest(templateId, "Ada", 45));
+    assertThat(play.stations(playerOf(host))).isEqualTo(templates.stations(templateId));
   }
 
   @Test
@@ -421,7 +563,7 @@ class GameServiceTest {
     clock.advance(Duration.ofDays(2));
     assertThat(games.deleteFinishedGames(Duration.ofDays(7))).isEqualTo(1);
 
-    for (String table : List.of("game", "game_player", "game_station", "game_event", "game_route")) {
+    for (String table : List.of("game", "game_player", "game_station", "game_event", "game_route", "game_position")) {
       String column = table.equals("game") ? "id" : "game_id";
       assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM " + table + " WHERE " + column + " = ?", Integer.class, gameId))
         .as(table).isZero();

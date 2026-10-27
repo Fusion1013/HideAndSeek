@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.UUID;
 
-/** Playing a running game: its stations, the seekers' positions, the hiders' station. */
+/** Playing a running game: its stations, the players' positions, the hiders' station. */
 @RestController
 // Declared, so the API document says JSON rather than */*; the generated client reads */* responses as blobs
 @RequestMapping(value = "/api/games/{gameId}", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -46,12 +46,13 @@ public class GamePlayController {
   @ResponseStatus(HttpStatus.NO_CONTENT)
   @Operation(
     operationId = "reportLocation",
-    summary = "Share a seeker's position with the hiders",
-    description = "Seekers only, while the game runs. Reports less than 5 seconds apart are accepted but not passed on.",
+    summary = "Report a player's position",
+    description = "While the game runs. A seeker's position is shared with the hiders; a hider's is shown to nobody "
+      + "until the game is over, in its replay. Reports less than 5 seconds apart are accepted but not kept.",
     responses = {
       @ApiResponse(responseCode = "204", description = "Accepted"),
       @ApiResponse(responseCode = "400", description = "Position out of range"),
-      @ApiResponse(responseCode = "403", description = "Not a seeker"),
+      @ApiResponse(responseCode = "403", description = "The player has no role"),
       @ApiResponse(responseCode = "409", description = "The game is not running")
     }
   )

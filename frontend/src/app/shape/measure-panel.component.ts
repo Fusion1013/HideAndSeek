@@ -1,11 +1,13 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 
+import { ReachabilityPanelComponent } from './reachability-panel.component';
 import { ShapeService } from './shape.service';
 import type { DrawMode } from './shape.service';
 
-/** The Measure tab: draw lines and circles on the map, and delete them. */
+/** The Measure tab: draw lines and circles on the map, and delete them; find the stations reachable in a time. */
 @Component({
   selector: 'app-measure-panel',
+  imports: [ReachabilityPanelComponent],
   template: `
     <section class="menu-content measure-tools" aria-label="Measure shapes">
       <div class="panel-heading">
@@ -21,6 +23,7 @@ import type { DrawMode } from './shape.service';
         <button type="button" [disabled]="shapes.shapeCount() === 0" (click)="shapes.clearShapes()">Delete all</button>
       </div>
     </section>
+    <app-reachability-panel />
   `,
   styles: `
     :host {

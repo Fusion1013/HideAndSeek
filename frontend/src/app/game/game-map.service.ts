@@ -1,6 +1,7 @@
 import { computed, DestroyRef, effect, inject, Injectable, signal, untracked } from '@angular/core';
 import Feature, { type FeatureLike } from 'ol/Feature';
 import type MapBrowserEvent from 'ol/MapBrowserEvent';
+import LineString from 'ol/geom/LineString';
 import Point from 'ol/geom/Point';
 import Polygon, { circular } from 'ol/geom/Polygon';
 import VectorLayer from 'ol/layer/Vector';
@@ -9,16 +10,17 @@ import { fromLonLat } from 'ol/proj';
 import VectorSource from 'ol/source/Vector';
 import { Circle as CircleStyle, Fill, Stroke, Style, Text } from 'ol/style';
 
-import type { QuestionDTO, StationDTO } from '../api/generated';
+import type { PlayerDTO, QuestionDTO, StationDTO } from '../api/generated';
 import { ControlsPanelService } from '../controls/controls-panel.service';
 import { MapService } from '../map/map.service';
 import { formatAge } from '../shared/format';
 import { RouteSelectionService } from '../transit/route-selection.service';
 import { GameSessionService } from './game-session.service';
 import { answerText, questionKind } from './questions';
+import { GameReplayService } from './replay/game-replay.service';
 
 /** Above the routes, below the measuring shapes. */
-const Z_INDEX = { area: 880, questions: 885, stations: 890, seekers: 895 };
+const Z_INDEX = { area: 880, questions: 885, paths: 887, stations: 890, questionPins: 893, players: 895 };
 
 const AREA_STYLE = [
   new Style({ stroke: new Stroke({ color: '#ffffff', width: 6 }) }),
@@ -35,6 +37,14 @@ const HIDING_STATION_STYLE = new Style({
   image: new CircleStyle({ radius: 10, fill: new Fill({ color: '#a85d00' }), stroke: new Stroke({ color: '#ffffff', width: 3 }) })
 });
 const SEEKER_COLOR = '#2d5bb8';
+const HIDER_COLOR = '#a85d00';
+const QUESTION_COLOR = '#7b3fa0';
+
+/** A pin where a question was asked from. */
+const QUESTION_PIN_STYLE = new Style({
+  image: new CircleStyle({ radius: 10, fill: new Fill({ color: QUESTION_COLOR }), stroke: new Stroke({ color: '#ffffff', width: 2 }) }),
+  text: new Text({ text: '?', font: '700 13px system-ui, sans-serif', fill: new Fill({ color: '#ffffff' }) })
+});
 
 /** Radar and tentacles questions are about a circle around where the asking seeker was. */
 const CIRCLE_QUESTIONS: readonly QuestionDTO.TypeEnum[] = ['RADAR', 'TENTACLES'];
@@ -46,8 +56,10 @@ const HIT_TOLERANCE = 12;
 
 /**
  * The game on the map while its page is open: the play area, the game's routes and stations, the hiders' station
- * and the seekers' last positions (both for hiders only). A click on a station picks it for the hiding tab.
- * One per game page; everything is taken off the map when the page closes, and the Overview selection returns.
+ * and the seekers' last positions (both for hiders only), and the questions. A click on a station picks it for
+ * the hiding tab. Once the game is over, its replay takes the place of the live state: everyone's paths up to the
+ * moment chosen on the timeline, and the questions and station as they were then. One per game page; everything
+ * is taken off the map when the page closes, and the Overview selection returns.
  */
 @Injectable()
 export class GameMapService {
@@ -55,22 +67,35 @@ export class GameMapService {
   private readonly mapService = inject(MapService);
   private readonly routeSelection = inject(RouteSelectionService);
   private readonly controls = inject(ControlsPanelService);
+  private readonly replay = inject(GameReplayService);
 
   private readonly areaSource = new VectorSource<Feature<Polygon>>();
   private readonly stationSource = new VectorSource<Feature<Point>>();
-  private readonly seekerSource = new VectorSource<Feature<Point>>();
+  private readonly playerSource = new VectorSource<Feature<Point>>();
+  private readonly pathSource = new VectorSource<Feature<LineString>>();
   private readonly questionSource = new VectorSource<Feature<Polygon>>();
+  private readonly questionPinSource = new VectorSource<Feature<Point>>();
   private readonly layers = [
     new VectorLayer({ source: this.areaSource, style: AREA_STYLE, zIndex: Z_INDEX.area }),
     new VectorLayer({ source: this.questionSource, style: feature => questionStyle(feature), zIndex: Z_INDEX.questions }),
     new VectorLayer({ source: this.stationSource, style: feature => this.stationStyle(feature), zIndex: Z_INDEX.stations }),
-    new VectorLayer({ source: this.seekerSource, style: feature => seekerStyle(feature), zIndex: Z_INDEX.seekers })
+    new VectorLayer({ source: this.pathSource, style: feature => pathStyle(feature), zIndex: Z_INDEX.paths }),
+    new VectorLayer({ source: this.questionPinSource, style: QUESTION_PIN_STYLE, zIndex: Z_INDEX.questionPins }),
+    new VectorLayer({ source: this.playerSource, style: feature => playerStyle(feature), zIndex: Z_INDEX.players })
   ];
   private map: OlMap | null = null;
   private readonly stationLayer = this.layers[2];
 
   /** A station clicked on the map, offered in the hiding tab. */
   readonly pickedStation = signal<StationDTO | null>(null);
+
+  /** The questions shown: as they are now, or as they were at the replay's moment. */
+  private readonly shownQuestions = computed(() => this.replay.frame()?.questions ?? this.session.questions());
+  /** The hiders' station shown: as it is now (to whoever may see it), or as it was at the replay's moment. */
+  private readonly shownHidingStation = computed(() => {
+    const frame = this.replay.frame();
+    return frame ? frame.hidingStation : this.session.hidingStation();
+  });
 
   /** The device's clock, for how long ago each seeker was seen; ticks every 15 seconds. */
   private readonly now = signal(Date.now());
@@ -123,23 +148,52 @@ export class GameMapService {
     // Restyles the stations when the pick or the hiding station changes
     effect(() => {
       this.pickedStation();
-      this.session.hidingStation();
+      this.shownHidingStation();
       this.stationSource.changed();
     });
 
+    // The players: in the replay, everyone where they were then; while the game runs, the seekers last seen
     effect(() => {
-      this.seekerSource.clear(true);
-      this.seekerSource.addFeatures(this.seekers().map(seeker => {
-        const feature = new Feature(new Point(fromLonLat([seeker.longitude, seeker.latitude])));
-        feature.set('label', `${seeker.displayName} · ${seeker.age}`);
+      const frame = this.replay.frame();
+      const markers: { position: readonly [number, number]; role: PlayerDTO.RoleEnum | undefined; label: string }[] = frame
+        ? frame.players.flatMap(({ player, position }) => position ? [{ position, role: player.role, label: player.displayName }] : [])
+        : this.seekers().map(seeker => ({
+          position: [seeker.longitude, seeker.latitude] as const,
+          role: 'SEEKER' as const,
+          label: `${seeker.displayName} · ${seeker.age}`
+        }));
+      this.playerSource.clear(true);
+      this.playerSource.addFeatures(markers.map(marker => {
+        const feature = new Feature(new Point(fromLonLat([...marker.position])));
+        feature.set('label', marker.label);
+        feature.set('role', marker.role);
         return feature;
       }));
+    });
+
+    // Where everyone went, in the replay
+    effect(() => {
+      const paths = this.replay.frame()?.players.filter(player => player.path.length > 1) ?? [];
+      this.pathSource.clear(true);
+      this.pathSource.addFeatures(paths.map(({ player, path }) => {
+        const feature = new Feature(new LineString(path.map(point => fromLonLat([...point]))));
+        feature.set('role', player.role);
+        return feature;
+      }));
+    });
+
+    // Where each question was asked from, whatever its kind
+    effect(() => {
+      this.questionPinSource.clear(true);
+      this.questionPinSource.addFeatures(this.shownQuestions()
+        .filter(question => question.params.origin)
+        .map(question => new Feature(new Point(fromLonLat([question.params.origin!.longitude, question.params.origin!.latitude])))));
     });
 
     // Radar and tentacles circles, true to the distance on the ground (a circle in the map's projection is not)
     effect(() => {
       this.questionSource.clear(true);
-      this.questionSource.addFeatures(this.session.questions()
+      this.questionSource.addFeatures(this.shownQuestions()
         .filter(question => CIRCLE_QUESTIONS.includes(question.type) && question.params.origin && question.params.distanceMeters)
         .map(question => {
           const { longitude, latitude } = question.params.origin!;
@@ -196,7 +250,7 @@ export class GameMapService {
 
   private stationStyle(feature: FeatureLike): Style {
     const station = feature.get('station') as StationDTO | undefined;
-    if (station && station.stationId === this.session.hidingStation()?.station.stationId) return HIDING_STATION_STYLE;
+    if (station && station.stationId === this.shownHidingStation()?.station.stationId) return HIDING_STATION_STYLE;
     if (station && station.stationId === this.pickedStation()?.stationId) return PICKED_STATION_STYLE;
     return STATION_STYLE;
   }
@@ -222,9 +276,13 @@ function questionStyle(feature: FeatureLike): Style {
   });
 }
 
-function seekerStyle(feature: FeatureLike): Style {
+function roleColor(feature: FeatureLike): string {
+  return feature.get('role') === 'HIDER' ? HIDER_COLOR : SEEKER_COLOR;
+}
+
+function playerStyle(feature: FeatureLike): Style {
   return new Style({
-    image: new CircleStyle({ radius: 9, fill: new Fill({ color: SEEKER_COLOR }), stroke: new Stroke({ color: '#ffffff', width: 3 }) }),
+    image: new CircleStyle({ radius: 9, fill: new Fill({ color: roleColor(feature) }), stroke: new Stroke({ color: '#ffffff', width: 3 }) }),
     text: new Text({
       text: String(feature.get('label') ?? ''),
       offsetY: -20,
@@ -233,4 +291,11 @@ function seekerStyle(feature: FeatureLike): Style {
       stroke: new Stroke({ color: '#ffffff', width: 4 })
     })
   });
+}
+
+function pathStyle(feature: FeatureLike): Style[] {
+  return [
+    new Style({ stroke: new Stroke({ color: 'rgba(255, 255, 255, 0.9)', width: 7 }) }),
+    new Style({ stroke: new Stroke({ color: roleColor(feature), width: 3.5 }) })
+  ];
 }

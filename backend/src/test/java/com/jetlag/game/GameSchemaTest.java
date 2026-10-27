@@ -2,6 +2,7 @@ package com.jetlag.game;
 
 import com.jetlag.game.auth.AccessTokens;
 import com.jetlag.game.session.GameEntity;
+import com.jetlag.game.session.GameOutcome;
 import com.jetlag.game.session.GamePlayerEntity;
 import com.jetlag.game.session.GamePlayerRepository;
 import com.jetlag.game.session.GameRepository;
@@ -101,7 +102,7 @@ class GameSchemaTest {
   void invitesCodesAreReusableOnlyOnceTheGameIsFinished() {
     GameEntity finished = games.save(new GameEntity(null, "SAME22", "Same", 30, box(0, 0, 1, 1), Map.of(), Set.of()));
     entityManager.flush();
-    finished.finish(Instant.now());
+    finished.finish(Instant.now(), GameOutcome.ENDED);
     entityManager.flush();
     games.save(new GameEntity(null, "SAME22", "Same", 30, box(0, 0, 1, 1), Map.of(), Set.of()));
     entityManager.flush();

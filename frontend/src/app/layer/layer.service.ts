@@ -64,6 +64,20 @@ export class LayerService {
     return this.distanceLayers;
   }
 
+  /**
+   * Whether the map layer loads its data when first drawn (places from the backend, the districts file), rather
+   * than holding what it was given. Only such sources report the end of a load; the others report a start only.
+   */
+  public loadsOnDemand(layerId: MapLayerId): boolean {
+    return this.providers.get(layerId) instanceof OverpassLayer || this.layersFor(layerId).some(layer =>
+      layer instanceof VectorLayer && layer.getSource()?.getUrl() !== undefined);
+  }
+
+  /** The OpenLayers layers drawn for a map layer, e.g. to draw the same sources in another map. */
+  public layersFor(layerId: MapLayerId): readonly BaseLayer[] {
+    return this.registeredLayers.get(layerId) ?? [];
+  }
+
   public getLayerVisibility(layerId: MapLayerId): boolean {
     return this.visibleLayerIds().has(layerId);
   }

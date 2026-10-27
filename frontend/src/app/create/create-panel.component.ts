@@ -5,6 +5,7 @@ import { RouterLink } from '@angular/router';
 import { ControlsPanelService } from '../controls/controls-panel.service';
 import { injectFocusAfterRender } from '../shared/focus';
 import { LayersPanelComponent } from '../layer/layers-panel.component';
+import { ExportImageDialogComponent } from './export-image-dialog.component';
 import { HostGameComponent } from './host-game.component';
 import { TemplateAreaComponent } from './template-area.component';
 import { MAX_TEMPLATE_NAME_LENGTH, TemplateEditorService } from './template-editor.service';
@@ -15,7 +16,7 @@ import { TemplateRoutePickerComponent } from './template-route-picker.component'
 @Component({
   selector: 'app-create-panel',
   imports: [
-    HostGameComponent, LayersPanelComponent, ReactiveFormsModule, RouterLink, TemplateAreaComponent,
+    ExportImageDialogComponent, HostGameComponent, LayersPanelComponent, ReactiveFormsModule, RouterLink, TemplateAreaComponent,
     TemplateListComponent, TemplateRoutePickerComponent
   ],
   providers: [TemplateEditorService],
@@ -95,6 +96,18 @@ import { TemplateRoutePickerComponent } from './template-route-picker.component'
             }
 
             @if (templateId(); as templateId) {
+              @if (editor.area(); as area) {
+                <section class="template-group" aria-labelledby="export-heading-panel">
+                  <h3 id="export-heading-panel" class="panel-heading">Image of the play area</h3>
+                  <div class="panel-actions">
+                    <button type="button" [disabled]="editor.dirty()" (click)="exportDialog.open()">Export as PNG…</button>
+                    @if (editor.dirty()) {
+                      <span class="status-text">Save the changes first.</span>
+                    }
+                  </div>
+                  <app-export-image-dialog #exportDialog [templateId]="templateId" [name]="editor.name.value" [area]="area" />
+                </section>
+              }
               <app-host-game [templateId]="templateId" [disabled]="editor.dirty()" />
             }
           }

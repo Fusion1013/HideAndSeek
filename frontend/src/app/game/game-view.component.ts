@@ -5,10 +5,12 @@ import type { PlayerDTO } from '../api/generated';
 import type { GeolocationError } from '../position/geolocation.service';
 import { ControlsPanelService } from '../controls/controls-panel.service';
 import { injectFocusAfterRender } from '../shared/focus';
+import { formatElapsed } from '../shared/format';
 import { GameMapService } from './game-map.service';
+import { clockTime, GameRecapComponent } from './game-recap.component';
 import { GameRole, GameSessionService } from './game-session.service';
 import { questionText } from './questions';
-import { SeekerLocationReporter } from './seeker-location-reporter.service';
+import { LocationReporter } from './location-reporter.service';
 
 const ROLE_LABELS: Record<GameRole, string> = { SEEKER: 'Seeker', HIDER: 'Hider' };
 
@@ -18,7 +20,7 @@ const ROLE_LABELS: Record<GameRole, string> = { SEEKER: 'Seeker', HIDER: 'Hider'
  */
 @Component({
   selector: 'app-game-view',
-  imports: [RouterLink],
+  imports: [GameRecapComponent, RouterLink],
   template: `
     @if (session.loading()) {
       <p class="status-text">Loading the game…</p>
@@ -34,6 +36,9 @@ const ROLE_LABELS: Record<GameRole, string> = { SEEKER: 'Seeker', HIDER: 'Hider'
     }
 
     @if (session.game(); as game) {
+      @if (game.status === 'FINISHED') {
+        <app-game-recap />
+      } @else {
       <section class="game-section" aria-labelledby="game-heading">
         <div class="panel-heading">
           <h3 id="game-heading">{{ game.name }}</h3>
@@ -44,6 +49,8 @@ const ROLE_LABELS: Record<GameRole, string> = { SEEKER: 'Seeker', HIDER: 'Hider'
           <p class="phase-title">{{ phaseTitle() }}</p>
           @if (game.status === 'HIDING') {
             <p class="countdown" aria-hidden="true">{{ countdown() }}</p>
+          } @else if (game.status === 'SEEKING') {
+            <p class="countdown" aria-hidden="true">{{ seekingTime() }}</p>
           }
           @if (roleHint()) {
             <p class="phase-hint">{{ roleHint() }}</p>
@@ -75,7 +82,7 @@ const ROLE_LABELS: Record<GameRole, string> = { SEEKER: 'Seeker', HIDER: 'Hider'
           } @else if (reporter.sendFailed()) {
             <p class="load-error" role="alert">Your position could not be sent. Trying again…</p>
           } @else {
-            <p class="status-text">{{ reporter.hasPosition() ? 'Shared with the hiders while the game runs.' : 'Finding your position…' }}</p>
+            <p class="status-text">{{ reporter.hasPosition() ? sharingText() : 'Finding your position…' }}</p>
           }
         </section>
       }
@@ -134,7 +141,26 @@ const ROLE_LABELS: Record<GameRole, string> = { SEEKER: 'Seeker', HIDER: 'Hider'
         <p class="load-error" role="alert">{{ session.error() }}</p>
       }
 
-      @if (session.isHost() && game.status !== 'FINISHED') {
+      @if (game.status === 'SEEKING' && (session.me()?.role === 'SEEKER' || session.isHost())) {
+        <section class="game-section" aria-labelledby="found-heading">
+          <h3 id="found-heading" class="panel-heading">Found the hiders?</h3>
+          @if (confirmingFound()) {
+            <div class="confirm-box found-confirm" role="group" aria-labelledby="found-question">
+              <p id="found-question">Did you find the hiders? This stops the clock and ends the game for everyone.</p>
+              <div class="panel-actions">
+                <button type="button" class="primary-action" [disabled]="session.busy()" (click)="foundHiders()">We found them</button>
+                <button id="found-keep" type="button" (click)="askFound(false)">Not yet</button>
+              </div>
+            </div>
+          } @else {
+            <div class="panel-actions">
+              <button id="found-ask" type="button" [disabled]="session.busy()" (click)="askFound(true)">We found them…</button>
+            </div>
+          }
+        </section>
+      }
+
+      @if (session.isHost()) {
         <section class="game-section" aria-label="Host controls">
           @if (game.status === 'LOBBY') {
             <div class="panel-actions">
@@ -166,6 +192,7 @@ const ROLE_LABELS: Record<GameRole, string> = { SEEKER: 'Seeker', HIDER: 'Hider'
           }
         </section>
       }
+      }
     }
   `,
   styleUrl: './game-panel.scss',
@@ -174,13 +201,14 @@ const ROLE_LABELS: Record<GameRole, string> = { SEEKER: 'Seeker', HIDER: 'Hider'
 export class GameViewComponent {
   protected readonly session = inject(GameSessionService);
   protected readonly map = inject(GameMapService);
-  protected readonly reporter = inject(SeekerLocationReporter);
+  protected readonly reporter = inject(LocationReporter);
   protected readonly controls = inject(ControlsPanelService);
   protected readonly questionText = questionText;
   private readonly document = inject(DOCUMENT);
   private readonly focus = injectFocusAfterRender();
 
   protected readonly confirmingEnd = signal(false);
+  protected readonly confirmingFound = signal(false);
   protected readonly copyStatus = signal('');
   /** The device's clock, ticking each second for the countdown. */
   private readonly now = signal(Date.now());
@@ -216,14 +244,13 @@ export class GameViewComponent {
     return endsAt ? Math.max(0, Date.parse(endsAt) - this.session.serverNow(this.now())) : 0;
   });
 
-  /** "12:05", or "1:02:05" for over an hour. */
-  protected readonly countdown = computed(() => {
-    const total = Math.ceil(this.remainingMs() / 1000);
-    const hours = Math.floor(total / 3600);
-    const minutes = Math.floor(total / 60) % 60;
-    const seconds = total % 60;
-    const mmss = `${String(minutes).padStart(hours > 0 ? 2 : 1, '0')}:${String(seconds).padStart(2, '0')}`;
-    return hours > 0 ? `${hours}:${mmss}` : mmss;
+  /** The hiding time left: "12:05", or "1:02:05" for over an hour. Rounded up, so it reaches 0:00 as time runs out. */
+  protected readonly countdown = computed(() => formatElapsed(Math.ceil(this.remainingMs() / 1000) * 1000));
+
+  /** How long the seekers have been seeking, counting up from the moment they set off. */
+  protected readonly seekingTime = computed(() => {
+    const startedAt = this.session.game()?.seekingStartedAt;
+    return startedAt ? formatElapsed(this.session.serverNow(this.now()) - Date.parse(startedAt)) : '';
   });
 
   protected readonly hidingEndsAtLabel = computed(() => {
@@ -232,9 +259,19 @@ export class GameViewComponent {
   });
 
   /** Said once by screen readers when the phase changes, instead of the countdown ticking. */
-  protected readonly phaseAnnouncement = computed(() => this.session.game()?.status === 'HIDING'
-    ? `${this.phaseTitle()}. The seekers set off at ${this.hidingEndsAtLabel()}.`
-    : this.phaseTitle());
+  /** Who sees the player's position: a hider's is kept from everyone until the replay. */
+  protected readonly sharingText = computed(() => this.session.me()?.role === 'HIDER'
+    ? 'Recorded for the replay after the game. Nobody sees it while the game runs.'
+    : 'Shared with the hiders while the game runs, and shown in the replay after it.');
+
+  protected readonly phaseAnnouncement = computed(() => {
+    const game = this.session.game();
+    if (game?.status === 'HIDING') return `${this.phaseTitle()}. The seekers set off at ${this.hidingEndsAtLabel()}.`;
+    if (game?.status === 'SEEKING' && game.seekingStartedAt) {
+      return `${this.phaseTitle()}. The clock started at ${clockTime(game.seekingStartedAt)}.`;
+    }
+    return this.phaseTitle();
+  });
 
   /** The code letter by letter, so screen readers do not try to say it as a word. */
   protected readonly spokenCode = computed(() => (this.session.game()?.inviteCode ?? '').split('').join(' '));
@@ -272,6 +309,18 @@ export class GameViewComponent {
   protected openQuestions(): void {
     this.controls.show('questions');
     this.focus('pending-heading');
+  }
+
+  /** Shows or hides the confirmation, moving focus to its safe choice or back to the button that opened it. */
+  protected askFound(confirming: boolean): void {
+    this.confirmingFound.set(confirming);
+    this.focus(confirming ? 'found-keep' : 'found-ask');
+  }
+
+  protected foundHiders(): void {
+    this.confirmingFound.set(false);
+    // The game page moves focus to the recap once the game has ended
+    this.session.found();
   }
 
   protected endGame(): void {

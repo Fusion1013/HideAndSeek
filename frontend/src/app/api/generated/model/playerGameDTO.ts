@@ -24,7 +24,7 @@ export interface PlayerGameDTO {
      */
     serverTime: string;
     /**
-     * Hiders only: their station, once chosen. Always null for anyone else.
+     * Hiders only, until the game is over: their station, once chosen. Null for anyone else while the game runs; revealed to everyone once it is finished.
      */
     hidingStation?: HidingStationDTO;
     /**

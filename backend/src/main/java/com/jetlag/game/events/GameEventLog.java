@@ -62,6 +62,17 @@ public class GameEventLog {
       gameId, afterId, limit);
   }
 
+  /** The game's events of one type, oldest first. */
+  public List<GameEvent> ofType(UUID gameId, String type) {
+    return jdbcTemplate.query("""
+        SELECT id, game_id, type, audience, payload::text AS payload FROM game_event
+        WHERE game_id = ? AND type = ? ORDER BY id
+        """,
+      (row, index) -> new GameEvent(row.getLong("id"), row.getObject("game_id", UUID.class), row.getString("type"),
+        EventAudience.valueOf(row.getString("audience")), row.getString("payload")),
+      gameId, type);
+  }
+
   /** The ID of the game's latest event; 0 before the first. */
   public long latestId(UUID gameId) {
     Long id = jdbcTemplate.queryForObject("SELECT COALESCE(max(id), 0) FROM game_event WHERE game_id = ?", Long.class, gameId);

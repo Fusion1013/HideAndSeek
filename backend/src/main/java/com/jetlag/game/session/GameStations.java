@@ -7,7 +7,10 @@ import org.springframework.stereotype.Repository;
 
 import java.sql.Array;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -55,6 +58,41 @@ public class GameStations {
         return statement.executeUpdate();
       }
     });
+  }
+
+  /**
+   * The stations a game from this template would have, now: chosen as {@link #snapshot} chooses them, from the
+   * template's own area. By name.
+   */
+  public List<StationDTO> forTemplate(UUID templateId, Collection<String> routeIds) {
+    if (routeIds.isEmpty()) return List.of();
+    List<StationDTO> stations = jdbcTemplate.execute((ConnectionCallback<List<StationDTO>>) connection -> {
+      try (PreparedStatement statement = connection.prepareStatement("""
+        SELECT DISTINCT ON (station.stop_id)
+               station.stop_id AS station_id, COALESCE(NULLIF(station.stop_name, ''), station.stop_id) AS name,
+               station.stop_lon AS longitude, station.stop_lat AS latitude
+        FROM game_template template
+        JOIN gtfs_route_stops route_stop ON route_stop.route_id = ANY(?)
+        JOIN gtfs_stops stop ON stop.stop_id = route_stop.stop_id
+        LEFT JOIN gtfs_stops parent ON parent.stop_id = stop.parent_station
+        JOIN gtfs_stops station ON station.stop_id = COALESCE(parent.stop_id, stop.stop_id)
+        WHERE template.id = ?
+          AND station.stop_lat IS NOT NULL AND station.stop_lon IS NOT NULL
+          AND ST_Contains(template.boundary, ST_SetSRID(ST_MakePoint(station.stop_lon, station.stop_lat), 4326))
+        ORDER BY station.stop_id
+        """)) {
+        statement.setArray(1, connection.createArrayOf("text", routeIds.toArray()));
+        statement.setObject(2, templateId);
+        try (ResultSet rows = statement.executeQuery()) {
+          List<StationDTO> found = new ArrayList<>();
+          while (rows.next()) found.add(STATION_ROW.mapRow(rows, found.size()));
+          return found;
+        }
+      }
+    });
+    return stations == null ? List.of() : stations.stream()
+      .sorted(Comparator.comparing(StationDTO::name).thenComparing(StationDTO::stationId))
+      .toList();
   }
 
   public int count(UUID gameId) {

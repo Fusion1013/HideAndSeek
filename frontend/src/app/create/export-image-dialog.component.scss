@@ -1,0 +1,172 @@
+// A modal dialog over the whole page, outside the controls panel, so the panel's shared styles do not reach it
+
+:host {
+  display: contents;
+}
+
+.export-dialog {
+  width: min(460px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  box-sizing: border-box;
+  padding: 20px;
+  border: 1px solid #d4dfe1;
+  border-radius: 8px;
+  background: #fafafa;
+  color: #172b32;
+  box-shadow: 0 12px 40px rgb(23 43 50 / 25%);
+  font: 15px/1.4 system-ui, sans-serif;
+
+  &::backdrop {
+    background: rgb(23 35 43 / 45%);
+  }
+
+  form {
+    display: grid;
+    gap: 14px;
+  }
+
+  h2 {
+    margin: 0;
+    font-size: 18px;
+  }
+
+  fieldset {
+    display: grid;
+    gap: 2px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  legend {
+    margin-bottom: 4px;
+    padding: 0;
+    font-size: 14px;
+    font-weight: 650;
+  }
+}
+
+.layer-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 12px;
+}
+
+.check-field {
+  display: flex;
+  min-height: 32px;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  cursor: pointer;
+
+  &.nested {
+    padding-left: 28px;
+  }
+
+  input {
+    flex: none;
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    accent-color: #087e8b;
+  }
+
+  &:has(input:disabled) {
+    color: #52666e;
+    cursor: default;
+  }
+}
+
+.control-field {
+  display: grid;
+  gap: 5px;
+  color: #52666e;
+  font-size: 12px;
+
+  &.nested {
+    padding-left: 28px;
+  }
+
+  .hint {
+    font-weight: 400;
+  }
+
+  select {
+    min-height: 40px;
+    padding: 6px 8px;
+    border: 1px solid #aebdc0;
+    border-radius: 5px;
+    background: #ffffff;
+    color: #172b32;
+    font: inherit;
+    font-size: 15px;
+
+    &:disabled {
+      opacity: 0.6;
+    }
+  }
+}
+
+.status-text {
+  margin: 0;
+  color: #52666e;
+  font-size: 13px;
+
+  &:empty {
+    display: none;
+  }
+}
+
+.load-error {
+  margin: 0;
+  padding: 10px 12px;
+  border-left: 3px solid #b33232;
+  background: #fff0ee;
+  color: #8d2525;
+  font-size: 13px;
+}
+
+.panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  button {
+    min-height: 42px;
+    padding: 8px 14px;
+    border: 1px solid #aebdc0;
+    border-radius: 5px;
+    background: #ffffff;
+    color: #172b32;
+    font: inherit;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: #eaf1f1;
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    &.primary-action {
+      border-color: #075761;
+      background: #087e8b;
+      color: #ffffff;
+      font-weight: 600;
+
+      &:hover:not(:disabled) {
+        background: #075761;
+      }
+    }
+  }
+}
+
+button:focus-visible,
+select:focus-visible,
+input:focus-visible {
+  outline: 3px solid #087e8b;
+  outline-offset: 2px;
+}

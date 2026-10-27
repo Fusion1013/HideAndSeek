@@ -11,6 +11,7 @@ import java.util.UUID;
 /**
  * Builds the answer for one player: the shared state plus what their role may see. The one place that decides
  * who sees the hiding station and the seekers' locations; anything that answers a player goes through here.
+ * Once the game is over, everyone sees the hiding station.
  */
 @Component
 public class PlayerViews {
@@ -33,7 +34,10 @@ public class PlayerViews {
       .findFirst().map(GamePlayerEntity::getRole).orElse(null);
     // Every player sees the questions and answers
     List<QuestionDTO> questions = questionService.list(state.id());
-    if (role != PlayerRole.HIDER) return new PlayerGameDTO(state, playerId, now, null, List.of(), questions);
+    if (role != PlayerRole.HIDER) {
+      HidingStationDTO revealed = state.status() == GameStatus.FINISHED ? hidingSpots.find(state.id()).orElse(null) : null;
+      return new PlayerGameDTO(state, playerId, now, revealed, List.of(), questions);
+    }
 
     List<SeekerLocationDTO> seekers = players.stream()
       .filter(player -> player.getRole() == PlayerRole.SEEKER && player.getLastLocation() != null)

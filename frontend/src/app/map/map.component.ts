@@ -1,6 +1,7 @@
 import { afterNextRender, ChangeDetectionStrategy, Component, DestroyRef, effect, ElementRef, inject, signal, viewChild } from '@angular/core';
 import type MapBrowserEvent from 'ol/MapBrowserEvent';
 
+import { NgComponentOutlet } from '@angular/common';
 import { RouterOutlet } from '@angular/router';
 import type { StopDTO, VehiclePosition } from '../api/generated';
 import { ControlsPanelComponent } from '../controls/controls-panel.component';
@@ -9,11 +10,14 @@ import { ClosestLocationsService } from '../distance/closest-locations.service';
 import { StationMeasurementService } from '../layer/station-measurement.service';
 import { VehicleLayerService } from '../layer/vehicle-layer.service';
 import { ModeService } from '../mode/mode.service';
+import { ReachabilityRouteService } from '../shape/reachability-route.service';
+import { ReachabilityService } from '../shape/reachability.service';
 import { StationTimetableService } from '../station/station-timetable.service';
 import { RouteCatalogService } from '../transit/route-catalog.service';
 import { RouteSelectionService } from '../transit/route-selection.service';
 import { isMappableVehicle } from '../vehicle/vehicle-position';
 import { VehicleSelectionService } from '../vehicle/vehicle-selection.service';
+import { MapOverlayService } from './map-overlay.service';
 import { MapService } from './map.service';
 
 /**
@@ -24,7 +28,7 @@ import { MapService } from './map.service';
   selector: 'app-map',
   templateUrl: './map.component.html',
   styleUrl: './map.component.scss',
-  imports: [ControlsPanelComponent, RouterOutlet],
+  imports: [ControlsPanelComponent, NgComponentOutlet, RouterOutlet],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MapComponent {
@@ -32,9 +36,12 @@ export class MapComponent {
   private readonly vehicleLayer = inject(VehicleLayerService);
   private readonly stationMeasurement = inject(StationMeasurementService);
   private readonly closestLocations = inject(ClosestLocationsService);
+  private readonly reachability = inject(ReachabilityService);
+  private readonly reachabilityRoutes = inject(ReachabilityRouteService);
   private readonly vehicleSelection = inject(VehicleSelectionService);
   private readonly modeService = inject(ModeService);
   protected readonly controls = inject(ControlsPanelService);
+  protected readonly mapOverlay = inject(MapOverlayService);
   protected readonly routeCatalog = inject(RouteCatalogService);
   protected readonly routeSelection = inject(RouteSelectionService);
   protected readonly stationTimetable = inject(StationTimetableService);
@@ -56,7 +63,8 @@ export class MapComponent {
   }
 
   /**
-   * In Overview mode, a click on the map selects the stop or vehicle under it. Anywhere else it deselects
+   * In Overview mode, a click on the map selects the stop or vehicle under it, or makes the stop the start of
+   * the reachable stations search while one is being picked. Anywhere else it deselects
    * vehicles, or adds a distance point when the Station tab is waiting for one. The other modes handle their
    * own clicks.
    */
@@ -67,6 +75,7 @@ export class MapComponent {
     const stop = map.forEachFeatureAtPixel(event.pixel, feature =>
       isStopDTO(feature.get('stop')) ? feature : undefined)?.get('stop') as StopDTO | undefined;
     if (stop) {
+      if (this.reachability.pickStop(stop)) return;
       this.vehicleSelection.clear();
       this.stationTimetable.select(stop);
       this.controls.show('station');
@@ -92,6 +101,8 @@ export class MapComponent {
       if (!map) throw new Error('Map creation did not produce a map instance.');
       this.stationMeasurement.initialize(map);
       this.closestLocations.initialize(map);
+      this.reachability.initialize(map);
+      this.reachabilityRoutes.initialize(map);
       map.on('singleclick', this.handleMapSingleClick);
       this.boundMap = map;
       void this.vehicleSelection.refresh();

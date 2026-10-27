@@ -38,3 +38,13 @@ export function formatAge(milliseconds: number): string {
   const remainingMinutes = minutes % 60;
   return remainingMinutes > 0 ? `${hours} hr ${remainingMinutes} min ago` : `${hours} hr ago`;
 }
+
+/** A running time as a clock shows it: "0:42", "12:05" or "1:02:05". Rounded down to the second. */
+export function formatElapsed(milliseconds: number): string {
+  const total = Math.floor(Math.max(0, milliseconds) / 1000);
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor(total / 60) % 60;
+  const seconds = total % 60;
+  const mmss = `${String(minutes).padStart(hours > 0 ? 2 : 1, '0')}:${String(seconds).padStart(2, '0')}`;
+  return hours > 0 ? `${hours}:${mmss}` : mmss;
+}

@@ -1,6 +1,8 @@
 // The panel and its tabs have their own stylesheets; shared control styles are in controls/_controls.scss
 .map-shell {
   position: relative;
+  // The closed controls panel slides out past the right edge; it must not make the page scroll sideways
+  overflow: hidden;
   width: 100%;
   height: 100%;
 }
@@ -8,4 +10,36 @@
 .map {
   width: 100%;
   height: 100%;
+}
+
+// Along the bottom of the map: above it, below the controls panel
+.map-overlay {
+  position: absolute;
+  z-index: 2;
+  right: 16px;
+  bottom: 28px;
+  left: 16px;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+
+  // The overlay's component is created dynamically, so it lacks this stylesheet's scoping attribute
+  > ::ng-deep * {
+    pointer-events: auto;
+  }
+}
+
+// Where there is room beside the open panel; on narrower screens the panel covers the overlay until closed
+@media (min-width: 900px) {
+  .map-overlay.beside-panel {
+    right: 416px;
+  }
+}
+
+@media (max-width: 600px) {
+  .map-overlay {
+    right: 8px;
+    bottom: 24px;
+    left: 8px;
+  }
 }

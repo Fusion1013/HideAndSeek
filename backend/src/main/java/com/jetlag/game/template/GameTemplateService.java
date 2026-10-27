@@ -4,6 +4,8 @@ import com.jetlag.game.Boundaries;
 import com.jetlag.game.RouteSnapshot;
 import com.jetlag.game.auth.AccessTokens;
 import com.jetlag.game.auth.InvalidTokenException;
+import com.jetlag.game.session.GameStations;
+import com.jetlag.game.session.StationDTO;
 import com.jetlag.transit.model.AgencyRouteEntity;
 import com.jetlag.transit.repository.AgencyRouteRepository;
 import org.springframework.http.HttpStatus;
@@ -31,10 +33,13 @@ public class GameTemplateService {
 
   private final GameTemplateRepository templateRepository;
   private final AgencyRouteRepository agencyRouteRepository;
+  private final GameStations stations;
 
-  public GameTemplateService(GameTemplateRepository templateRepository, AgencyRouteRepository agencyRouteRepository) {
+  public GameTemplateService(GameTemplateRepository templateRepository, AgencyRouteRepository agencyRouteRepository,
+                             GameStations stations) {
     this.templateRepository = templateRepository;
     this.agencyRouteRepository = agencyRouteRepository;
+    this.stations = stations;
   }
 
   @Transactional
@@ -61,6 +66,13 @@ public class GameTemplateService {
     Map<UUID, GameTemplateEntity> byId = templateRepository.findAllById(ids).stream()
       .collect(Collectors.toMap(GameTemplateEntity::getId, Function.identity()));
     return ids.stream().distinct().map(byId::get).filter(template -> template != null).map(this::toDTO).toList();
+  }
+
+  /** The stations a game from the template would have, as the timetable is now. */
+  @Transactional(readOnly = true)
+  public List<StationDTO> stations(UUID id) {
+    GameTemplateEntity template = find(id);
+    return stations.forTemplate(template.getId(), template.getRoutes().stream().map(RouteSnapshot::routeId).toList());
   }
 
   @Transactional

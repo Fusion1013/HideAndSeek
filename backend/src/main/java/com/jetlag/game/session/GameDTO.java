@@ -23,6 +23,7 @@ public record GameDTO(
   @Schema(description = "When the seekers may set off; set once the game starts") Instant hidingEndsAt,
   Instant seekingStartedAt,
   Instant finishedAt,
+  @Schema(description = "How the game ended; set once it is finished") GameOutcome outcome,
   @Schema(description = "The play area's outline as a closed ring of [longitude, latitude] positions",
     requiredMode = Schema.RequiredMode.REQUIRED)
   List<List<Double>> boundary,
@@ -59,6 +60,7 @@ public record GameDTO(
       .toList();
     return new GameDTO(game.getId(), game.getName(), game.getInviteCode(), game.getStatus(), game.getHidingMinutes(),
       game.getHidingStartedAt(), game.getHidingEndsAt(), game.getSeekingStartedAt(), game.getFinishedAt(),
+      game.getOutcome(),
       Boundaries.toRing(game.getBoundary()), routes, stationCount, players.stream().map(PlayerDTO::from).toList());
   }
 }

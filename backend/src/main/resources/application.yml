@@ -59,8 +59,9 @@ game:
   cleanup:
     # A game with no activity for this long is ended
     idle-after: PT24H
-    # A finished game, with its players' positions, is deleted after this long
-    keep-finished-for: P7D
+    # A finished game, with its players' positions, is deleted after this long (e.g. P90D). Empty: finished games
+    # are kept, so their players can look back at them (env: GAME_CLEANUP_KEEP_FINISHED_FOR)
+    keep-finished-for: ${GAME_CLEANUP_KEEP_FINISHED_FOR:}
     interval: PT1H
   rate-limits:
     # Requests per client IP per minute; beyond that, 429 Too Many Requests

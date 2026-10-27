@@ -175,8 +175,8 @@ export class GamePlayControllerService extends BaseService {
     }
 
     /**
-     * Share a seeker\&#39;s position with the hiders
-     * Seekers only, while the game runs. Reports less than 5 seconds apart are accepted but not passed on.
+     * Report a player\&#39;s position
+     * While the game runs. A seeker\&#39;s position is shared with the hiders; a hider\&#39;s is shown to nobody until the game is over, in its replay. Reports less than 5 seconds apart are accepted but not kept.
      * @endpoint post /api/games/{gameId}/location
      * @param gameId 
      * @param locationRequest 

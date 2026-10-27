@@ -1,6 +1,12 @@
 <div class="map-shell">
 	<div #mapElement class="map"></div>
 
+	@if (mapOverlay.overlay(); as overlay) {
+		<div class="map-overlay" [class.beside-panel]="controls.open()">
+			<ng-container *ngComponentOutlet="overlay.component; injector: overlay.injector" />
+		</div>
+	}
+
 	<app-controls-panel [stationAvailable]="!!stationTimetable.stop()">
 		<router-outlet />
 

@@ -47,12 +47,14 @@ public class GameService {
   private final GamePhases phases;
   private final GameEventLog eventLog;
   private final PlayerViews playerViews;
+  private final HidingSpots hidingSpots;
   private final EntityManager entityManager;
   private final Clock clock;
 
   public GameService(GameRepository gameRepository, GamePlayerRepository playerRepository,
                      GameTemplateRepository templateRepository, GameStations stations, GamePhases phases,
-                     GameEventLog eventLog, PlayerViews playerViews, EntityManager entityManager, Clock clock) {
+                     GameEventLog eventLog, PlayerViews playerViews, HidingSpots hidingSpots,
+                     EntityManager entityManager, Clock clock) {
     this.gameRepository = gameRepository;
     this.playerRepository = playerRepository;
     this.templateRepository = templateRepository;
@@ -60,6 +62,7 @@ public class GameService {
     this.phases = phases;
     this.eventLog = eventLog;
     this.playerViews = playerViews;
+    this.hidingSpots = hidingSpots;
     this.entityManager = entityManager;
     this.clock = clock;
   }
@@ -144,12 +147,19 @@ public class GameService {
     for (UUID gameId : phases.idleSince(now.minus(idleFor))) {
       GameEntity game = lock(gameId);
       if (game.getStatus() == GameStatus.FINISHED) continue;
-      game.finish(now);
-      gameRepository.saveAndFlush(game);
-      recordState(game);
+      finish(game, GameOutcome.ABANDONED, now);
       finished++;
     }
     return finished;
+  }
+
+  /**
+   * Deletes the finished games' events that only mattered while they ran, and returns how many. The seekers'
+   * positions are also in the game's track, which the replay reads.
+   */
+  @Transactional
+  public int trimFinishedGames() {
+    return phases.trimFinished(List.of(GamePlayService.SEEKER_LOCATION_EVENT));
   }
 
   /** Deletes the games that finished longer ago than the given time, with all their data. */
@@ -200,10 +210,40 @@ public class GameService {
   public PlayerGameDTO end(GamePlayerEntity host) {
     requireHost(host);
     GameEntity game = lock(host.getGame().getId());
-    if (game.getStatus() == GameStatus.FINISHED) return playerViews.of(state(game), host.getId(), clock.instant());
-    game.finish(clock.instant());
+    Instant now = clock.instant();
+    if (game.getStatus() != GameStatus.FINISHED) finish(game, GameOutcome.ENDED, now);
+    return playerViews.of(state(game), host.getId(), now);
+  }
+
+  /**
+   * The seekers have found the hiders: the game is over, its seeking time final. A seeker or the host says so,
+   * while seeking.
+   */
+  @Transactional
+  public PlayerGameDTO found(GamePlayerEntity player) {
+    GameEntity game = lock(player.getGame().getId());
+    GamePlayerEntity current = playerRepository.findById(player.getId()).orElseThrow();
+    if (current.getRole() != PlayerRole.SEEKER && !current.isHost()) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the seekers or the host can say the hiders were found");
+    }
+    if (game.getStatus() != GameStatus.SEEKING) {
+      throw new ResponseStatusException(HttpStatus.CONFLICT, "The hiders can only be found while seeking");
+    }
+    Instant now = clock.instant();
+    finish(game, GameOutcome.FOUND, now);
+    return playerViews.of(state(game), player.getId(), now);
+  }
+
+  /**
+   * Finishes the game and tells its players, then shows everyone where the hiders were: once the game is over,
+   * the hiding station is no secret.
+   */
+  private void finish(GameEntity game, GameOutcome outcome, Instant now) {
+    game.finish(now, outcome);
     gameRepository.saveAndFlush(game);
-    return answer(game, host);
+    recordState(game);
+    hidingSpots.find(game.getId()).ifPresent(spot ->
+      eventLog.record(game.getId(), GamePlayService.HIDING_STATION_EVENT, EventAudience.ALL, spot));
   }
 
   private void advancePhases(Instant now) {

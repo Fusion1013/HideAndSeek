@@ -149,6 +149,12 @@ export class GameSessionService {
     if (game) this.act(this.gameApi.endGame(game.id));
   }
 
+  /** The seekers found the hiders: ends the game. */
+  found(): void {
+    const game = this.game();
+    if (game) this.act(this.gameApi.foundHiders(game.id));
+  }
+
   /** Asks the hiders; true once the question is asked, false if refused (the reason is in {@link error}). */
   ask(request: AskRequest): Promise<boolean> {
     const game = this.game();
@@ -207,8 +213,9 @@ export class GameSessionService {
         break;
       case 'game':
         this.game.set(JSON.parse(message.data) as GameDTO);
-        // A player who stops being a hider (in the lobby) has no business keeping what only hiders see
-        if (this.me()?.role !== 'HIDER') this.clearHiderView();
+        // A player who stops being a hider (in the lobby) has no business keeping what only hiders see; once the
+        // game is over, the hiding station is everyone's to see
+        if (this.me()?.role !== 'HIDER' && this.game()?.status !== 'FINISHED') this.clearHiderView();
         break;
       case 'hiding-station':
         this.hidingStation.set(JSON.parse(message.data) as HidingStationDTO);

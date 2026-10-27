@@ -69,6 +69,10 @@ public class GameEntity {
   @Column(name = "finished_at")
   private Instant finishedAt;
 
+  /** How it ended; null until it is finished. */
+  @Enumerated(EnumType.STRING)
+  private GameOutcome outcome;
+
   @CreationTimestamp
   @Column(name = "created_at", nullable = false, updatable = false)
   private Instant createdAt;
@@ -124,10 +128,15 @@ public class GameEntity {
   }
 
   /** Ends the game, from any phase. */
-  public void finish(Instant now) {
+  public void finish(Instant now, GameOutcome outcome) {
     if (status == GameStatus.FINISHED) return;
     status = GameStatus.FINISHED;
     finishedAt = now;
+    this.outcome = outcome;
+  }
+
+  public GameOutcome getOutcome() {
+    return outcome;
   }
 
   public GameStatus getStatus() {

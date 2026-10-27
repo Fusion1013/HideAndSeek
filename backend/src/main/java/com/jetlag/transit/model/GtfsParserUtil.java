@@ -3,6 +3,9 @@ package com.jetlag.transit.model;
 import org.apache.commons.csv.CSVRecord;
 
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 
 class GtfsParserUtil {
   public static String required(CSVRecord record, String column)
@@ -54,6 +57,25 @@ class GtfsParserUtil {
 
       return parsed;
     } catch (NumberFormatException exception) {
+      throw new IOException(
+        "Invalid " + column + " on GTFS row "
+          + record.getRecordNumber() + ": " + value,
+        exception);
+    }
+  }
+
+  /** A GTFS date, written YYYYMMDD. */
+  public static LocalDate date(CSVRecord record, String column)
+    throws IOException {
+    String value = optional(record, column);
+
+    if (value == null) {
+      return null;
+    }
+
+    try {
+      return LocalDate.parse(value.trim(), DateTimeFormatter.BASIC_ISO_DATE);
+    } catch (DateTimeParseException exception) {
       throw new IOException(
         "Invalid " + column + " on GTFS row "
           + record.getRecordNumber() + ": " + value,

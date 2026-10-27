@@ -148,6 +148,22 @@ public class GameController {
     return gameService.start(host);
   }
 
+  @PostMapping("/{gameId}/found")
+  @SecurityRequirement(name = GameAuthConfig.PLAYER_TOKEN)
+  @Operation(
+    operationId = "foundHiders",
+    summary = "Say the seekers have found the hiders",
+    description = "A seeker or the host, while seeking. Ends the game; everyone then sees where the hiders were.",
+    responses = {
+      @ApiResponse(responseCode = "200", description = "The game, now finished"),
+      @ApiResponse(responseCode = "403", description = "Neither a seeker nor the host"),
+      @ApiResponse(responseCode = "409", description = "Not seeking")
+    }
+  )
+  public PlayerGameDTO foundHiders(@PathVariable UUID gameId, @CurrentPlayer GamePlayerEntity player) {
+    return gameService.found(player);
+  }
+
   @PostMapping("/{gameId}/end")
   @SecurityRequirement(name = GameAuthConfig.PLAYER_TOKEN)
   @Operation(

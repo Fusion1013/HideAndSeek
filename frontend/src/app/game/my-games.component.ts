@@ -15,7 +15,10 @@ const STATUS_LABELS: Record<GameDTO.StatusEnum, string> = {
   FINISHED: 'Over'
 };
 
-/** The games this browser has joined and that are still running, to go back to. */
+/**
+ * The games this browser has joined: the ones still running, to go back to, and the finished ones, to look back
+ * at with their recap and replay.
+ */
 @Component({
   selector: 'app-my-games',
   imports: [RouterLink],
@@ -28,6 +31,19 @@ const STATUS_LABELS: Record<GameDTO.StatusEnum, string> = {
             <li>
               <a [routerLink]="['/game', game.id]">{{ game.name }}</a>
               <span>{{ statusLabels[game.status] }}</span>
+            </li>
+          }
+        </ul>
+      </nav>
+    }
+    @if (past().length > 0) {
+      <nav class="game-section" aria-labelledby="past-games-heading">
+        <h3 id="past-games-heading" class="panel-heading">Past games</h3>
+        <ul class="game-links">
+          @for (game of past(); track game.id) {
+            <li>
+              <a [routerLink]="['/game', game.id]">{{ game.name }}</a>
+              <span>{{ endedOn(game) }}</span>
             </li>
           }
         </ul>
@@ -59,6 +75,16 @@ export class MyGamesComponent {
     }
   });
 
-  protected readonly running = computed(() =>
-    (this.games.hasValue() ? this.games.value() : []).filter(game => game.status !== 'FINISHED'));
+  private readonly all = computed(() => this.games.hasValue() ? this.games.value() : []);
+  protected readonly running = computed(() => this.all().filter(game => game.status !== 'FINISHED'));
+  /** Most recent first. */
+  protected readonly past = computed(() => this.all()
+    .filter(game => game.status === 'FINISHED')
+    .sort((first, second) => Date.parse(second.finishedAt ?? '') - Date.parse(first.finishedAt ?? '')));
+
+  protected endedOn(game: GameDTO): string {
+    return game.finishedAt
+      ? new Date(game.finishedAt).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' })
+      : STATUS_LABELS[game.status];
+  }
 }

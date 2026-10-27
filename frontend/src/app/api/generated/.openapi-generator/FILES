@@ -8,9 +8,11 @@ api/api.ts
 api/gameController.service.ts
 api/gamePlayController.service.ts
 api/gameTemplateController.service.ts
+api/gameTimelineController.service.ts
 api/gtfsController.service.ts
 api/overpass.service.ts
 api/questionController.service.ts
+api/reachabilityController.service.ts
 api/routeController.service.ts
 api/shapeController.service.ts
 api/stopController.service.ts
@@ -29,6 +31,7 @@ model/createGameRequest.ts
 model/createdTemplateDTO.ts
 model/gameDTO.ts
 model/gameRouteDTO.ts
+model/gameTimelineDTO.ts
 model/hidingStationDTO.ts
 model/hidingStationRequest.ts
 model/joinGameRequest.ts
@@ -39,10 +42,16 @@ model/overpassLocationDTO.ts
 model/overpassLocationPage.ts
 model/playerDTO.ts
 model/playerGameDTO.ts
+model/playerTrackDTO.ts
 model/position.ts
 model/questionAnswer.ts
 model/questionDTO.ts
 model/questionParams.ts
+model/reachabilityLegDTO.ts
+model/reachabilityLegStopDTO.ts
+model/reachabilityPathPointDTO.ts
+model/reachabilityRouteDTO.ts
+model/reachableStationDTO.ts
 model/roleRequest.ts
 model/routeDTO.ts
 model/routeShapeDTO.ts
@@ -55,6 +64,8 @@ model/stopTimeDTO.ts
 model/templateDTO.ts
 model/templateRequest.ts
 model/templateRouteDTO.ts
+model/timelineEventDTO.ts
+model/trackPointDTO.ts
 model/tripDTO.ts
 model/vehiclePosition.ts
 param.ts

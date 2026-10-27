@@ -41,7 +41,7 @@ public class GamePlayerEntity {
   @Column(name = "last_seen_at")
   private Instant lastSeenAt;
 
-  /** Where the player last reported being; only seekers report, and only hiders are shown it. */
+  /** Where the player last reported being. Only a seeker's is shown while the game runs, and only to hiders. */
   @Column(name = "last_location", columnDefinition = "geometry(Point,4326)")
   private Point lastLocation;
 

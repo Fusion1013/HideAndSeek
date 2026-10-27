@@ -2,6 +2,7 @@ package com.jetlag.game.template;
 
 import com.jetlag.game.auth.AccessTokens;
 import com.jetlag.game.auth.InvalidTokenException;
+import com.jetlag.game.session.GameStations;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,7 +28,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Testcontainers(disabledWithoutDocker = true)
-@Import(GameTemplateService.class)
+@Import({GameTemplateService.class, GameStations.class})
 class GameTemplateServiceTest {
 
   @Container
