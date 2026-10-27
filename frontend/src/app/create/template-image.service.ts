@@ -17,6 +17,8 @@ import View from 'ol/View';
 
 import { GameTemplateControllerService } from '../api/generated';
 import type { StationDTO } from '../api/generated';
+import { BaseMapLayerService } from '../layer/base-map-layer.service';
+import { HILLSHADE_ATTRIBUTION } from '../layer/base-maps';
 import { LayerService } from '../layer/layer.service';
 import type { MapLayerId } from '../layer/map-layers';
 import type { AreaBounds } from './area-bounds';
@@ -71,6 +73,7 @@ const ACCENT = '#087e8b';
 export class TemplateImageService {
   private readonly document = inject(DOCUMENT);
   private readonly layerService = inject(LayerService);
+  private readonly baseMapService = inject(BaseMapLayerService);
   private readonly templateApi = inject(GameTemplateControllerService);
 
   /** The image's size in pixels for an area, as {@link render} will make it. */
@@ -120,9 +123,8 @@ export class TemplateImageService {
       const context = canvas.getContext('2d')!;
       const reserved: Rect[] = [];
       if (options.title) reserved.push(drawTitle(context, source.name, pixelRatio));
-      if (options.layerIds.includes('base-map')) {
-        reserved.push(drawAttribution(context, '© OpenStreetMap contributors', pixelRatio));
-      }
+      const attribution = this.attribution(options.layerIds);
+      if (attribution) reserved.push(drawAttribution(context, attribution, pixelRatio));
       if (options.stations && options.stationNames) {
         drawStationNames(context, map, stations, LABEL_FONT_SIZES[options.labelSize], pixelRatio, reserved);
       }
@@ -132,6 +134,14 @@ export class TemplateImageService {
       map.setTarget(undefined);
       container.remove();
     }
+  }
+
+  /** What the licences of the image's tiles require it to credit, or nothing when it has no tiles. */
+  private attribution(layerIds: readonly MapLayerId[]): string {
+    return [
+      layerIds.includes('base-map') ? this.baseMapService.attribution() : undefined,
+      layerIds.includes('hillshade') ? HILLSHADE_ATTRIBUTION : undefined
+    ].filter(text => text !== undefined).join(' · ');
   }
 
   private layers(area: AreaBounds, stations: readonly StationDTO[], options: TemplateImageOptions): BaseLayer[] {

@@ -3,6 +3,7 @@ import type { Type } from '@angular/core';
 import type { MapLayerProvider } from './base-layer.service';
 import { BaseMapLayerService } from './base-map-layer.service';
 import { DistrictLayerService } from './district-layer.service';
+import { HillshadeLayerService } from './hillshade-layer.service';
 import type { OverpassLayerConfig } from './overpass-layer';
 import { RouteShapesLayerService } from './route-shapes-layer.service';
 import { StopsLayerService } from './stops-layer.service';
@@ -35,6 +36,7 @@ export interface MapLayerDefinition {
  */
 export const MAP_LAYERS = [
   { id: 'base-map', label: 'Base map', visible: true, provider: BaseMapLayerService },
+  { id: 'hillshade', label: 'Hillshade', visible: false, provider: HillshadeLayerService },
   { id: 'districts', label: 'Districts', visible: false, provider: DistrictLayerService },
   { id: 'routes', label: 'Routes', visible: true, provider: RouteShapesLayerService },
   { id: 'stops', label: 'Stops', visible: false, provider: StopsLayerService },

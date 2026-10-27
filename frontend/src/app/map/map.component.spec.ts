@@ -3,6 +3,7 @@ import { provideRouter, Router } from '@angular/router';
 
 import { routes } from '../app.routes';
 import { MapComponent } from './map.component';
+import { BaseMapLayerService } from '../layer/base-map-layer.service';
 import { LayerService } from '../layer/layer.service';
 import { MAP_LAYERS } from '../layer/map-layers';
 import { ControlsPanelService } from '../controls/controls-panel.service';
@@ -247,15 +248,43 @@ describe('MapComponent', () => {
     layersMenuButton?.click();
     fixture.detectChanges();
 
-    const layerInputs = fixture.nativeElement.querySelectorAll('.layer-toggle input') as NodeListOf<HTMLInputElement>;
+    const toggled = MAP_LAYERS.filter(layer => layer.id !== 'base-map');
+    const layerInputs = fixture.nativeElement.querySelectorAll('.layer-toggle input[type="checkbox"]') as NodeListOf<HTMLInputElement>;
     expect(Array.from(layerInputs, input => input.closest('label')?.textContent?.trim()))
-      .toEqual(MAP_LAYERS.map(layer => layer.label));
-    expect(Array.from(layerInputs, input => input.checked)).toEqual(MAP_LAYERS.map(layer => layer.visible));
+      .toEqual(toggled.map(layer => layer.label));
+    expect(Array.from(layerInputs, input => input.checked)).toEqual(toggled.map(layer => layer.visible));
     layerInputs[0].click();
     fixture.detectChanges();
 
-    expect(layerInputs[0].checked).toBe(false);
-    expect(setLayerVisibility).toHaveBeenCalledWith('base-map', false);
+    expect(layerInputs[0].checked).toBe(!toggled[0].visible);
+    expect(setLayerVisibility).toHaveBeenCalledWith(toggled[0].id, !toggled[0].visible);
+  });
+
+  it('picks the base map from the Layers menu, or hides it', () => {
+    const setLayerVisibility = vi.spyOn(TestBed.inject(LayerService), 'setLayerVisibility');
+    const baseMaps = TestBed.inject(BaseMapLayerService);
+    const controlsToggle = fixture.nativeElement.querySelector('#map-controls-toggle') as HTMLButtonElement;
+    controlsToggle.click();
+    fixture.detectChanges();
+    const menuButtons = fixture.nativeElement.querySelectorAll('.menu-switcher button') as NodeListOf<HTMLButtonElement>;
+    Array.from(menuButtons).find(button => button.getAttribute('aria-label') === 'Map layers')?.click();
+    fixture.detectChanges();
+
+    const radio = (label: string) => Array.from(
+      fixture.nativeElement.querySelectorAll('.base-maps input[type="radio"]') as NodeListOf<HTMLInputElement>
+    ).find(input => input.closest('label')?.textContent?.trim() === label)!;
+    expect(radio('Streets').checked).toBe(true);
+
+    radio('Satellite').click();
+    fixture.detectChanges();
+    expect(baseMaps.baseMapId()).toBe('satellite');
+    expect(setLayerVisibility).toHaveBeenLastCalledWith('base-map', true);
+
+    radio('None').click();
+    fixture.detectChanges();
+    expect(setLayerVisibility).toHaveBeenLastCalledWith('base-map', false);
+    expect(radio('None').checked).toBe(true);
+    baseMaps.setBaseMap('streets');
   });
 
   it('refreshes vehicle positions when the map button is pressed', () => {
