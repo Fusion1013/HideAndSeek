@@ -1,29 +1,18 @@
 :host {
-  --route-color: #087e8b;
-  --trip-ink: #172b32;
-  --trip-muted: #52666e;
+  --route-color: var(--control-accent);
   --trip-line-idle: #c3d0d3;
   --rail-x: 14px;
   // Vertical centre of each stop's dot and first text line, from the top of its row
   --dot-y: 16px;
   display: block;
-  color: var(--trip-ink);
-}
-
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
+  color: var(--control-ink);
 }
 
 .vehicle-trip {
   display: grid;
   gap: 14px;
   padding-top: 14px;
-  border-top: 1px solid var(--control-border, #d4dfe1);
+  border-top: 1px solid var(--control-border);
 }
 
 // Header: route badge and destination
@@ -61,7 +50,7 @@
 
   p {
     margin: 2px 0 0;
-    color: var(--trip-muted);
+    color: var(--control-muted);
     font-size: 12px;
   }
 }
@@ -77,24 +66,24 @@
   li {
     padding: 4px 8px;
     border-radius: 999px;
-    background: #eef3f4;
+    background: var(--control-subtle);
     font-size: 12px;
     font-variant-numeric: tabular-nums;
   }
 
   span {
-    color: var(--trip-muted);
+    color: var(--control-muted);
   }
 }
 
 .trip-status {
   margin: 0;
-  color: var(--trip-muted);
+  color: var(--control-muted);
   font-size: 13px;
 }
 
 .trip-error {
-  color: #8d2525;
+  color: var(--control-danger-ink);
 }
 
 // Progress bar across the whole trip
@@ -138,7 +127,7 @@
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  color: var(--trip-muted);
+  color: var(--control-muted);
   font-size: 11px;
 
   span:last-child {
@@ -161,7 +150,7 @@
 }
 
 .next-stop-label {
-  color: var(--trip-muted);
+  color: var(--control-muted);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -169,13 +158,13 @@
 }
 
 .next-stop-meta {
-  color: var(--trip-muted);
+  color: var(--control-muted);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
 
 .platform {
-  color: var(--trip-muted);
+  color: var(--control-muted);
   font-size: 12px;
   font-weight: 400;
 }
@@ -234,11 +223,11 @@
     cursor: pointer;
 
     &:hover {
-      background: #eef3f4;
+      background: var(--control-subtle);
     }
 
     &:focus-visible {
-      outline: 3px solid var(--control-accent, #087e8b);
+      outline: 3px solid var(--control-accent);
       outline-offset: 1px;
     }
   }
@@ -284,7 +273,7 @@
 }
 
 .stop-passed .stop-name {
-  color: var(--trip-muted);
+  color: var(--control-muted);
 }
 
 .stop-next .stop-name,
@@ -304,7 +293,7 @@
 }
 
 .stop-time {
-  color: var(--trip-muted);
+  color: var(--control-muted);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
 }

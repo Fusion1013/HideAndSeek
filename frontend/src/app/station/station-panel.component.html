@@ -1,33 +1,35 @@
 @if (timetable.stop(); as stop) {
 	<section class="menu-content station-tools" aria-label="Selected station details">
-		<div class="panel-heading station-heading">
-			<span>{{ stop.stopName || 'Unnamed station' }}</span>
-			<button type="button" (click)="clear()">Clear</button>
+		<div class="panel-section">
+			<div class="panel-heading station-heading">
+				<h3>{{ stop.stopName || 'Unnamed station' }}</h3>
+				<button type="button" (click)="clear()">Clear</button>
+			</div>
+			<dl class="station-details">
+				@if (stop.stopCode) {
+					<div><dt>Stop code</dt><dd>{{ stop.stopCode }}</dd></div>
+				}
+				@if (stop.stopDescription) {
+					<div><dt>Description</dt><dd>{{ stop.stopDescription }}</dd></div>
+				}
+				@if (stop.platformCode) {
+					<div><dt>Platform</dt><dd>{{ stop.platformCode }}</dd></div>
+				}
+				@if (stop.latitude !== undefined && stop.longitude !== undefined) {
+					<div><dt>Coordinates</dt><dd>{{ stop.latitude }}, {{ stop.longitude }}</dd></div>
+				}
+			</dl>
 		</div>
-		<dl class="station-details">
-			@if (stop.stopCode) {
-				<div><dt>Stop code</dt><dd>{{ stop.stopCode }}</dd></div>
-			}
-			@if (stop.stopDescription) {
-				<div><dt>Description</dt><dd>{{ stop.stopDescription }}</dd></div>
-			}
-			@if (stop.platformCode) {
-				<div><dt>Platform</dt><dd>{{ stop.platformCode }}</dd></div>
-			}
-			@if (stop.latitude !== undefined && stop.longitude !== undefined) {
-				<div><dt>Coordinates</dt><dd>{{ stop.latitude }}, {{ stop.longitude }}</dd></div>
-			}
-		</dl>
-		<div class="station-timetable-heading">
+		<div class="panel-heading">
 			<h3>Stop times</h3>
 			<span>{{ timetable.rows().length }}</span>
 		</div>
 		@if (timetable.loading()) {
-			<p class="station-timetable-status" role="status">Loading stop times...</p>
+			<p class="status-text" role="status">Loading stop times...</p>
 		} @else if (timetable.error()) {
-			<p class="station-timetable-status" role="alert">Stop times could not be loaded.</p>
+			<p class="status-text" role="alert">Stop times could not be loaded.</p>
 		} @else if (timetable.rows().length === 0) {
-			<p class="station-timetable-status">No stop times available.</p>
+			<p class="status-text">No stop times available.</p>
 		} @else {
 			<!-- Focusable so the timetable can be scrolled with the keyboard -->
 			<div #timetableViewport class="station-timetable-scroll" tabindex="0" role="region" aria-label="Stop times">
@@ -58,7 +60,7 @@
 				</table>
 			</div>
 		}
-		<label class="control-field station-radius" for="station-radius">
+		<label class="control-field" for="station-radius">
 			Radius (meters)
 			<input id="station-radius" type="number" min="1" max="10000" step="25" [value]="measurement.radiusMeters()" (change)="setRadius($event)">
 		</label>

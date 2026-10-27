@@ -24,61 +24,72 @@
 	[attr.inert]="controls.open() ? null : ''"
 	aria-label="Map controls"
 >
-	<h2 class="controls-title">Map controls</h2>
+	<!-- The mode switcher below shows the mode; the heading names it for screen readers -->
+	<h2 class="controls-title">{{ title() }}</h2>
 	<nav class="mode-switcher" aria-label="Modes">
-		<a routerLink="/" [attr.aria-current]="mode() === 'overview' ? 'page' : null">Overview</a>
-		<a routerLink="/create" [attr.aria-current]="mode() === 'create' ? 'page' : null">Create</a>
-		<a routerLink="/join" [attr.aria-current]="mode() === 'game' ? 'page' : null">Play</a>
+		<a [routerLink]="urls().overview" [attr.aria-current]="mode() === 'overview' ? 'page' : null">Overview</a>
+		<a [routerLink]="urls().create" [attr.aria-current]="mode() === 'create' ? 'page' : null">Create</a>
+		<a [routerLink]="urls().game" [attr.aria-current]="mode() === 'game' ? 'page' : null">Play</a>
 	</nav>
 	<nav class="menu-switcher" aria-label="Map control menus">
 		@if (controls.hasTab('template')) {
-			<button type="button" aria-label="Game template" title="Game template" [attr.aria-pressed]="controls.activeMenu() === 'template'" (click)="controls.select('template')">
+			<button type="button" aria-label="Game template" [attr.aria-pressed]="controls.activeMenu() === 'template'" (click)="controls.select('template')">
 				<svg lucideSquareDashed [size]="20" aria-hidden="true"></svg>
+				<span class="tab-label">Template</span>
 			</button>
 		}
 		@if (controls.hasTab('game')) {
-			<button type="button" aria-label="Game" title="Game" [attr.aria-pressed]="controls.activeMenu() === 'game'" (click)="controls.select('game')">
+			<button type="button" aria-label="Game" [attr.aria-pressed]="controls.activeMenu() === 'game'" (click)="controls.select('game')">
 				<svg lucideUsers [size]="20" aria-hidden="true"></svg>
+				<span class="tab-label">Game</span>
 			</button>
 		}
 		@if (controls.hasTab('questions')) {
-			<button type="button" aria-label="Questions" title="Questions" [attr.aria-pressed]="controls.activeMenu() === 'questions'" (click)="controls.select('questions')">
+			<button type="button" aria-label="Questions" [attr.aria-pressed]="controls.activeMenu() === 'questions'" (click)="controls.select('questions')">
 				<svg lucideMessageCircleQuestionMark [size]="20" aria-hidden="true"></svg>
+				<span class="tab-label">Questions</span>
 			</button>
 		}
 		@if (controls.hasTab('hiding')) {
-			<button type="button" aria-label="Hiding station" title="Hiding station" [attr.aria-pressed]="controls.activeMenu() === 'hiding'" (click)="controls.select('hiding')">
+			<button type="button" aria-label="Hiding station" [attr.aria-pressed]="controls.activeMenu() === 'hiding'" (click)="controls.select('hiding')">
 				<svg lucideEyeOff [size]="20" aria-hidden="true"></svg>
+				<span class="tab-label">Hiding</span>
 			</button>
 		}
 		@if (controls.hasTab('transit')) {
-			<button type="button" aria-label="Transit routes" title="Transit routes" [attr.aria-pressed]="controls.activeMenu() === 'transit'" (click)="controls.select('transit')">
+			<button type="button" aria-label="Transit routes" [attr.aria-pressed]="controls.activeMenu() === 'transit'" (click)="controls.select('transit')">
 				<svg lucideRoute [size]="20" aria-hidden="true"></svg>
+				<span class="tab-label">Routes</span>
 			</button>
 		}
 		@if (controls.hasTab('vehicles')) {
-			<button type="button" aria-label="Vehicles" title="Vehicles" [attr.aria-pressed]="controls.activeMenu() === 'vehicles'" (click)="controls.select('vehicles')">
+			<button type="button" aria-label="Vehicles" [attr.aria-pressed]="controls.activeMenu() === 'vehicles'" (click)="controls.select('vehicles')">
 				<svg lucideBusFront [size]="20" aria-hidden="true"></svg>
+				<span class="tab-label">Vehicles</span>
 			</button>
 		}
 		@if (stationAvailable() && controls.hasTab('station')) {
-			<button type="button" aria-label="Selected station" title="Selected station" [attr.aria-pressed]="controls.activeMenu() === 'station'" (click)="controls.select('station')">
+			<button type="button" aria-label="Selected station" [attr.aria-pressed]="controls.activeMenu() === 'station'" (click)="controls.select('station')">
 				<svg lucideMapPin [size]="20" aria-hidden="true"></svg>
+				<span class="tab-label">Station</span>
 			</button>
 		}
 		@if (controls.hasTab('measure')) {
-			<button type="button" aria-label="Measure shapes" title="Measure shapes" [attr.aria-pressed]="controls.activeMenu() === 'measure'" (click)="controls.select('measure')">
+			<button type="button" aria-label="Measure shapes" [attr.aria-pressed]="controls.activeMenu() === 'measure'" (click)="controls.select('measure')">
 				<svg lucideRuler [size]="20" aria-hidden="true"></svg>
+				<span class="tab-label">Measure</span>
 			</button>
 		}
 		@if (controls.hasTab('layers')) {
-			<button type="button" aria-label="Map layers" title="Map layers" [attr.aria-pressed]="controls.activeMenu() === 'layers'" (click)="controls.select('layers')">
+			<button type="button" aria-label="Map layers" [attr.aria-pressed]="controls.activeMenu() === 'layers'" (click)="controls.select('layers')">
 				<svg lucideLayers [size]="20" aria-hidden="true"></svg>
+				<span class="tab-label">Layers</span>
 			</button>
 		}
 		@if (controls.hasTab('distances')) {
-			<button type="button" aria-label="Distances" title="Distances" [attr.aria-pressed]="controls.activeMenu() === 'distances'" (click)="controls.select('distances')">
+			<button type="button" aria-label="Distances" [attr.aria-pressed]="controls.activeMenu() === 'distances'" (click)="controls.select('distances')">
 				<svg lucideLocateFixed [size]="20" aria-hidden="true"></svg>
+				<span class="tab-label">Distances</span>
 			</button>
 		}
 	</nav>

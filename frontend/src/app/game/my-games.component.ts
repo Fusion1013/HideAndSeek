@@ -24,7 +24,7 @@ const STATUS_LABELS: Record<GameDTO.StatusEnum, string> = {
   imports: [RouterLink],
   template: `
     @if (running().length > 0) {
-      <nav class="game-section" aria-labelledby="my-games-heading">
+      <nav class="panel-section" aria-labelledby="my-games-heading">
         <h3 id="my-games-heading" class="panel-heading">Your games</h3>
         <ul class="game-links">
           @for (game of running(); track game.id) {
@@ -37,7 +37,7 @@ const STATUS_LABELS: Record<GameDTO.StatusEnum, string> = {
       </nav>
     }
     @if (past().length > 0) {
-      <nav class="game-section" aria-labelledby="past-games-heading">
+      <nav class="panel-section" aria-labelledby="past-games-heading">
         <h3 id="past-games-heading" class="panel-heading">Past games</h3>
         <ul class="game-links">
           @for (game of past(); track game.id) {

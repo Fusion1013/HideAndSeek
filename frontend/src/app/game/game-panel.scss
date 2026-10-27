@@ -4,29 +4,6 @@
   display: contents;
 }
 
-.game-panel {
-  gap: 16px;
-}
-
-// A titled part of the game: phase, invite, players, host controls
-.game-section {
-  display: grid;
-  gap: 10px;
-  min-width: 0;
-  padding-bottom: 14px;
-  border-bottom: 1px solid var(--control-border);
-
-  h3 {
-    margin: 0;
-    font-size: inherit;
-  }
-
-  a {
-    color: #075761;
-    font-weight: 600;
-  }
-}
-
 .phase {
   display: grid;
   gap: 4px;
@@ -40,13 +17,13 @@
   }
 
   &.phase-hiding {
-    border-color: #a85d00;
-    background: #fff4e5;
+    border-color: var(--control-warning);
+    background: var(--control-warning-surface);
   }
 
   &.phase-seeking {
-    border-color: #2d5bb8;
-    background: #eaf0fb;
+    border-color: var(--control-info);
+    background: var(--control-info-surface);
   }
 
   &.phase-finished {
@@ -101,7 +78,7 @@
     min-height: 36px;
     max-width: 140px;
     padding: 4px 8px;
-    border: 1px solid #aebdc0;
+    border: 1px solid var(--control-field-border);
     border-radius: 5px;
     background: #ffffff;
     color: var(--control-ink);
@@ -118,8 +95,8 @@
   margin-left: 6px;
   padding: 1px 6px;
   border-radius: 10px;
-  background: #e1f1f0;
-  color: #075761;
+  background: var(--control-selected);
+  color: var(--control-accent-strong);
   font-size: 12px;
 }
 
@@ -169,9 +146,9 @@
 // A station clicked on the map, waiting to be chosen
 .picked {
   padding: 12px 14px;
-  border-left: 4px solid #a85d00;
+  border-left: 4px solid var(--control-warning);
   border-radius: 4px;
-  background: #fff4e5;
+  background: var(--control-warning-surface);
 }
 
 .station-list {
@@ -196,7 +173,7 @@
     flex: none;
     min-height: 36px;
     padding: 4px 10px;
-    border: 1px solid #aebdc0;
+    border: 1px solid var(--control-field-border);
     border-radius: 5px;
     background: #ffffff;
     color: var(--control-ink);
@@ -205,7 +182,7 @@
     cursor: pointer;
 
     &:hover:not(:disabled) {
-      background: #eaf1f1;
+      background: var(--control-hover);
     }
 
     &:disabled {
@@ -225,9 +202,9 @@
 .pending-question,
 .waiting-question {
   padding: 12px 14px;
-  border-left: 4px solid #2d5bb8;
+  border-left: 4px solid var(--control-info);
   border-radius: 4px;
-  background: #eaf0fb;
+  background: var(--control-info-surface);
 }
 
 .place-answer {
@@ -298,11 +275,11 @@
 
 .answer {
   margin: 0;
-  color: #075761;
+  color: var(--control-accent-strong);
   font-weight: 700;
 
   &.expired {
-    color: #8a4b00;
+    color: var(--control-warning-ink);
   }
 }
 
@@ -343,13 +320,13 @@
   min-height: 42px;
   padding: 0 14px;
   place-items: center;
-  border: 1px solid #aebdc0;
+  border: 1px solid var(--control-field-border);
   border-radius: 5px;
   background: #ffffff;
   color: var(--control-ink);
   text-decoration: none;
 
   &:hover {
-    background: #eaf1f1;
+    background: var(--control-hover);
   }
 }

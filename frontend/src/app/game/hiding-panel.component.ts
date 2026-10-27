@@ -16,7 +16,7 @@ const MAX_LISTED = 50;
 @Component({
   selector: 'app-hiding-panel',
   template: `
-    <section class="game-section" aria-labelledby="hiding-heading">
+    <section class="panel-section" aria-labelledby="hiding-heading">
       <h3 id="hiding-heading" class="panel-heading" tabindex="-1">Hiding station</h3>
       <div role="status">
         @if (session.hidingStation(); as chosen) {
@@ -35,7 +35,7 @@ const MAX_LISTED = 50;
 
     @if (session.canChooseStation()) {
       @if (map.pickedStation(); as picked) {
-        <section class="game-section picked" aria-labelledby="picked-heading">
+        <section class="panel-section picked" aria-labelledby="picked-heading">
           <h3 id="picked-heading" class="panel-heading">{{ picked.name }}</h3>
           <div class="panel-actions">
             <button type="button" class="primary-action" [disabled]="session.busy() || isChosen(picked)" (click)="choose(picked)">
@@ -46,7 +46,7 @@ const MAX_LISTED = 50;
         </section>
       }
 
-      <section class="game-section" aria-labelledby="stations-heading">
+      <section class="panel-section" aria-labelledby="stations-heading">
         <div class="panel-heading">
           <h3 id="stations-heading">Stations</h3>
           <span>{{ session.stations().length }}</span>

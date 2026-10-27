@@ -30,7 +30,7 @@ export function seekingDuration(game: Pick<GameDTO, 'seekingStartedAt' | 'finish
   imports: [RouterLink],
   template: `
     @if (session.game(); as game) {
-      <section class="game-section" aria-labelledby="recap-heading">
+      <section class="panel-section" aria-labelledby="recap-heading">
         <div class="panel-heading">
           <h3 id="recap-heading" tabindex="-1">Game recap</h3>
           <span>{{ game.name }}</span>
@@ -72,7 +72,7 @@ export function seekingDuration(game: Pick<GameDTO, 'seekingStartedAt' | 'finish
         </dl>
       </section>
 
-      <section class="game-section" aria-labelledby="recap-replay-heading">
+      <section class="panel-section" aria-labelledby="recap-replay-heading">
         <h3 id="recap-replay-heading" class="panel-heading">Replay</h3>
         @if (replay.active()) {
           <p class="phase-hint">
@@ -89,7 +89,7 @@ export function seekingDuration(game: Pick<GameDTO, 'seekingStartedAt' | 'finish
         }
       </section>
 
-      <section class="game-section" aria-labelledby="recap-players-heading">
+      <section class="panel-section" aria-labelledby="recap-players-heading">
         <h3 id="recap-players-heading" class="panel-heading">Players</h3>
         <dl class="recap-facts">
           <div>
@@ -103,7 +103,7 @@ export function seekingDuration(game: Pick<GameDTO, 'seekingStartedAt' | 'finish
         </dl>
       </section>
 
-      <section class="game-section" aria-labelledby="recap-questions-heading">
+      <section class="panel-section" aria-labelledby="recap-questions-heading">
         <div class="panel-heading">
           <h3 id="recap-questions-heading">Questions</h3>
           <span>{{ questionSummary() }}</span>
@@ -122,7 +122,7 @@ export function seekingDuration(game: Pick<GameDTO, 'seekingStartedAt' | 'finish
       </section>
 
       <div class="panel-actions">
-        <a class="button-link" routerLink="/join">Back to Play</a>
+        <a class="button-link" routerLink="/join">All your games</a>
       </div>
     }
   `,

@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 
+import { LayerService } from '../layer/layer.service';
 import { StationTimetableService } from '../station/station-timetable.service';
 import { ReachabilityRouteCardComponent } from './reachability-route-card.component';
 import { ReachabilityRoutePickerComponent } from './reachability-route-picker.component';
@@ -29,7 +30,12 @@ import { MAX_REACHABILITY_MINUTES, REACHABILITY_COLORS, ReachabilityService } fr
         }
       </div>
       @if (reachability.picking()) {
-        <p class="status-text" role="status">Click a stop on the map. Turn on the Stops layer if none are shown.</p>
+        <p class="status-text" role="status">Click a stop on the map.</p>
+        @if (!stopsShown()) {
+          <div class="panel-actions">
+            <button type="button" (click)="showStops()">Show stops on the map</button>
+          </div>
+        }
       }
 
       <form class="reachability-form" [formGroup]="form" (ngSubmit)="calculate()">
@@ -93,17 +99,6 @@ import { MAX_REACHABILITY_MINUTES, REACHABILITY_COLORS, ReachabilityService } fr
       display: contents;
     }
 
-    .reachability-tools {
-      margin-top: 12px;
-      padding-top: 8px;
-      border-top: 1px solid var(--control-border);
-    }
-
-    h3 {
-      margin: 0;
-      font-size: 14px;
-    }
-
     .reachability-form {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -151,7 +146,7 @@ import { MAX_REACHABILITY_MINUTES, REACHABILITY_COLORS, ReachabilityService } fr
 
       &.likely {
         border: 2px solid #ffffff;
-        box-shadow: 0 0 0 1px #aebdc0;
+        box-shadow: 0 0 0 1px var(--control-field-border);
       }
 
       &.unlikely {
@@ -166,6 +161,10 @@ export class ReachabilityPanelComponent {
   protected readonly reachability = inject(ReachabilityService);
   protected readonly routes = inject(ReachabilityRouteService);
   private readonly timetable = inject(StationTimetableService);
+  private readonly layers = inject(LayerService);
+
+  /** Stops can only be picked where they are drawn. */
+  protected readonly stopsShown = computed(() => this.layers.visibleLayerIds().has('stops'));
 
   protected readonly colors = REACHABILITY_COLORS;
   protected readonly maxMinutes = MAX_REACHABILITY_MINUTES;
@@ -184,6 +183,10 @@ export class ReachabilityPanelComponent {
       validators: [Validators.required, Validators.min(1), Validators.max(MAX_REACHABILITY_MINUTES)]
     })
   });
+
+  protected showStops(): void {
+    this.layers.setLayerVisibility('stops', true);
+  }
 
   protected calculate(): void {
     if (this.form.invalid) return;

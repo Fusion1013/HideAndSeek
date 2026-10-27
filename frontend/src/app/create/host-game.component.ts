@@ -16,7 +16,7 @@ const MAX_HIDING_MINUTES = 300;
   selector: 'app-host-game',
   imports: [ReactiveFormsModule],
   template: `
-    <form class="template-group" [formGroup]="form" (ngSubmit)="host()" aria-labelledby="host-heading">
+    <form class="panel-section" [formGroup]="form" (ngSubmit)="host()" aria-labelledby="host-heading">
       <h3 id="host-heading" class="panel-heading">Play this template</h3>
       <p class="status-text">Creates a game with an invite code for the others to join. You will be its host.</p>
       <div class="host-fields">
@@ -38,9 +38,6 @@ const MAX_HIDING_MINUTES = 300;
         <button type="submit" class="primary-action" [disabled]="busy() || disabled()">
           {{ busy() ? 'Creating the game…' : 'Create a game' }}
         </button>
-        @if (disabled()) {
-          <span class="status-text">Save the changes first.</span>
-        }
       </div>
     </form>
   `,

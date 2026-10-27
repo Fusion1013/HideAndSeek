@@ -9,10 +9,10 @@
   max-height: calc(100dvh - 32px);
   box-sizing: border-box;
   padding: 20px;
-  border: 1px solid #d4dfe1;
+  border: 1px solid var(--control-border);
   border-radius: 8px;
-  background: #fafafa;
-  color: #172b32;
+  background: var(--control-surface);
+  color: var(--control-ink);
   box-shadow: 0 12px 40px rgb(23 43 50 / 25%);
   font: 15px/1.4 system-ui, sans-serif;
 
@@ -69,11 +69,11 @@
     width: 18px;
     height: 18px;
     margin: 0;
-    accent-color: #087e8b;
+    accent-color: var(--control-accent);
   }
 
   &:has(input:disabled) {
-    color: #52666e;
+    color: var(--control-muted);
     cursor: default;
   }
 }
@@ -81,7 +81,7 @@
 .control-field {
   display: grid;
   gap: 5px;
-  color: #52666e;
+  color: var(--control-muted);
   font-size: 12px;
 
   &.nested {
@@ -95,10 +95,10 @@
   select {
     min-height: 40px;
     padding: 6px 8px;
-    border: 1px solid #aebdc0;
+    border: 1px solid var(--control-field-border);
     border-radius: 5px;
     background: #ffffff;
-    color: #172b32;
+    color: var(--control-ink);
     font: inherit;
     font-size: 15px;
 
@@ -110,7 +110,7 @@
 
 .status-text {
   margin: 0;
-  color: #52666e;
+  color: var(--control-muted);
   font-size: 13px;
 
   &:empty {
@@ -121,9 +121,9 @@
 .load-error {
   margin: 0;
   padding: 10px 12px;
-  border-left: 3px solid #b33232;
-  background: #fff0ee;
-  color: #8d2525;
+  border-left: 3px solid var(--control-danger);
+  background: var(--control-danger-surface);
+  color: var(--control-danger-ink);
   font-size: 13px;
 }
 
@@ -135,15 +135,15 @@
   button {
     min-height: 42px;
     padding: 8px 14px;
-    border: 1px solid #aebdc0;
+    border: 1px solid var(--control-field-border);
     border-radius: 5px;
     background: #ffffff;
-    color: #172b32;
+    color: var(--control-ink);
     font: inherit;
     cursor: pointer;
 
     &:hover:not(:disabled) {
-      background: #eaf1f1;
+      background: var(--control-hover);
     }
 
     &:disabled {
@@ -152,13 +152,13 @@
     }
 
     &.primary-action {
-      border-color: #075761;
-      background: #087e8b;
+      border-color: var(--control-accent-strong);
+      background: var(--control-accent);
       color: #ffffff;
       font-weight: 600;
 
       &:hover:not(:disabled) {
-        background: #075761;
+        background: var(--control-accent-strong);
       }
     }
   }
@@ -167,6 +167,6 @@
 button:focus-visible,
 select:focus-visible,
 input:focus-visible {
-  outline: 3px solid #087e8b;
+  outline: 3px solid var(--control-accent);
   outline-offset: 2px;
 }

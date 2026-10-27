@@ -140,7 +140,7 @@ type Step =
     }
 
     .tight-note {
-      color: #8a4b00;
+      color: var(--control-warning-ink);
     }
 
     .steps {

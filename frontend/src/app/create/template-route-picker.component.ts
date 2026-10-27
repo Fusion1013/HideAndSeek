@@ -24,7 +24,7 @@ interface PickableRoute {
   template: `
     @if (!editor.canEdit()) {
       <!-- Read-only: just the chosen routes, as a list that can be scrolled by keyboard -->
-      <section class="template-group" aria-labelledby="chosen-routes-heading">
+      <section class="panel-section" aria-labelledby="chosen-routes-heading">
         <h3 id="chosen-routes-heading" class="panel-heading">Routes <span>{{ editor.routeIds().length }} chosen</span></h3>
         <ul class="route-checklist read-only" aria-labelledby="chosen-routes-heading" tabindex="0">
           @for (route of chosenRoutes(); track route.routeId) {
@@ -43,7 +43,7 @@ interface PickableRoute {
         </ul>
       </section>
     } @else {
-    <fieldset class="template-group" [disabled]="editor.busy()">
+    <fieldset class="panel-section" [disabled]="editor.busy()">
       <legend class="panel-heading">
         Routes
         <span>{{ editor.routeIds().length }} chosen · {{ editor.routeIdsInArea().size }} in area</span>

@@ -1,8 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { MapComponent } from './map/map.component';
-import { AppMode, ModeService } from './mode/mode.service';
-
-const MODE_TITLES: Record<AppMode, string> = { overview: 'Overview', create: 'Create a game', game: 'Play' };
+import { MODE_TITLES, ModeService } from './mode/mode.service';
 
 @Component({
   selector: 'app-root',

@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 
+import { ControlsPanelService } from '../controls/controls-panel.service';
 import { MAP_LAYERS } from '../layer/map-layers';
 import type { MapLayerId } from '../layer/map-layers';
 import type { GeolocationError } from '../position/geolocation.service';
@@ -16,6 +17,7 @@ import type { PositionSource } from './closest-locations.service';
 })
 export class DistancesPanelComponent {
   protected readonly closest = inject(ClosestLocationsService);
+  protected readonly controls = inject(ControlsPanelService);
 
   protected readonly formatDistance = formatDistance;
   protected readonly layerLabels: ReadonlyMap<MapLayerId, string> = new Map(MAP_LAYERS.map(layer => [layer.id, layer.label]));

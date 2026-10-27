@@ -18,7 +18,7 @@
   width: 44px;
   height: 44px;
   place-items: center;
-  border: 1px solid #aebdc0;
+  border: 1px solid var(--control-field-border);
   border-radius: 5px;
   background: #ffffff;
   color: var(--control-ink);
@@ -45,13 +45,15 @@
   background: var(--control-surface);
   color: var(--control-ink);
   box-shadow: -12px 0 32px rgb(23 43 50 / 12%);
+  // As the export dialog and replay slider, rather than the browser's default serif
+  font: 15px/1.4 system-ui, sans-serif;
   transition: transform 220ms ease, visibility 0s;
 }
 
-// Keep the title and switchers in place; only the list below them scrolls
+// Keep the switchers (and any error) in place; only the list below them scrolls, taking the space left
 .controls-panel.has-scrolling-list {
-  grid-template-rows: auto auto auto minmax(0, 1fr);
-  align-content: stretch;
+  display: flex;
+  flex-direction: column;
   overflow-y: hidden;
 }
 
@@ -62,13 +64,15 @@
   pointer-events: none;
 }
 
+// Read by screen readers only: the mode switcher already shows the mode
 .controls-title {
-  min-height: 44px;
+  position: absolute;
+  width: 1px;
+  height: 1px;
   margin: 0;
-  padding-right: 52px;
-  align-content: center;
-  font-size: 18px;
-  font-weight: 650;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 // Overview / Create / Play: links, as each mode has its own address
@@ -76,10 +80,12 @@
   display: grid;
   grid-auto-columns: minmax(0, 1fr);
   grid-auto-flow: column;
+  // Clear of the panel toggle, which sits over the panel's top right corner
+  margin-right: 52px;
   padding: 3px;
   border: 1px solid var(--control-border);
   border-radius: 6px;
-  background: #eef3f4;
+  background: var(--control-subtle);
 
   a {
     display: grid;
@@ -103,7 +109,7 @@
     &[aria-current='page'] {
       background: #ffffff;
       box-shadow: 0 1px 3px rgb(23 43 50 / 16%);
-      color: #075761;
+      color: var(--control-accent-strong);
     }
   }
 }
@@ -116,28 +122,43 @@
   padding-bottom: 16px;
   border-bottom: 1px solid var(--control-border);
 
+  // Icon above its name
   button {
     display: grid;
     width: 100%;
-    aspect-ratio: 1;
-    max-height: 52px;
+    min-width: 0;
+    min-height: 52px;
+    padding: 6px 2px 4px;
     place-items: center;
+    align-content: center;
+    gap: 3px;
     border: 1px solid var(--control-border);
     border-radius: 5px;
     background: #ffffff;
     color: var(--control-muted);
+    font: inherit;
     cursor: pointer;
 
     &:hover {
-      background: #eaf1f1;
+      background: var(--control-hover);
     }
 
     &[aria-pressed='true'] {
       border-color: var(--control-accent);
-      background: #e1f1f0;
-      color: #075761;
+      background: var(--control-selected);
+      color: var(--control-accent-strong);
     }
   }
+}
+
+.tab-label {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 @media (max-width: 600px) {

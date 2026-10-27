@@ -1,12 +1,48 @@
 // Building blocks shared by every tab of the map controls panel. Loaded once from styles.scss and scoped to
 // the panel, so each tab's own stylesheet only holds what is particular to it.
 
-.map-shell {
+:root {
   --control-ink: #172b32;
   --control-muted: #52666e;
   --control-border: #d4dfe1;
   --control-surface: #fafafa;
+  // Panels in a panel, and the track behind segmented controls
+  --control-subtle: #eef3f4;
   --control-accent: #087e8b;
+  // Accent text, and the pressed and primary controls' borders
+  --control-accent-strong: var(--control-accent-strong);
+  // Inputs, selects and buttons
+  --control-field-border: var(--control-field-border);
+  --control-hover: var(--control-hover);
+  --control-selected: var(--control-selected);
+  --control-danger: var(--control-danger);
+  --control-danger-strong: var(--control-danger-strong);
+  --control-danger-ink: var(--control-danger-ink);
+  --control-danger-surface: var(--control-danger-surface);
+  --control-warning: #a85d00;
+  --control-warning-ink: #8a4b00;
+  --control-warning-surface: #fff4e5;
+  --control-info: #2d5bb8;
+  --control-info-surface: #eaf0fb;
+}
+
+// A titled part of a tab, set off from the next by a rule. Kept at the lowest specificity so a tab can restyle
+// one (a highlighted card, say) with a single class.
+:where(.controls-panel) .panel-section {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  padding: 0 0 14px;
+  border: 0;
+  border-bottom: 1px solid var(--control-border);
+
+  // As a fieldset's legend, the heading spans the section like any other heading
+  > legend {
+    width: 100%;
+    margin-bottom: 8px;
+    padding: 0;
+  }
 }
 
 .controls-panel {
@@ -23,7 +59,19 @@
   // A tab's content
   .menu-content {
     display: grid;
-    gap: 2px;
+    gap: 12px;
+  }
+
+  // Every tab's headings are the same size, beside the panel's own title
+  h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 650;
+  }
+
+  .menu-content a:not(.button-link) {
+    color: var(--control-accent-strong);
+    font-weight: 600;
   }
 
   .panel-heading,
@@ -53,7 +101,7 @@
     button {
       min-height: 42px;
       padding: 8px 12px;
-      border: 1px solid #aebdc0;
+      border: 1px solid var(--control-field-border);
       border-radius: 5px;
       background: #ffffff;
       color: var(--control-ink);
@@ -61,13 +109,13 @@
       cursor: pointer;
 
       &:hover {
-        background: #eaf1f1;
+        background: var(--control-hover);
       }
 
       &[aria-pressed='true'] {
         border-color: var(--control-accent);
-        background: #e1f1f0;
-        color: #075761;
+        background: var(--control-selected);
+        color: var(--control-accent-strong);
       }
 
       &:disabled {
@@ -84,7 +132,7 @@
     min-height: clamp(180px, 34dvh, 360px);
     max-height: 48dvh;
     padding: 4px;
-    border: 1px solid #aebdc0;
+    border: 1px solid var(--control-field-border);
     border-radius: 5px;
     background: #ffffff;
     color: var(--control-ink);
@@ -102,7 +150,7 @@
     input,
     select {
       box-sizing: border-box;
-      border: 1px solid #aebdc0;
+      border: 1px solid var(--control-field-border);
       border-radius: 5px;
       background: #ffffff;
       color: var(--control-ink);
@@ -141,23 +189,23 @@
 
   // The main action of a tab (create, join, start), and one that cannot be undone (delete, end)
   .panel-actions button.primary-action {
-    border-color: #075761;
-    background: #087e8b;
+    border-color: var(--control-accent-strong);
+    background: var(--control-accent);
     color: #ffffff;
     font-weight: 600;
 
     &:hover {
-      background: #075761;
+      background: var(--control-accent-strong);
     }
   }
 
   .panel-actions button.danger-action {
-    border-color: #a32222;
-    background: #a32222;
+    border-color: var(--control-danger);
+    background: var(--control-danger);
     color: #ffffff;
 
     &:hover {
-      background: #851b1b;
+      background: var(--control-danger-strong);
     }
   }
 
@@ -166,12 +214,12 @@
     display: grid;
     gap: 8px;
     padding: 10px 12px;
-    border-left: 3px solid #a32222;
-    background: #fff0ee;
+    border-left: 3px solid var(--control-danger);
+    background: var(--control-danger-surface);
 
     p {
       margin: 0;
-      color: #6f1d1d;
+      color: var(--control-danger-ink);
       font-size: 13px;
     }
   }
@@ -195,9 +243,9 @@
   .load-error {
     margin: 0;
     padding: 10px 12px;
-    border-left: 3px solid #b33232;
-    background: #fff0ee;
-    color: #8d2525;
+    border-left: 3px solid var(--control-danger);
+    background: var(--control-danger-surface);
+    color: var(--control-danger-ink);
     font-size: 13px;
   }
 }

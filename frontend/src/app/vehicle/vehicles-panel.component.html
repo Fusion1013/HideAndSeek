@@ -1,20 +1,23 @@
 <section class="menu-content" aria-label="Vehicle positions">
-	<div class="panel-actions vehicle-actions">
-		<button type="button" [disabled]="transit.vehiclePositionsLoading()" (click)="selection.refresh()">
-			{{ transit.vehiclePositionsLoading() ? 'Updating...' : 'Refresh vehicles' }}
-		</button>
-		<span role="status" aria-live="polite">{{ transit.vehiclePositions().length }} vehicles</span>
+	<div class="panel-section">
+		<div class="panel-actions">
+			<button type="button" [disabled]="transit.vehiclePositionsLoading()" (click)="selection.refresh()">
+				{{ transit.vehiclePositionsLoading() ? 'Updating...' : 'Refresh vehicles' }}
+			</button>
+			<!-- Vehicles refresh while their layer is on, so this is that layer's switch -->
+			<button type="button" [attr.aria-pressed]="autoRefresh()" (click)="setAutoRefresh(!autoRefresh())">
+				Show live on map
+			</button>
+		</div>
+		@if (updatedAt(); as updatedAt) {
+			<p class="status-text">Updated {{ updatedAt }}{{ autoRefresh() ? ' · refreshes every ' + refreshSeconds + ' s' : '' }}</p>
+		}
+		@if (transit.vehiclePositionsError()) {
+			<p class="load-error" role="alert">Vehicle positions could not be updated.</p>
+		}
 	</div>
-	@if (updatedAt(); as updatedAt) {
-		<p class="vehicles-updated">
-			Updated {{ updatedAt }}{{ autoRefresh() ? ' · refreshes every ' + refreshSeconds + ' s' : ' · turn on the Vehicles layer to refresh automatically' }}
-		</p>
-	}
-	@if (transit.vehiclePositionsError()) {
-		<p class="load-error" role="alert">Vehicle positions could not be updated.</p>
-	}
-	<div class="panel-heading vehicle-list-heading">
-		<span>Vehicles</span>
+	<div class="panel-heading">
+		<label for="vehicle-select">Vehicles</label>
 		<span>{{ selection.selectedIds().length }} selected · {{ selection.vehicles().length }} total</span>
 	</div>
 	@if (selection.vehicles().length === 0) {

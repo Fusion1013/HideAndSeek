@@ -17,7 +17,7 @@ import { answerText, QUESTION_CATEGORIES, QUESTION_KINDS, questionKind, question
   imports: [ReactiveFormsModule],
   template: `
     @if (pending(); as question) {
-      <section class="game-section pending-question" aria-labelledby="pending-heading">
+      <section class="panel-section pending-question" aria-labelledby="pending-heading">
         <h3 id="pending-heading" class="panel-heading" tabindex="-1">
           {{ isHider() ? 'Answer the seekers' : 'Waiting for the hiders' }}
           <span aria-hidden="true">{{ timeLeft(question) }}</span>
@@ -45,7 +45,7 @@ import { answerText, QUESTION_CATEGORIES, QUESTION_KINDS, questionKind, question
     }
 
     @if (isSeeker()) {
-      <form class="game-section" [formGroup]="form" (ngSubmit)="ask()" aria-labelledby="ask-heading">
+      <form class="panel-section" [formGroup]="form" (ngSubmit)="ask()" aria-labelledby="ask-heading">
         <h3 id="ask-heading" class="panel-heading">Ask a question</h3>
         @if (session.game()?.status !== 'SEEKING') {
           <p class="status-text">You can ask once the hiding time is over.</p>
@@ -94,7 +94,7 @@ import { answerText, QUESTION_CATEGORIES, QUESTION_KINDS, questionKind, question
     }
     <p class="visually-hidden" role="status">{{ announcement() }}</p>
 
-    <section class="game-section" aria-labelledby="history-heading">
+    <section class="panel-section" aria-labelledby="history-heading">
       <h3 id="history-heading" class="panel-heading" tabindex="-1">Asked so far <span>{{ answered().length }}</span></h3>
       <ol class="question-history" reversed>
         @for (question of answered(); track question.id) {

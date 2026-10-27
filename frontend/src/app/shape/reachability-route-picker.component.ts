@@ -80,7 +80,7 @@ const MAX_LISTED = 100;
       display: grid;
       gap: 8px;
       min-width: 0;
-      margin: 12px 0 0;
+      margin: 0;
       padding: 8px 0 0;
       border: 0;
       border-top: 1px solid var(--control-border);
@@ -162,7 +162,7 @@ const MAX_LISTED = 100;
     }
 
     .unlikely-note {
-      color: #8a4b00;
+      color: var(--control-warning-ink);
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush

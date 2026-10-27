@@ -12,7 +12,7 @@ import { TemplateEditorService } from './template-editor.service';
 @Component({
   selector: 'app-template-area',
   template: `
-    <fieldset class="template-group" [disabled]="!editor.canEdit() || editor.busy()">
+    <fieldset class="panel-section" [disabled]="!editor.canEdit() || editor.busy()">
       <legend class="panel-heading">
         Play area
         <span>{{ sizeLabel() }}</span>

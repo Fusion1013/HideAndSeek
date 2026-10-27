@@ -2,12 +2,6 @@
   display: contents;
 }
 
-.station-heading span:first-child {
-  color: var(--control-ink);
-  font-size: 17px;
-  font-weight: 650;
-}
-
 .station-details {
   display: grid;
   gap: 4px;
@@ -36,28 +30,6 @@
     overflow-wrap: anywhere;
     text-align: right;
   }
-}
-
-.station-timetable-heading {
-  margin-top: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-
-  h3 {
-    margin: 4px 0;
-    font-size: 14px;
-  }
-}
-
-.station-timetable-heading span,
-.station-timetable-status {
-  color: var(--control-muted);
-  font-size: 12px;
-}
-
-.station-timetable-status {
-  margin: 0;
 }
 
 .station-timetable-scroll {
@@ -104,8 +76,8 @@
   }
 
   .stop-time-next td {
-    background: #e1f1f0;
-    color: #075761;
+    background: var(--control-selected);
+    color: var(--control-accent-strong);
     font-weight: 700;
   }
 
@@ -116,10 +88,6 @@
   .stop-time-upcoming td:first-child {
     color: var(--control-muted);
   }
-}
-
-.station-radius {
-  margin-top: 12px;
 }
 
 .station-measure-points {
@@ -143,7 +111,7 @@
 .station-heading button {
   min-height: 36px;
   padding: 6px 8px;
-  border: 1px solid #aebdc0;
+  border: 1px solid var(--control-field-border);
   border-radius: 5px;
   background: #ffffff;
   color: var(--control-ink);

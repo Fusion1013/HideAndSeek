@@ -6,9 +6,12 @@
 			<option value="gps">GPS</option>
 		</select>
 	</label>
-	<h3 id="closest-locations-heading" class="distance-heading">Closest locations</h3>
+	<h3 id="closest-locations-heading">Closest locations</h3>
 	@if (closest.openLayerIds().length === 0) {
-		<p class="status-text">Turn on a layer such as Zoos, Museums or High-Speed Rail under Map layers.</p>
+		<p class="status-text">Turn on a layer such as Zoos, Museums or High-Speed Rail to see the closest place on it.</p>
+		<div class="panel-actions">
+			<button type="button" (click)="controls.select('layers')">Choose layers</button>
+		</div>
 	} @else if (closest.positionSource() === 'gps' && closest.gpsError(); as error) {
 		<p class="status-text" role="alert">{{ gpsErrorMessage(error) }}</p>
 	} @else if (!closest.origin()) {

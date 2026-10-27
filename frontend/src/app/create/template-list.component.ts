@@ -11,7 +11,7 @@ import { AccessTokenStore } from '../auth/access-token.store';
   imports: [RouterLink],
   template: `
     @if (templates.hasValue() && templates.value().length > 0) {
-      <nav class="template-group" aria-labelledby="template-list-heading">
+      <nav class="panel-section" aria-labelledby="template-list-heading">
         <h3 id="template-list-heading" class="panel-heading">Your templates</h3>
         <ul class="template-links">
           @for (template of templates.value(); track template.id) {

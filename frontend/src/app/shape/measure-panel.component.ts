@@ -9,9 +9,9 @@ import type { DrawMode } from './shape.service';
   selector: 'app-measure-panel',
   imports: [ReachabilityPanelComponent],
   template: `
-    <section class="menu-content measure-tools" aria-label="Measure shapes">
+    <section class="menu-content measure-tools panel-section" aria-labelledby="measure-heading">
       <div class="panel-heading">
-        <span>Measurement shapes</span>
+        <h3 id="measure-heading">Measurement shapes</h3>
         <span>{{ shapes.shapeCount() }}</span>
       </div>
       <div class="panel-actions measure-actions">

@@ -14,7 +14,7 @@ export const MAX_PLAYER_NAME_LENGTH = 30;
   selector: 'app-join-game',
   imports: [ReactiveFormsModule],
   template: `
-    <form class="game-section" [formGroup]="form" (ngSubmit)="join()" aria-labelledby="join-heading">
+    <form class="panel-section" [formGroup]="form" (ngSubmit)="join()" aria-labelledby="join-heading">
       <h3 id="join-heading" class="panel-heading">Join a game</h3>
       <div class="control-field">
         <label for="join-code">Invite code</label>

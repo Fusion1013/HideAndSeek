@@ -23,7 +23,7 @@ import { TemplateRoutePickerComponent } from './template-route-picker.component'
   template: `
     @switch (controls.activeMenu()) {
       @case ('template') {
-        <section class="menu-content template-editor" aria-labelledby="template-heading">
+        <section class="menu-content" aria-labelledby="template-heading">
           <div class="panel-heading">
             <h3 id="template-heading">{{ templateId() ? 'Edit template' : 'New template' }}</h3>
             @if (templateId()) {
@@ -46,6 +46,10 @@ import { TemplateRoutePickerComponent } from './template-route-picker.component'
           } @else {
             @if (!editor.canEdit()) {
               <p class="status-text">This template was created in another browser, so it can only be viewed here.</p>
+            }
+            <!-- One notice for everything that waits on a save: exporting and hosting below -->
+            @if (editor.dirty() && templateId()) {
+              <p class="unsaved-notice">Unsaved changes. Save them before exporting an image or creating a game.</p>
             }
 
             <div class="control-field">
@@ -71,9 +75,6 @@ import { TemplateRoutePickerComponent } from './template-route-picker.component'
                 <button type="button" class="primary-action" [disabled]="editor.busy()" (click)="editor.save()">
                   {{ editor.status() === 'saving' ? 'Saving…' : templateId() ? 'Save changes' : 'Create template' }}
                 </button>
-                @if (editor.dirty() && templateId()) {
-                  <span class="status-text">Unsaved changes</span>
-                }
               </div>
 
               @if (templateId()) {
@@ -97,13 +98,10 @@ import { TemplateRoutePickerComponent } from './template-route-picker.component'
 
             @if (templateId(); as templateId) {
               @if (editor.area(); as area) {
-                <section class="template-group" aria-labelledby="export-heading-panel">
+                <section class="panel-section" aria-labelledby="export-heading-panel">
                   <h3 id="export-heading-panel" class="panel-heading">Image of the play area</h3>
                   <div class="panel-actions">
                     <button type="button" [disabled]="editor.dirty()" (click)="exportDialog.open()">Export as PNG…</button>
-                    @if (editor.dirty()) {
-                      <span class="status-text">Save the changes first.</span>
-                    }
                   </div>
                   <app-export-image-dialog #exportDialog [templateId]="templateId" [name]="editor.name.value" [area]="area" />
                 </section>

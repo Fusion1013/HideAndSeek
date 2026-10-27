@@ -28,7 +28,7 @@ import { LocationReporter } from './location-reporter.service';
   template: `
     @switch (controls.activeMenu()) {
       @case ('game') {
-        <div class="menu-content game-panel">
+        <div class="menu-content">
           @if (gameId()) {
             <app-game-view />
           } @else {
@@ -38,12 +38,12 @@ import { LocationReporter } from './location-reporter.service';
         </div>
       }
       @case ('questions') {
-        <div class="menu-content game-panel">
+        <div class="menu-content">
           <app-questions-panel />
         </div>
       }
       @case ('hiding') {
-        <div class="menu-content game-panel">
+        <div class="menu-content">
           <app-hiding-panel />
         </div>
       }

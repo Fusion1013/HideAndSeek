@@ -8,10 +8,11 @@
 	}
 
 	<app-controls-panel [stationAvailable]="!!stationTimetable.stop()">
-		<router-outlet />
-
+		<!-- Above the tab, so it is seen whichever tab is open and however long it is -->
 		@if (mapError() || routeCatalog.loadError() || routeSelection.loadError()) {
 			<p class="load-error" role="alert">Transit data could not be loaded.</p>
 		}
+
+		<router-outlet />
 	</app-controls-panel>
 </div>

@@ -50,7 +50,9 @@ type BaseMapChoice = BaseMapId | 'none';
 
     // The panel gives this list the space left below the tabs, and only the list scrolls
     .layer-list {
+      flex: 1 1 0;
       align-content: start;
+      gap: 2px;
       min-height: 0;
       overflow-y: auto;
       overscroll-behavior: contain;

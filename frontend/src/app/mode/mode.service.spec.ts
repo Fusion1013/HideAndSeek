@@ -44,6 +44,19 @@ describe('ModeService', () => {
     expect(mode()).toBe('overview');
   });
 
+  it('remembers the page each mode was left at, for going back to it', async () => {
+    const modes = TestBed.inject(ModeService);
+    const router = TestBed.inject(Router);
+    const url = (mode: 'overview' | 'create' | 'game') => router.serializeUrl(router.parseUrl(modes.modeUrls()[mode].toString()));
+    expect(url('game')).toBe('/join');
+
+    await navigate('/game/abc?view=1');
+    await navigate('/create');
+    expect(url('game')).toBe('/game/abc?view=1');
+    expect(url('create')).toBe('/create');
+    expect(url('overview')).toBe('/');
+  });
+
   it('offers each mode its own tabs, keeping the open tab when the next mode has it', async () => {
     const controls = TestBed.inject(ControlsPanelService);
     await navigate('/');

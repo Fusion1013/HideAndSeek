@@ -35,6 +35,10 @@ export class VehiclesPanelComponent {
 
   protected readonly autoRefresh = computed(() => this.layers.visibleLayerIds().has('vehicles'));
 
+  protected setAutoRefresh(on: boolean): void {
+    this.layers.setLayerVisibility('vehicles', on);
+  }
+
   protected optionLabel(vehicle: VehiclePosition, index: number): string {
     const route = this.catalog.route(vehicle.routeId);
     const routeName = route?.routeShortName || vehicle.routeId || 'Unknown route';

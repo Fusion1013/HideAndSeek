@@ -79,7 +79,7 @@ describe('MapComponent', () => {
     expect(panel.getAttribute('aria-hidden')).toBe('false');
     expect(controlsToggle.getAttribute('aria-label')).toBe('Close map controls');
     expect(fixture.nativeElement.querySelector('#line-select')).toBeTruthy();
-    expect(fixture.nativeElement.querySelector('section[aria-label="Measure shapes"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('section[aria-labelledby="measure-heading"]')).toBeNull();
 
     const menuButtons = fixture.nativeElement.querySelectorAll('.menu-switcher button') as NodeListOf<HTMLButtonElement>;
     const vehiclesMenuButton = Array.from(menuButtons)
@@ -96,7 +96,7 @@ describe('MapComponent', () => {
     measureMenuButton?.click();
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('#line-select')).toBeNull();
-    expect(fixture.nativeElement.querySelector('section[aria-label="Measure shapes"]')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('section[aria-labelledby="measure-heading"]')).toBeTruthy();
 
     controlsToggle.click();
     fixture.detectChanges();

@@ -39,7 +39,7 @@ const ROLE_LABELS: Record<GameRole, string> = { SEEKER: 'Seeker', HIDER: 'Hider'
       @if (game.status === 'FINISHED') {
         <app-game-recap />
       } @else {
-      <section class="game-section" aria-labelledby="game-heading">
+      <section class="panel-section" aria-labelledby="game-heading">
         <div class="panel-heading">
           <h3 id="game-heading">{{ game.name }}</h3>
           <span>{{ game.stationCount }} stations · {{ game.routes.length }} routes</span>
@@ -65,7 +65,7 @@ const ROLE_LABELS: Record<GameRole, string> = { SEEKER: 'Seeker', HIDER: 'Hider'
       </section>
 
       @if (session.me()?.role === 'HIDER' && session.pendingQuestion(); as question) {
-        <section class="game-section waiting-question" aria-labelledby="waiting-heading">
+        <section class="panel-section waiting-question" aria-labelledby="waiting-heading">
           <h3 id="waiting-heading" class="panel-heading">A question is waiting for your answer</h3>
           <p class="question-text">{{ questionText(question) }}</p>
           <div class="panel-actions">
@@ -75,7 +75,7 @@ const ROLE_LABELS: Record<GameRole, string> = { SEEKER: 'Seeker', HIDER: 'Hider'
       }
 
       @if (reporter.sharing()) {
-        <section class="game-section" aria-labelledby="sharing-heading">
+        <section class="panel-section" aria-labelledby="sharing-heading">
           <h3 id="sharing-heading" class="panel-heading">Your position</h3>
           @if (reporter.gpsError(); as gpsError) {
             <p class="load-error" role="alert">{{ gpsErrorMessage(gpsError) }}</p>
@@ -88,7 +88,7 @@ const ROLE_LABELS: Record<GameRole, string> = { SEEKER: 'Seeker', HIDER: 'Hider'
       }
 
       @if (session.me()?.role === 'HIDER' && game.status !== 'LOBBY') {
-        <section class="game-section" aria-labelledby="seekers-heading">
+        <section class="panel-section" aria-labelledby="seekers-heading">
           <h3 id="seekers-heading" class="panel-heading">Seekers last seen</h3>
           @for (seeker of map.seekers(); track seeker.playerId) {
             <p class="seeker-line"><strong>{{ seeker.displayName }}</strong>&ngsp;<span class="status-text">{{ seeker.age }}</span></p>
@@ -99,7 +99,7 @@ const ROLE_LABELS: Record<GameRole, string> = { SEEKER: 'Seeker', HIDER: 'Hider'
       }
 
       @if (game.status === 'LOBBY') {
-        <section class="game-section" aria-labelledby="invite-heading">
+        <section class="panel-section" aria-labelledby="invite-heading">
           <h3 id="invite-heading" class="panel-heading">Invite players</h3>
           <p class="invite-code" aria-label="Invite code {{ spokenCode() }}">{{ game.inviteCode }}</p>
           <div class="panel-actions">
@@ -109,7 +109,7 @@ const ROLE_LABELS: Record<GameRole, string> = { SEEKER: 'Seeker', HIDER: 'Hider'
         </section>
       }
 
-      <section class="game-section" aria-labelledby="players-heading">
+      <section class="panel-section" aria-labelledby="players-heading">
         <div class="panel-heading">
           <h3 id="players-heading">Players</h3>
           <span>{{ game.players.length }}</span>
@@ -142,7 +142,7 @@ const ROLE_LABELS: Record<GameRole, string> = { SEEKER: 'Seeker', HIDER: 'Hider'
       }
 
       @if (game.status === 'SEEKING' && (session.me()?.role === 'SEEKER' || session.isHost())) {
-        <section class="game-section" aria-labelledby="found-heading">
+        <section class="panel-section" aria-labelledby="found-heading">
           <h3 id="found-heading" class="panel-heading">Found the hiders?</h3>
           @if (confirmingFound()) {
             <div class="confirm-box found-confirm" role="group" aria-labelledby="found-question">
@@ -160,8 +160,10 @@ const ROLE_LABELS: Record<GameRole, string> = { SEEKER: 'Seeker', HIDER: 'Hider'
         </section>
       }
 
+      <p class="status-text"><a routerLink="/join">All your games</a></p>
+
       @if (session.isHost()) {
-        <section class="game-section" aria-label="Host controls">
+        <section class="panel-section" aria-label="Host controls">
           @if (game.status === 'LOBBY') {
             <div class="panel-actions">
               <button type="button" class="primary-action" aria-describedby="start-blockers"

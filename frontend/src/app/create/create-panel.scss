@@ -4,38 +4,6 @@
   display: contents;
 }
 
-.template-editor {
-  gap: 16px;
-
-  .panel-heading h3 {
-    margin: 0;
-    font-size: inherit;
-  }
-
-  a {
-    color: #075761;
-    font-size: 13px;
-    font-weight: 600;
-  }
-}
-
-// A titled part of the editor: area, routes, your templates
-.template-group {
-  display: grid;
-  gap: 10px;
-  min-width: 0;
-  margin: 0;
-  padding: 0 0 14px;
-  border: 0;
-  border-bottom: 1px solid var(--control-border);
-
-  legend {
-    width: 100%;
-    margin-bottom: 8px;
-    padding: 0;
-  }
-}
-
 .check-field {
   display: flex;
   min-height: 32px;
@@ -107,7 +75,7 @@
 
 .route-note {
   display: block;
-  color: #8a4b00;
+  color: var(--control-warning-ink);
   font-size: 12px;
 }
 
@@ -132,7 +100,7 @@
 }
 
 .field-error {
-  color: #a32222;
+  color: var(--control-danger);
   font-size: 12px;
 }
 
@@ -144,4 +112,14 @@
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
   gap: 8px;
+}
+
+// Changes not saved yet, which exporting and hosting wait for
+.unsaved-notice {
+  margin: 0;
+  padding: 10px 12px;
+  border-left: 3px solid var(--control-warning);
+  background: var(--control-warning-surface);
+  color: var(--control-warning-ink);
+  font-size: 13px;
 }

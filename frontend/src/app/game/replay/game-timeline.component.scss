@@ -24,7 +24,7 @@ $phase: #17232b;
 }
 
 .timeline-error {
-  color: #a32222;
+  color: var(--control-danger);
   font-weight: 600;
 }
 
@@ -93,7 +93,7 @@ $phase: #17232b;
   height: 36px;
   place-items: center;
   padding: 0;
-  border: 1px solid #aebdc0;
+  border: 1px solid var(--control-field-border);
   border-radius: 5px;
   background: #ffffff;
   color: var(--control-ink);
@@ -112,12 +112,12 @@ $phase: #17232b;
 }
 
 .play-button {
-  border-color: #075761;
-  background: #087e8b;
+  border-color: var(--control-accent-strong);
+  background: var(--control-accent);
   color: #ffffff;
 
   &:hover {
-    background: #075761;
+    background: var(--control-accent-strong);
   }
 }
 
@@ -143,7 +143,7 @@ select {
     height: 100%;
     margin: 0;
     background: transparent;
-    accent-color: #087e8b;
+    accent-color: var(--control-accent);
     cursor: pointer;
   }
 }
@@ -171,7 +171,7 @@ select {
 .timeline-speed select {
   height: 36px;
   max-width: 140px;
-  border: 1px solid #aebdc0;
+  border: 1px solid var(--control-field-border);
   border-radius: 5px;
   background: #ffffff;
   color: var(--control-ink);
