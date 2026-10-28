@@ -10,15 +10,15 @@
   --control-subtle: #eef3f4;
   --control-accent: #087e8b;
   // Accent text, and the pressed and primary controls' borders
-  --control-accent-strong: var(--control-accent-strong);
+  --control-accent-strong: #075761;
   // Inputs, selects and buttons
-  --control-field-border: var(--control-field-border);
-  --control-hover: var(--control-hover);
-  --control-selected: var(--control-selected);
-  --control-danger: var(--control-danger);
-  --control-danger-strong: var(--control-danger-strong);
-  --control-danger-ink: var(--control-danger-ink);
-  --control-danger-surface: var(--control-danger-surface);
+  --control-field-border: #aebdc0;
+  --control-hover: #eaf1f1;
+  --control-selected: #e1f1f0;
+  --control-danger: #a32222;
+  --control-danger-strong: #851b1b;
+  --control-danger-ink: #6f1d1d;
+  --control-danger-surface: #fff0ee;
   --control-warning: #a85d00;
   --control-warning-ink: #8a4b00;
   --control-warning-surface: #fff4e5;
@@ -187,10 +187,6 @@
     // Keeps labels aligned for layers drawn in several colors (base map, transit)
     &.is-empty {
       border-color: transparent;
-    }
-
-    &.is-outline {
-      border-width: 2px;
     }
   }
 

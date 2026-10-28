@@ -31,6 +31,15 @@ describe('LayerService', () => {
     expect(new Set(sources).size).toBe(sources.length);
   });
 
+  it('ties each region layer to a layer of places of the same category', () => {
+    for (const layer of MAP_LAYERS) {
+      if (!('regionsOf' in layer)) continue;
+      const parent = MAP_LAYERS.find(other => other.id === layer.regionsOf);
+      expect(parent && 'overpass' in parent && !('regionsOf' in parent)).toBe(true);
+      expect(parent && 'overpass' in parent && parent.overpass.category).toBe(layer.overpass.category);
+    }
+  });
+
   it('gives each layer at most one way of being created', () => {
     for (const layer of MAP_LAYERS) {
       expect('provider' in layer && 'overpass' in layer).toBe(false);

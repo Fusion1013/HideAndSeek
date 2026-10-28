@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { LucideHexagon } from '@lucide/angular';
 
 import { BaseMapLayerService } from './base-map-layer.service';
 import { BASE_MAPS } from './base-maps';
@@ -6,13 +7,18 @@ import type { BaseMapId } from './base-maps';
 import { LayerService } from './layer.service';
 import type { MapLayerId } from './layer.service';
 import { MAP_LAYERS } from './map-layers';
+import type { MapLayerDefinition } from './map-layers';
 
 /** Choosing "None" hides the base map layer rather than picking a map. */
 type BaseMapChoice = BaseMapId | 'none';
 
-/** The Layers tab: a choice of base map, then a checkbox per map layer, with its color. */
+/**
+ * The Layers tab: a choice of base map, then a checkbox per map layer, with its color, and for layers of places
+ * a Regions toggle for the areas where each place is the closest one.
+ */
 @Component({
   selector: 'app-layers-panel',
+  imports: [LucideHexagon],
   template: `
     <section class="menu-content layer-list" aria-label="Map layers">
       <fieldset class="base-maps">
@@ -31,22 +37,29 @@ type BaseMapChoice = BaseMapId | 'none';
         }
       </fieldset>
       @for (layer of layers; track layer.id) {
-        <label class="layer-toggle">
-          <input
-            type="checkbox"
-            [checked]="layerService.visibleLayerIds().has(layer.id)"
-            (change)="setVisible(layer.id, $event)"
-          >
-          <span
-            class="layer-swatch"
-            [class.is-empty]="!layer.color"
-            [class.is-outline]="layer.outline"
-            [style.background-color]="layer.outline ? null : layer.color"
-            [style.border-color]="layer.outline ? layer.color : null"
-            aria-hidden="true"
-          ></span>
-          <span>{{ layer.label }}</span>
-        </label>
+        <div class="layer-row">
+          <label class="layer-toggle">
+            <input
+              type="checkbox"
+              [checked]="layerService.visibleLayerIds().has(layer.id)"
+              (change)="setVisible(layer.id, $event)"
+            >
+            <span class="layer-swatch" [class.is-empty]="!layer.color" [style.background-color]="layer.color" aria-hidden="true"></span>
+            <span>{{ layer.label }}</span>
+          </label>
+          @if (layer.regions; as regions) {
+            <button
+              type="button"
+              class="regions-toggle"
+              [attr.aria-label]="regions.label"
+              [attr.aria-pressed]="layerService.visibleLayerIds().has(regions.id)"
+              (click)="toggle(regions.id)"
+            >
+              <svg lucideHexagon [size]="14" aria-hidden="true"></svg>
+              Regions
+            </button>
+          }
+        </div>
       }
     </section>
   `,
@@ -84,6 +97,46 @@ type BaseMapChoice = BaseMapId | 'none';
       }
     }
 
+    .layer-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--control-border);
+
+      .layer-toggle {
+        flex: 1;
+        min-width: 0;
+        border-bottom: 0;
+      }
+    }
+
+    // Shows the areas where each of the layer's places is the closest one
+    .regions-toggle {
+      display: inline-flex;
+      flex: none;
+      align-items: center;
+      gap: 4px;
+      min-height: 26px;
+      padding: 2px 8px;
+      border: 1px solid var(--control-field-border);
+      border-radius: 5px;
+      background: #ffffff;
+      color: var(--control-ink);
+      font: inherit;
+      font-size: 12px;
+      cursor: pointer;
+
+      &:hover {
+        background: var(--control-hover);
+      }
+
+      &[aria-pressed='true'] {
+        border-color: var(--control-accent);
+        background: var(--control-selected);
+        color: var(--control-accent-strong);
+      }
+    }
+
     .layer-toggle {
       display: flex;
       min-height: 32px;
@@ -115,18 +168,26 @@ export class LayersPanelComponent {
   protected readonly baseMapChoice = computed<BaseMapChoice>(() =>
     this.layerService.visibleLayerIds().has('base-map') ? this.baseMapService.baseMapId() : 'none');
 
-  // The base map is chosen above, not switched on and off with the others
-  protected readonly layers = MAP_LAYERS.filter(layer => layer.id !== 'base-map').map(layer => ({
-    id: layer.id,
-    label: layer.label,
-    color: 'overpass' in layer ? layer.overpass.color : undefined,
-    // Cell layers tile the map with outlines, so their swatch is an outline too
-    outline: 'overpass' in layer && layer.overpass.style.kind === 'cells'
-  }));
+  // The base map is chosen above, and region layers are toggled on the line of the layer they belong to
+  protected readonly layers = (MAP_LAYERS as readonly MapLayerDefinition[])
+    .filter(layer => layer.id !== 'base-map' && !layer.regionsOf)
+    .map(layer => {
+      const regions = MAP_LAYERS.find(other => 'regionsOf' in other && other.regionsOf === layer.id);
+      return {
+        id: layer.id as MapLayerId,
+        label: layer.label,
+        color: layer.overpass?.color,
+        regions: regions && { id: regions.id, label: regions.label }
+      };
+    });
 
   protected chooseBaseMap(choice: BaseMapChoice): void {
     if (choice !== 'none') this.baseMapService.setBaseMap(choice);
     this.layerService.setLayerVisibility('base-map', choice !== 'none');
+  }
+
+  protected toggle(layerId: MapLayerId): void {
+    this.layerService.setLayerVisibility(layerId, !this.layerService.getLayerVisibility(layerId));
   }
 
   protected setVisible(layerId: MapLayerId, event: Event): void {

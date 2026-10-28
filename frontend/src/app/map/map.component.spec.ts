@@ -287,7 +287,8 @@ describe('MapComponent', () => {
     layersMenuButton?.click();
     fixture.detectChanges();
 
-    const toggled = MAP_LAYERS.filter(layer => layer.id !== 'base-map');
+    // Region layers are toggled by a button on their places' line, not a checkbox
+    const toggled = MAP_LAYERS.filter(layer => layer.id !== 'base-map' && !('regionsOf' in layer));
     const layerInputs = fixture.nativeElement.querySelectorAll('.layer-toggle input[type="checkbox"]') as NodeListOf<HTMLInputElement>;
     expect(Array.from(layerInputs, input => input.closest('label')?.textContent?.trim()))
       .toEqual(toggled.map(layer => layer.label));
