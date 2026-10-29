@@ -91,12 +91,12 @@
 				<span class="tab-label">Measure</span>
 			</button>
 		}
-<!--		@if (controls.hasTab('reachability')) {-->
-<!--			<button type="button" aria-label="Reachable stations" [attr.aria-pressed]="controls.activeMenu() === 'reachability'" (click)="controls.select('reachability')">-->
-<!--				<svg lucideTimer [size]="20" aria-hidden="true"></svg>-->
-<!--				<span class="tab-label">Reach</span>-->
-<!--			</button>-->
-<!--		}-->
+		@if (controls.hasTab('reachability')) {
+			<button type="button" aria-label="Reachable stations" [attr.aria-pressed]="controls.activeMenu() === 'reachability'" (click)="controls.select('reachability')">
+				<svg lucideTimer [size]="20" aria-hidden="true"></svg>
+				<span class="tab-label">Reach</span>
+			</button>
+		}
 		@if (controls.hasTab('share')) {
 			<button type="button" aria-label="Share template" [attr.aria-pressed]="controls.activeMenu() === 'share'" (click)="controls.select('share')">
 				<svg lucideShare2 [size]="20" aria-hidden="true"></svg>

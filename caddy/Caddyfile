@@ -1,6 +1,13 @@
 # HTTPS in front of the frontend: browsers only allow GPS (and other device features) on secure pages.
 # Set SITE_ADDRESS to the server's domain name and Caddy gets and renews a Let's Encrypt certificate for it;
 # ports 80 and 443 must be reachable from the internet. Unset, it serves https://localhost with a local certificate.
+{
+	servers {
+		# No HTTP/3: some mobile networks drop UDP 443 and iOS then times out instead of falling back to TCP
+		protocols h1 h2
+	}
+}
+
 {$SITE_ADDRESS:localhost} {
 	# Not a game's event stream: compressing it would hold events back until a buffer fills
 	@compressible not path_regexp ^/api/games/[^/]+/events$
