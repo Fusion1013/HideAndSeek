@@ -7,6 +7,7 @@ import { ControlsPanelService } from '../controls/controls-panel.service';
 import { injectFocusAfterRender } from '../shared/focus';
 import { GameClock } from './game-clock.service';
 import { GameMapService } from './game-map.service';
+import { GameNotificationsComponent } from './game-notifications.component';
 import { clockTime, GameRecapComponent } from './game-recap.component';
 import { GameRole, GameSessionService } from './game-session.service';
 import { questionText } from './questions';
@@ -20,7 +21,7 @@ const ROLE_LABELS: Record<GameRole, string> = { SEEKER: 'Seeker', HIDER: 'Hider'
  */
 @Component({
   selector: 'app-game-view',
-  imports: [GameRecapComponent, RouterLink],
+  imports: [GameNotificationsComponent, GameRecapComponent, RouterLink],
   template: `
     @if (session.loading()) {
       <p class="status-text">Loading the game…</p>
@@ -160,6 +161,8 @@ const ROLE_LABELS: Record<GameRole, string> = { SEEKER: 'Seeker', HIDER: 'Hider'
       @if (session.error()) {
         <p class="load-error" role="alert">{{ session.error() }}</p>
       }
+
+      <app-game-notifications [gameId]="game.id" />
 
       @if (session.isHost()) {
         <section class="panel-section" aria-label="Host controls">

@@ -22,6 +22,12 @@ SITE_ADDRESS=jetlag.example.com docker compose up --build -d
 
 Caddy gets and renews a Let's Encrypt certificate on its own; the site is then at `https://jetlag.example.com`. You can also put `SITE_ADDRESS=...` in a `.env` file next to `docker-compose.yml`.
 
+### Installing the app and notifications
+
+The production build is an installable web app with a service worker (`frontend/ngsw-config.json`), so players can add it to their home screen and get notifications for their games: a question waiting for the hiders, an answer for the seekers, the seekers setting off and the end. Each player turns them on in the game's Notifications section. On iPhone and iPad they only work in the app added to the Home Screen (iOS 16.4 or later). The development server (`npm start`) runs without the service worker; use `docker compose up` to try it.
+
+The server makes its own VAPID key pair the first time it is needed and keeps it in the database. Set `PUSH_SUBJECT` to a `mailto:` or `https:` address where push services can reach whoever runs the server.
+
 The greeting endpoint is `GET /api/hello` and returns `Hello, world!`. The generated OpenAPI documentation is available at [http://localhost:4200/swagger-ui/index.html](http://localhost:4200/swagger-ui/index.html), with the JSON document at `/v3/api-docs`.
 
 ## Generate API code

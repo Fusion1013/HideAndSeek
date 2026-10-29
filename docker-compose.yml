@@ -36,6 +36,8 @@ services:
       TRAFIKLAB_REALTIME_API_KEY: ${TRAFIKLAB_REALTIME_API_KEY:-}
       GTFS_UPDATE_ENABLED: ${GTFS_UPDATE_ENABLED:-true}
       OVERPASS_UPDATE_ENABLED: ${OVERPASS_UPDATE_ENABLED:-true}
+      # Contact address push services may use about the server's notifications (mailto: or https:)
+      PUSH_SUBJECT: ${PUSH_SUBJECT:-mailto:jetlag@example.com}
     depends_on:
       database:
         condition: service_healthy

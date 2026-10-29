@@ -2,6 +2,8 @@ package com.jetlag.game.question;
 
 import com.jetlag.game.events.EventAudience;
 import com.jetlag.game.events.GameEventLog;
+import com.jetlag.game.push.GameNotifications;
+import com.jetlag.game.push.GameNotifications.Notification;
 import com.jetlag.game.session.GameEntity;
 import com.jetlag.game.session.GamePlayerEntity;
 import com.jetlag.game.session.GamePlayerRepository;
@@ -17,6 +19,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
@@ -30,6 +33,8 @@ public class QuestionService {
   /** A question, new or changed, as a {@link QuestionDTO}. */
   public static final String QUESTION_EVENT = "question";
   static final Duration ANSWER_TIME = Duration.ofMinutes(5);
+  /** An answer is old news to the seekers if it reaches them later than this. */
+  private static final Duration ANSWER_NOTICE_TTL = Duration.ofMinutes(10);
   static final int MIN_DISTANCE_METERS = 100;
   static final int MAX_DISTANCE_METERS = 500_000;
   /** Category IDs are the frontend's (map layer IDs and game_station); only their form is checked. */
@@ -39,14 +44,17 @@ public class QuestionService {
   private final GameRepository gameRepository;
   private final GamePlayerRepository playerRepository;
   private final GameEventLog eventLog;
+  private final GameNotifications notifications;
   private final Clock clock;
 
   public QuestionService(GameQuestionRepository questionRepository, GameRepository gameRepository,
-                         GamePlayerRepository playerRepository, GameEventLog eventLog, Clock clock) {
+                         GamePlayerRepository playerRepository, GameEventLog eventLog,
+                         GameNotifications notifications, Clock clock) {
     this.questionRepository = questionRepository;
     this.gameRepository = gameRepository;
     this.playerRepository = playerRepository;
     this.eventLog = eventLog;
+    this.notifications = notifications;
     this.clock = clock;
   }
 
@@ -81,6 +89,8 @@ public class QuestionService {
     Instant now = clock.instant();
     GameQuestionEntity question = questionRepository.saveAndFlush(new GameQuestionEntity(game.getId(), type,
       new QuestionParams(category, distance, origin), seeker.getId(), now, now.plus(ANSWER_TIME)));
+    tell(game, EventAudience.HIDERS, "A " + label(type) + " question is waiting: answer within "
+      + ANSWER_TIME.toMinutes() + " min.", ANSWER_TIME);
     return record(question);
   }
 
@@ -106,6 +116,8 @@ public class QuestionService {
 
     question.answer(validAnswer(question.getType(), request), hider.getId(), now);
     questionRepository.saveAndFlush(question);
+    tell(game, EventAudience.SEEKERS, "The hiders answered your " + label(question.getType()) + " question: "
+      + answerText(question.getAnswer()), ANSWER_NOTICE_TTL);
     return record(question);
   }
 
@@ -118,6 +130,8 @@ public class QuestionService {
         question.expire();
         questionRepository.saveAndFlush(question);
         record(question);
+        tell(game, EventAudience.SEEKERS, "The hiders did not answer your " + label(question.getType())
+          + " question in time.", ANSWER_NOTICE_TTL);
       });
     }
   }
@@ -126,6 +140,25 @@ public class QuestionService {
     QuestionDTO dto = QuestionDTO.from(question);
     eventLog.record(question.getGameId(), QUESTION_EVENT, EventAudience.ALL, dto);
     return dto;
+  }
+
+  /** Tells the audience on their devices, in place of the last notice about a question. */
+  private void tell(GameEntity game, EventAudience audience, String body, Duration ttl) {
+    notifications.send(new Notification(game.getId(), audience, null, game.getName(), body, "question", ttl));
+  }
+
+  /** "radar", for "a radar question". */
+  private static String label(QuestionType type) {
+    return type.name().toLowerCase(Locale.ROOT);
+  }
+
+  /** "Yes", "Closer", or the place named; as the frontend words them. */
+  private static String answerText(QuestionAnswer answer) {
+    return switch (answer.choice()) {
+      case QuestionAnswer.PLACE -> answer.text();
+      case QuestionAnswer.NONE -> "None within the distance";
+      default -> answer.choice().charAt(0) + answer.choice().substring(1).toLowerCase(Locale.ROOT);
+    };
   }
 
   private GameEntity lock(GamePlayerEntity player) {

@@ -19,6 +19,7 @@ import { LocationReporter } from './location-reporter.service';
 import { GameReplayService } from './replay/game-replay.service';
 import { GameClock } from './game-clock.service';
 import { GameViewComponent } from './game-view.component';
+import { PushNotificationsService } from './push-notifications.service';
 import { expectNoAxeViolations } from '../../testing/axe';
 
 const NOW = Date.parse('2026-10-25T12:00:00Z');
@@ -97,6 +98,8 @@ describe('GameViewComponent', () => {
       imports: [GameViewComponent],
       providers: [
         provideRouter([]),
+        // Notifications have their own spec; no service worker here
+        { provide: PushNotificationsService, useValue: { state: () => Promise.resolve('unsupported') } },
         // Provided by the game page in the app
         GameSessionService,
         GameClock,

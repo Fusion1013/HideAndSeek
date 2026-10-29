@@ -28,7 +28,10 @@ export class GameEventStream {
   connect(gameId: string, token: string, lastEventId: string | null): Observable<SseMessage> {
     return new Observable<SseMessage>(subscriber => {
       const abort = new AbortController();
-      const headers: Record<string, string> = { Accept: 'text/event-stream', Authorization: `Bearer ${token}` };
+      // Straight to the network: the service worker would only pass the stream on, a step that may hold events back
+      const headers: Record<string, string> = {
+        Accept: 'text/event-stream', Authorization: `Bearer ${token}`, 'ngsw-bypass': 'true'
+      };
       if (lastEventId !== null) headers['Last-Event-ID'] = lastEventId;
 
       const read = async (): Promise<void> => {

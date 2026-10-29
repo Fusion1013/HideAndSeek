@@ -4,6 +4,9 @@ import com.jetlag.game.auth.AccessTokens;
 import com.jetlag.game.events.EventAudience;
 import com.jetlag.game.events.GameEvent;
 import com.jetlag.game.events.GameEventLog;
+import com.jetlag.game.push.GameNotifications;
+import com.jetlag.game.push.PushSubscriptions;
+import com.jetlag.game.push.VapidKeys;
 import com.jetlag.game.question.GameQuestionEntity;
 import com.jetlag.game.question.QuestionAnswer;
 import com.jetlag.game.question.QuestionDTO;
@@ -57,6 +60,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @Testcontainers(disabledWithoutDocker = true)
 @Import({GameService.class, GameStations.class, GamePhases.class, GameEventLog.class, PlayerViews.class,
   HidingSpots.class, GamePositions.class, GamePlayService.class, QuestionService.class, GameTemplateService.class,
+  GameNotifications.class, PushSubscriptions.class, VapidKeys.class,
   GameServiceTest.TestClock.class, GameServiceTest.Timeline.class})
 class GameServiceTest {
 

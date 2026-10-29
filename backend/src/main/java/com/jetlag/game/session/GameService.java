@@ -4,6 +4,8 @@ import com.jetlag.game.RouteSnapshot;
 import com.jetlag.game.auth.AccessTokens;
 import com.jetlag.game.events.EventAudience;
 import com.jetlag.game.events.GameEventLog;
+import com.jetlag.game.push.GameNotifications;
+import com.jetlag.game.push.GameNotifications.Notification;
 import com.jetlag.game.template.GameTemplateEntity;
 import com.jetlag.game.template.GameTemplateRepository;
 import jakarta.persistence.EntityManager;
@@ -39,6 +41,8 @@ public class GameService {
   static final int DEFAULT_HIDING_MINUTES = 30;
   /** A clash with a running game's code is very unlikely; several in a row means something else is wrong. */
   private static final int INVITE_CODE_ATTEMPTS = 10;
+  /** A notice that the game moved on is old news if it arrives later than this. */
+  private static final Duration PHASE_NOTICE_TTL = Duration.ofMinutes(15);
 
   private final GameRepository gameRepository;
   private final GamePlayerRepository playerRepository;
@@ -48,13 +52,14 @@ public class GameService {
   private final GameEventLog eventLog;
   private final PlayerViews playerViews;
   private final HidingSpots hidingSpots;
+  private final GameNotifications notifications;
   private final EntityManager entityManager;
   private final Clock clock;
 
   public GameService(GameRepository gameRepository, GamePlayerRepository playerRepository,
                      GameTemplateRepository templateRepository, GameStations stations, GamePhases phases,
                      GameEventLog eventLog, PlayerViews playerViews, HidingSpots hidingSpots,
-                     EntityManager entityManager, Clock clock) {
+                     GameNotifications notifications, EntityManager entityManager, Clock clock) {
     this.gameRepository = gameRepository;
     this.playerRepository = playerRepository;
     this.templateRepository = templateRepository;
@@ -63,6 +68,7 @@ public class GameService {
     this.eventLog = eventLog;
     this.playerViews = playerViews;
     this.hidingSpots = hidingSpots;
+    this.notifications = notifications;
     this.entityManager = entityManager;
     this.clock = clock;
   }
@@ -202,6 +208,10 @@ public class GameService {
 
     game.startHiding(clock.instant());
     gameRepository.saveAndFlush(game);
+    int minutes = game.getHidingMinutes();
+    Duration hiding = Duration.ofMinutes(minutes);
+    tell(game, EventAudience.HIDERS, host, "Go and hide: the seekers set off in " + minutes + " min.", hiding);
+    tell(game, EventAudience.SEEKERS, host, "The hiders are off. You set off in " + minutes + " min.", hiding);
     return answer(game, host);
   }
 
@@ -211,7 +221,10 @@ public class GameService {
     requireHost(host);
     GameEntity game = lock(host.getGame().getId());
     Instant now = clock.instant();
-    if (game.getStatus() != GameStatus.FINISHED) finish(game, GameOutcome.ENDED, now);
+    if (game.getStatus() != GameStatus.FINISHED) {
+      finish(game, GameOutcome.ENDED, now);
+      tell(game, EventAudience.ALL, host, "The host ended the game.", PHASE_NOTICE_TTL);
+    }
     return playerViews.of(state(game), host.getId(), now);
   }
 
@@ -231,6 +244,7 @@ public class GameService {
     }
     Instant now = clock.instant();
     finish(game, GameOutcome.FOUND, now);
+    tell(game, EventAudience.ALL, current, "The seekers found the hiders. The game is over.", PHASE_NOTICE_TTL);
     return playerViews.of(state(game), player.getId(), now);
   }
 
@@ -252,8 +266,16 @@ public class GameService {
         // Changed by SQL, behind the back of a copy this transaction may have read before
         entityManager.refresh(game);
         recordState(game);
+        tell(game, EventAudience.HIDERS, null, "The seekers have set off.", PHASE_NOTICE_TTL);
+        tell(game, EventAudience.SEEKERS, null, "Time's up for the hiders: go and find them.", PHASE_NOTICE_TTL);
       });
     }
+  }
+
+  /** Tells the audience on their devices; the player who made the change knows already. */
+  private void tell(GameEntity game, EventAudience audience, GamePlayerEntity except, String body, Duration ttl) {
+    notifications.send(new Notification(game.getId(), audience, except == null ? null : except.getId(), game.getName(),
+      body, "phase", ttl));
   }
 
   /** Records the game's new state for its players, and answers the player who changed it with the same state. */

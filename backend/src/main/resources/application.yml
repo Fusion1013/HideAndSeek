@@ -69,6 +69,11 @@ game:
     create-game-per-minute: 5
     create-template-per-minute: 10
 
+push:
+  # Who runs the server, for push services to contact about its notifications: a mailto: or https: address
+  # (env: PUSH_SUBJECT). Apple refuses localhost addresses.
+  subject: ${PUSH_SUBJECT:mailto:jetlag@example.com}
+
 overpass:
   base-url: https://overpass-api.de/api/interpreter
   update:

@@ -11,6 +11,7 @@ api/gameTemplateController.service.ts
 api/gameTimelineController.service.ts
 api/gtfsController.service.ts
 api/overpass.service.ts
+api/pushController.service.ts
 api/questionController.service.ts
 api/reachabilityController.service.ts
 api/routeController.service.ts
@@ -44,6 +45,9 @@ model/playerDTO.ts
 model/playerGameDTO.ts
 model/playerTrackDTO.ts
 model/position.ts
+model/pushKeyDTO.ts
+model/pushStatusDTO.ts
+model/pushSubscriptionRequest.ts
 model/questionAnswer.ts
 model/questionDTO.ts
 model/questionParams.ts
@@ -61,6 +65,7 @@ model/shapePointDTO.ts
 model/stationDTO.ts
 model/stopDTO.ts
 model/stopTimeDTO.ts
+model/subscriptionKeys.ts
 model/templateDTO.ts
 model/templateRequest.ts
 model/templateRouteDTO.ts
