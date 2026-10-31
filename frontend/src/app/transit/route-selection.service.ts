@@ -15,11 +15,16 @@ const METERS_PER_DEGREE_LONGITUDE = 111_319.49;
 /** About a metre: no finer detail is worth sending. */
 const MIN_TOLERANCE = 0.00001;
 
+/** Lines are loaded again once the view calls for a tolerance this many times finer than theirs. */
+const REFINE_FACTOR = 2;
+
 interface SelectedRoutesData {
   /** Each route's shapes, as [longitude, latitude] lines. */
   linesByRoute: Map<string, number[][][]>;
   /** Every stop served by the selected routes. */
   stopIds: string[];
+  /** How far the lines were simplified, in degrees. */
+  tolerance: number;
 }
 
 interface ViewBounds {
@@ -61,11 +66,34 @@ export class RouteSelectionService {
 
   readonly loadError = computed(() => this.selectedRoutes.error() !== undefined || this.routesInView.error() !== undefined);
 
+  /** The tolerance the view called for when it last came to rest. */
+  private readonly viewTolerance = signal(Infinity);
+
+  /** The routes on the map, to tell new routes from finer lines for the same ones. */
+  private drawnRouteIds: string[] = [];
+
   constructor() {
+    effect(onCleanup => {
+      const map = this.mapService.getMap();
+      if (!map) return;
+      const updateViewTolerance = () => this.viewTolerance.set(this.toleranceForView());
+      map.on('moveend', updateViewTolerance);
+      onCleanup(() => map.un('moveend', updateViewTolerance));
+    });
+
+    // Lines loaded at a wider zoom, such as the map's first view before a game's area is fitted, are too coarse for
+    // a closer one. Also checked as each load ends: a reload asked for during a first load would be dropped.
+    effect(() => {
+      const tolerance = this.viewTolerance();
+      if (this.selectedRoutes.isLoading() || !this.selectedRoutes.hasValue()) return;
+      if (tolerance * REFINE_FACTOR <= this.selectedRoutes.value().tolerance) this.selectedRoutes.reload();
+    });
+
     // Draw the selected routes, and show only their stops; existing shapes stay until new ones have loaded
     effect(() => {
       const map = this.mapService.getMap();
       if (this.selectedRouteIds().length === 0) {
+        this.drawnRouteIds = [];
         this.stopsLayer.setVisibleStopIds(null);
         if (map) this.routeShapesLayer.setRouteShapes(map, new Map());
         return;
@@ -76,7 +104,11 @@ export class RouteSelectionService {
       }
       const { linesByRoute, stopIds } = this.selectedRoutes.value();
       this.stopsLayer.setVisibleStopIds(this.showStops() ? stopIds : []);
-      if (map) this.routeShapesLayer.setRouteShapes(map, linesByRoute, untracked(this.fitView));
+      if (!map) return;
+      const routeIds = [...linesByRoute.keys()];
+      const newRoutes = !sameItems(routeIds, this.drawnRouteIds);
+      this.drawnRouteIds = routeIds;
+      this.routeShapesLayer.setRouteShapes(map, linesByRoute, newRoutes && untracked(this.fitView));
     });
 
     // "Routes in view" replaces the selection once its routes are known
@@ -102,12 +134,14 @@ export class RouteSelectionService {
 
   /**
    * The routes' stops and shapes, each answered by the backend in one query however many routes there are.
-   * Shapes come as lines simplified to half a pixel at the current zoom, so a wide view stays small.
+   * Shapes come as lines simplified to half a pixel at the current zoom, so a wide view stays small; they are
+   * loaded again once the view zooms in far enough.
    */
   private loadRoutes(routeIds: readonly string[]): Observable<SelectedRoutesData> {
     const ids = [...routeIds];
     const tolerance = this.toleranceForView();
     return forkJoin({
+      tolerance: of(tolerance),
       stopIds: this.routeApi.getStopIdsForRoutes(ids),
       linesByRoute: this.routeApi.getShapeIdsForRoutes(ids).pipe(
         switchMap(routeShapes => {

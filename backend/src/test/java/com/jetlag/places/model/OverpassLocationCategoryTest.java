@@ -43,7 +43,9 @@ class OverpassLocationCategoryTest {
   @Test
   void requestsGeometryOnlyForShapeCategories() {
     assertThat(OverpassLocationCategory.COASTLINE.hasGeometry()).isTrue();
-    assertThat(OverpassLocationCategory.COASTLINE.outStatement()).isEqualTo("out geom tags;");
+    // Relations (lakes, administrative boundaries) need their members, which "out geom tags;" leaves out
+    assertThat(OverpassLocationCategory.COASTLINE.outStatement()).isEqualTo("out geom;");
+    assertThat(OverpassLocationCategory.ADMIN_DIVISION_1.outStatement()).isEqualTo("out geom;");
     assertThat(OverpassLocationCategory.ZOO.hasGeometry()).isFalse();
     assertThat(OverpassLocationCategory.ZOO.outStatement()).isEqualTo("out center tags;");
   }

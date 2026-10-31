@@ -14,6 +14,8 @@ import { RouteSelectionService } from '../transit/route-selection.service';
 import type { SseMessage } from '../shared/sse-parser';
 import { GameEventStream, GameStreamError, STREAM_OPEN } from './game-event-stream.service';
 import { GameMapService } from './game-map.service';
+import { QuestionPreviewService } from './question-preview.service';
+import { ThermometerDraftService } from './thermometer-draft.service';
 import { GameSessionService, RECONNECT_DELAYS_MS, STREAM_SILENCE_MS } from './game-session.service';
 import { LocationReporter } from './location-reporter.service';
 import { GameReplayService } from './replay/game-replay.service';
@@ -33,6 +35,7 @@ function game(overrides: Partial<GameDTO> = {}): GameDTO {
     hidingMinutes: 30,
     boundary: [],
     routes: [],
+    settings: { questions: {} },
     stationCount: 61,
     players: [
       { id: 'p1', displayName: 'Ada', host: true },
@@ -105,6 +108,8 @@ describe('GameViewComponent', () => {
         GameClock,
         GameReplayService,
         GameMapService,
+        ThermometerDraftService,
+        QuestionPreviewService,
         LocationReporter,
         { provide: GameTimelineControllerService, useValue: { getGameTimeline: (gameId: string) => timelineFor(gameId) } },
         { provide: GameControllerService, useValue: gameApi },

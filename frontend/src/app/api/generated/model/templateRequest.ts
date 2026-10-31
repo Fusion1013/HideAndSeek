@@ -7,6 +7,7 @@
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
+import { GameSettings } from './gameSettings';
 
 
 export interface TemplateRequest { 
@@ -16,5 +17,9 @@ export interface TemplateRequest {
      */
     boundary: Array<Array<number>>;
     routeIds: Array<string>;
+    /**
+     * The rules for its games; everything is as usual if left out
+     */
+    settings?: GameSettings;
 }
 

@@ -38,6 +38,22 @@
   max-width: calc(100% - 120px);
 }
 
+// A small menu in the bottom left corner, for what is selected on the map; below the controls panel
+.map-corner {
+  position: absolute;
+  z-index: 2;
+  bottom: 28px;
+  left: 16px;
+  width: min(260px, calc(100% - 32px));
+  max-height: calc(100% - 100px);
+  overflow-y: auto;
+
+  // Clear of the replay slider along the bottom
+  &.above-overlay {
+    bottom: 136px;
+  }
+}
+
 // Where there is room beside the open panel; on narrower screens the panel covers the overlay until closed
 @media (min-width: 900px) {
   .map-overlay.beside-panel {

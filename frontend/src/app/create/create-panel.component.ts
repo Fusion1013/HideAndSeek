@@ -7,20 +7,24 @@ import { injectFocusAfterRender } from '../shared/focus';
 import { LayersPanelComponent } from '../layer/layers-panel.component';
 import { ExportImageDialogComponent } from './export-image-dialog.component';
 import { HostGameComponent } from './host-game.component';
+import { OpenTemplateComponent } from './open-template.component';
 import { TemplateAreaComponent } from './template-area.component';
+import { TemplateLinkComponent } from './template-link.component';
 import { MAX_TEMPLATE_NAME_LENGTH, TemplateEditorService } from './template-editor.service';
 import { TemplateListComponent } from './template-list.component';
+import { TemplateQuestionsComponent } from './template-questions.component';
 import { TemplateRoutePickerComponent } from './template-route-picker.component';
 
 /**
  * Create mode: setting up a game template, new or (with a template ID in the address) existing, in the Template
- * tab; sharing a saved one as an image or a game in the Share tab; and the templates this browser made.
+ * tab; sharing a saved one as a link, an image or a game in the Share tab; and the templates this browser made, or
+ * opening one someone shared.
  */
 @Component({
   selector: 'app-create-panel',
   imports: [
-    ExportImageDialogComponent, HostGameComponent, LayersPanelComponent, ReactiveFormsModule, RouterLink, TemplateAreaComponent,
-    TemplateListComponent, TemplateRoutePickerComponent
+    ExportImageDialogComponent, HostGameComponent, LayersPanelComponent, OpenTemplateComponent, ReactiveFormsModule, RouterLink,
+    TemplateAreaComponent, TemplateLinkComponent, TemplateListComponent, TemplateQuestionsComponent, TemplateRoutePickerComponent
   ],
   providers: [TemplateEditorService],
   template: `
@@ -60,6 +64,7 @@ import { TemplateRoutePickerComponent } from './template-route-picker.component'
 
             <app-template-area />
             <app-template-route-picker />
+            <app-template-questions />
 
             @if (editor.error()) {
               <p class="load-error" role="alert">{{ editor.error() }}</p>
@@ -107,12 +112,13 @@ import { TemplateRoutePickerComponent } from './template-route-picker.component'
             </div>
             @if (editor.dirty()) {
               <div class="unsaved-notice">
-                <p>The template has unsaved changes. Save them first, so the image and the game get them.</p>
+                <p>The template has unsaved changes. Save them first, so the image, the game and anyone you share it with get them.</p>
                 <div class="panel-actions">
                   <button type="button" (click)="controls.select('template')">Back to the template</button>
                 </div>
               </div>
             }
+            <app-template-link [templateId]="templateId" />
             @if (editor.area(); as area) {
               <section class="panel-section" aria-labelledby="export-heading-panel">
                 <h3 id="export-heading-panel" class="panel-heading">Image of the play area</h3>
@@ -133,6 +139,7 @@ import { TemplateRoutePickerComponent } from './template-route-picker.component'
             <a routerLink="/create" (click)="controls.select('template')">New template</a>
           </div>
           <app-template-list />
+          <app-open-template />
         </section>
       }
       @case ('layers') {

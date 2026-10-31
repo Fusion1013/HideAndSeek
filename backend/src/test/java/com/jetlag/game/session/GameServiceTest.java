@@ -1,5 +1,6 @@
 package com.jetlag.game.session;
 
+import com.jetlag.game.GameSettings;
 import com.jetlag.game.auth.AccessTokens;
 import com.jetlag.game.events.EventAudience;
 import com.jetlag.game.events.GameEvent;
@@ -8,9 +9,12 @@ import com.jetlag.game.push.GameNotifications;
 import com.jetlag.game.push.PushSubscriptions;
 import com.jetlag.game.push.VapidKeys;
 import com.jetlag.game.question.GameQuestionEntity;
+import com.jetlag.game.question.NearestPlaces;
 import com.jetlag.game.question.QuestionAnswer;
 import com.jetlag.game.question.QuestionDTO;
+import com.jetlag.game.question.QuestionParams;
 import com.jetlag.game.question.QuestionRequests;
+import com.jetlag.game.question.QuestionRules;
 import com.jetlag.game.question.QuestionService;
 import com.jetlag.game.question.QuestionType;
 import com.jetlag.game.template.GameTemplateService;
@@ -22,6 +26,9 @@ import com.jetlag.game.timeline.TimelineEventDTO;
 import com.jetlag.game.timeline.TimelineEventType;
 import com.jetlag.game.timeline.TimelineSource;
 import com.jetlag.game.timeline.TrackPointDTO;
+import com.jetlag.places.model.OsmType;
+import com.jetlag.places.model.OverpassLocationEntity;
+import com.jetlag.places.repository.OverpassLocationRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,12 +49,18 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -59,7 +72,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Testcontainers(disabledWithoutDocker = true)
 @Import({GameService.class, GameStations.class, GamePhases.class, GameEventLog.class, PlayerViews.class,
-  HidingSpots.class, GamePositions.class, GamePlayService.class, QuestionService.class, GameTemplateService.class,
+  HidingSpots.class, GamePositions.class, GamePlayService.class, QuestionService.class, NearestPlaces.class,
+  GameTemplateService.class,
   GameNotifications.class, PushSubscriptions.class, VapidKeys.class,
   GameServiceTest.TestClock.class, GameServiceTest.Timeline.class})
 class GameServiceTest {
@@ -131,6 +145,9 @@ class GameServiceTest {
   private JdbcTemplate jdbcTemplate;
 
   @Autowired
+  private OverpassLocationRepository locations;
+
+  @Autowired
   private GameEventLog eventLog;
 
   @Autowired
@@ -167,7 +184,7 @@ class GameServiceTest {
       INSERT INTO gtfs_route_stops VALUES
         ('central-a', 'r6'), ('central-b', 'r6'), ('korsvagen', 'r6'), ('far', 'r6'), ('bus-only', 'r16')
       """);
-    templateId = templates.create(new TemplateRequest("Göteborg", BOX, List.of("r6"))).template().id();
+    templateId = templates.create(new TemplateRequest("Göteborg", BOX, List.of("r6"), null)).template().id();
   }
 
   @Test
@@ -364,11 +381,11 @@ class GameServiceTest {
     games.advancePhases();
     play.reportLocation(playerOf(seeker), new GameRequests.LocationRequest(11.95, 57.71, 20f));
     clock.advance(Duration.ofMinutes(2));
-    QuestionDTO radar = questions.ask(playerOf(seeker), new QuestionRequests.AskRequest(QuestionType.RADAR, null, 2000));
+    QuestionDTO radar = questions.ask(playerOf(seeker), new QuestionRequests.AskRequest(QuestionType.RADAR, null, 2000, null, null));
     clock.advance(Duration.ofMinutes(1));
     questions.answer(playerOf(hider), radar.id(), new QuestionRequests.AnswerRequest("YES", null));
     clock.advance(Duration.ofMinutes(1));
-    QuestionDTO matching = questions.ask(playerOf(seeker), new QuestionRequests.AskRequest(QuestionType.MATCHING, "parks", null));
+    QuestionDTO matching = questions.ask(playerOf(seeker), new QuestionRequests.AskRequest(QuestionType.MATCHING, "parks", null, null, null));
     clock.advance(Duration.ofMinutes(6));
     questions.expireOverdue();
     games.found(playerOf(seeker));
@@ -389,7 +406,7 @@ class GameServiceTest {
     assertThat(timeline.events().getFirst().at()).isEqualTo(start);
     assertThat(timeline.events()).filteredOn(event -> event.type() == TimelineEventType.HIDING_STATION_CHOSEN)
       .extracting(event -> event.hidingStation().station().name()).containsExactly("Centralstationen", "Korsvägen");
-    assertThat(timeline.events().get(5).question().answer()).isEqualTo(new QuestionAnswer("YES", null));
+    assertThat(timeline.events().get(5).question().answer()).isEqualTo(new QuestionAnswer("YES", null, null));
     assertThat(timeline.events().get(5).playerId()).isEqualTo(hider.playerId());
     assertThat(timeline.events().get(7).question().id()).isEqualTo(matching.id());
 
@@ -474,11 +491,96 @@ class GameServiceTest {
   }
 
   @Test
+  void questionsFollowTheSettingsOfTheTemplateTheGameCameFrom() {
+    templateId = templates.create(new TemplateRequest("Göteborg", BOX, List.of("r6"), new GameSettings(Map.of(
+      "MATCHING", new QuestionRules(true, null, List.of(), List.of()),
+      "MEASURING", new QuestionRules(false, null, List.of("zoos"), List.of()),
+      "RADAR", new QuestionRules(false, 10, List.of(), List.of(500)),
+      // Rules a thermometer's distance, which is how far the seekers moved, must not fall under
+      "THERMOMETER", new QuestionRules(false, null, List.of(), List.of(1112)))))).template().id();
+    JoinedGameDTO[] players = seekingGame();
+    GamePlayerEntity seeker = playerOf(players[0]);
+    assertThat(games.get(seeker).game().settings().rules(QuestionType.RADAR).answerMinutes()).isEqualTo(10);
+
+    Instant now = clock.instant();
+    assertStatus(() -> questions.ask(seeker, new QuestionRequests.AskRequest(QuestionType.MATCHING, "parks", null, null, null)),
+      HttpStatus.BAD_REQUEST);
+    assertStatus(() -> questions.preview(seeker, new QuestionRequests.AskRequest(QuestionType.MEASURING, "zoos", null, null, null)),
+      HttpStatus.BAD_REQUEST);
+    assertStatus(() -> questions.ask(seeker, new QuestionRequests.AskRequest(QuestionType.RADAR, null, 500, null, null)),
+      HttpStatus.BAD_REQUEST);
+
+    QuestionDTO radar = questions.ask(seeker, new QuestionRequests.AskRequest(QuestionType.RADAR, null, 1000, null, null));
+    assertThat(radar.deadlineAt()).isEqualTo(now.plus(Duration.ofMinutes(10)));
+    questions.answer(playerOf(players[1]), radar.id(), new QuestionRequests.AnswerRequest("YES", null));
+
+    QuestionDTO measuring = questions.ask(seeker, new QuestionRequests.AskRequest(QuestionType.MEASURING, "parks", null, null, null));
+    assertThat(measuring.deadlineAt()).isEqualTo(now.plus(Duration.ofMinutes(5)));
+    questions.answer(playerOf(players[1]), measuring.id(), new QuestionRequests.AnswerRequest("CLOSER", null));
+
+    QuestionDTO thermometer = questions.ask(seeker, new QuestionRequests.AskRequest(QuestionType.THERMOMETER, null, null,
+      new QuestionParams.Position(11.97, 57.70), new QuestionParams.Position(11.97, 57.71)));
+    assertThat(thermometer.params().distanceMeters()).isEqualTo(1112);
+  }
+
+  @Test
+  void hidersAnswerPhotoQuestionsWithAPictureEveryPlayerCanSee() throws IOException {
+    JoinedGameDTO[] players = seekingGame();
+    JoinedGameDTO seeker = players[0];
+    JoinedGameDTO hider = players[1];
+    QuestionRequests.AskRequest tree = new QuestionRequests.AskRequest(QuestionType.PHOTO, "tree", null, null, null);
+    ByteArrayOutputStream picture = new ByteArrayOutputStream();
+    ImageIO.write(new BufferedImage(40, 30, BufferedImage.TYPE_INT_RGB), "jpeg", picture);
+    byte[] upload = picture.toByteArray();
+
+    assertStatus(() -> questions.ask(playerOf(seeker), new QuestionRequests.AskRequest(QuestionType.PHOTO, null, null, null, null)),
+      HttpStatus.BAD_REQUEST);
+    QuestionDTO asked = questions.ask(playerOf(seeker), tree);
+    assertThat(asked.params().category()).isEqualTo("tree");
+    assertThat(asked.params().nearest()).isNull();
+
+    // Only with a picture, only from a hider, and only a picture
+    assertStatus(() -> questions.answer(playerOf(hider), asked.id(), new QuestionRequests.AnswerRequest("PHOTO", null)),
+      HttpStatus.BAD_REQUEST);
+    assertStatus(() -> questions.answerWithPhoto(playerOf(seeker), asked.id(), upload), HttpStatus.FORBIDDEN);
+    assertStatus(() -> questions.answerWithPhoto(playerOf(hider), asked.id(), new byte[]{1, 2, 3}), HttpStatus.BAD_REQUEST);
+    assertStatus(() -> questions.photo(playerOf(seeker).getGame().getId(), asked.id()), HttpStatus.NOT_FOUND);
+
+    QuestionDTO answered = questions.answerWithPhoto(playerOf(hider), asked.id(), upload);
+    assertThat(answered.status()).isEqualTo(GameQuestionEntity.Status.ANSWERED);
+    assertThat(answered.answer()).isEqualTo(new QuestionAnswer("PHOTO", null, null));
+    assertThat(answered.answeredBy()).isEqualTo(hider.playerId());
+    assertStatus(() -> questions.answerWithPhoto(playerOf(hider), asked.id(), upload), HttpStatus.CONFLICT);
+
+    UUID gameId = playerOf(seeker).getGame().getId();
+    assertThat(ImageIO.read(new ByteArrayInputStream(questions.photo(gameId, asked.id()))).getWidth()).isEqualTo(40);
+    assertStatus(() -> questions.photo(UUID.randomUUID(), asked.id()), HttpStatus.NOT_FOUND);
+
+    // Other questions are not answered with a picture, nor do their answers have one
+    QuestionDTO radar = questions.ask(playerOf(seeker), new QuestionRequests.AskRequest(QuestionType.RADAR, null, 1000, null, null));
+    assertStatus(() -> questions.answerWithPhoto(playerOf(hider), radar.id(), upload), HttpStatus.BAD_REQUEST);
+    questions.answer(playerOf(hider), radar.id(), new QuestionRequests.AnswerRequest("YES", null));
+    assertStatus(() -> questions.photo(gameId, radar.id()), HttpStatus.NOT_FOUND);
+  }
+
+  @Test
+  void aPhotoQuestionsSubjectsFollowTheGamesSettings() {
+    templateId = templates.create(new TemplateRequest("Göteborg", BOX, List.of("r6"), new GameSettings(Map.of(
+      "PHOTO", new QuestionRules(false, null, List.of("tree"), List.of()))))).template().id();
+    GamePlayerEntity seeker = playerOf(seekingGame()[0]);
+
+    assertStatus(() -> questions.ask(seeker, new QuestionRequests.AskRequest(QuestionType.PHOTO, "tree", null, null, null)),
+      HttpStatus.BAD_REQUEST);
+    assertThat(questions.ask(seeker, new QuestionRequests.AskRequest(QuestionType.PHOTO, "sky", null, null, null)).type())
+      .isEqualTo(QuestionType.PHOTO);
+  }
+
+  @Test
   void seekersAskOneQuestionAtATimeWhileSeekingAndHidersAnswerIt() {
     JoinedGameDTO[] players = gameWithSeekerAndHider();
     JoinedGameDTO seeker = players[0];
     JoinedGameDTO hider = players[1];
-    QuestionRequests.AskRequest radar = new QuestionRequests.AskRequest(QuestionType.RADAR, null, 1000);
+    QuestionRequests.AskRequest radar = new QuestionRequests.AskRequest(QuestionType.RADAR, null, 1000, null, null);
     games.start(playerOf(seeker));
     play.reportLocation(playerOf(seeker), new GameRequests.LocationRequest(11.97, 57.70, 10f));
     assertStatus(() -> questions.ask(playerOf(seeker), radar), HttpStatus.CONFLICT);
@@ -486,9 +588,9 @@ class GameServiceTest {
     clock.advance(Duration.ofMinutes(45));
     games.advancePhases();
     assertStatus(() -> questions.ask(playerOf(hider), radar), HttpStatus.FORBIDDEN);
-    assertStatus(() -> questions.ask(playerOf(seeker), new QuestionRequests.AskRequest(QuestionType.RADAR, null, null)),
+    assertStatus(() -> questions.ask(playerOf(seeker), new QuestionRequests.AskRequest(QuestionType.RADAR, null, null, null, null)),
       HttpStatus.BAD_REQUEST);
-    assertStatus(() -> questions.ask(playerOf(seeker), new QuestionRequests.AskRequest(QuestionType.MATCHING, "Bad!", null)),
+    assertStatus(() -> questions.ask(playerOf(seeker), new QuestionRequests.AskRequest(QuestionType.MATCHING, "Bad!", null, null, null)),
       HttpStatus.BAD_REQUEST);
 
     QuestionDTO asked = questions.ask(playerOf(seeker), radar);
@@ -505,17 +607,17 @@ class GameServiceTest {
       HttpStatus.FORBIDDEN);
     QuestionDTO answered = questions.answer(playerOf(hider), asked.id(), new QuestionRequests.AnswerRequest("YES", "ignored"));
     assertThat(answered.status()).isEqualTo(GameQuestionEntity.Status.ANSWERED);
-    assertThat(answered.answer()).isEqualTo(new QuestionAnswer("YES", null));
+    assertThat(answered.answer()).isEqualTo(new QuestionAnswer("YES", null, null));
     assertThat(answered.answeredBy()).isEqualTo(hider.playerId());
     assertStatus(() -> questions.answer(playerOf(hider), asked.id(), new QuestionRequests.AnswerRequest("NO", null)),
       HttpStatus.CONFLICT);
 
     QuestionDTO tentacles = questions.ask(playerOf(seeker),
-      new QuestionRequests.AskRequest(QuestionType.TENTACLES, "museums", 2000));
+      new QuestionRequests.AskRequest(QuestionType.TENTACLES, "museums", 2000, null, null));
     assertStatus(() -> questions.answer(playerOf(hider), tentacles.id(), new QuestionRequests.AnswerRequest("PLACE", " ")),
       HttpStatus.BAD_REQUEST);
     assertThat(questions.answer(playerOf(hider), tentacles.id(), new QuestionRequests.AnswerRequest("PLACE", " Röhsska ")).answer())
-      .isEqualTo(new QuestionAnswer("PLACE", "Röhsska"));
+      .isEqualTo(new QuestionAnswer("PLACE", "Röhsska", null));
 
     // Everyone sees them, in the order asked
     assertThat(games.get(playerOf(seeker)).questions()).extracting(QuestionDTO::type)
@@ -531,7 +633,7 @@ class GameServiceTest {
     games.start(playerOf(players[0]));
     clock.advance(Duration.ofMinutes(45));
     games.advancePhases();
-    QuestionDTO asked = questions.ask(playerOf(players[0]), new QuestionRequests.AskRequest(QuestionType.MATCHING, "parks", null));
+    QuestionDTO asked = questions.ask(playerOf(players[0]), new QuestionRequests.AskRequest(QuestionType.MATCHING, "parks", null, null, null));
 
     clock.advance(Duration.ofMinutes(5));
     assertStatus(() -> questions.answer(playerOf(players[1]), asked.id(), new QuestionRequests.AnswerRequest("YES", null)),
@@ -541,8 +643,116 @@ class GameServiceTest {
     assertThat(questions.list(players[0].gameId())).singleElement()
       .extracting(QuestionDTO::status).isEqualTo(GameQuestionEntity.Status.EXPIRED);
     // The seekers may ask again
-    assertThat(questions.ask(playerOf(players[0]), new QuestionRequests.AskRequest(QuestionType.THERMOMETER, null, 1000)).status())
+    assertThat(questions.ask(playerOf(players[0]), new QuestionRequests.AskRequest(QuestionType.THERMOMETER, null, null,
+      new QuestionParams.Position(11.97, 57.70), new QuestionParams.Position(11.97, 57.71))).status())
       .isEqualTo(GameQuestionEntity.Status.PENDING);
+  }
+
+  @Test
+  void aThermometerTakesItsDistanceFromItsTwoPoints() {
+    JoinedGameDTO seeker = gameWithSeekerAndHider()[0];
+    games.start(playerOf(seeker));
+    clock.advance(Duration.ofMinutes(45));
+    games.advancePhases();
+    QuestionParams.Position start = new QuestionParams.Position(11.97, 57.70);
+
+    assertStatus(() -> questions.ask(playerOf(seeker), new QuestionRequests.AskRequest(QuestionType.THERMOMETER, null, null, start, null)),
+      HttpStatus.BAD_REQUEST);
+    assertStatus(() -> questions.ask(playerOf(seeker), new QuestionRequests.AskRequest(QuestionType.THERMOMETER, null, null, start,
+      new QuestionParams.Position(11.97, 91))), HttpStatus.BAD_REQUEST);
+    // Hardly moved at all
+    assertStatus(() -> questions.ask(playerOf(seeker), new QuestionRequests.AskRequest(QuestionType.THERMOMETER, null, null, start,
+      new QuestionParams.Position(11.97, 57.7001))), HttpStatus.BAD_REQUEST);
+
+    QuestionDTO asked = questions.ask(playerOf(seeker), new QuestionRequests.AskRequest(QuestionType.THERMOMETER, null, null, start,
+      new QuestionParams.Position(11.97, 57.71)));
+    assertThat(asked.params().distanceMeters()).isBetween(1110, 1114);
+    assertThat(asked.params().start()).isEqualTo(start);
+    assertThat(asked.params().end().latitude()).isEqualTo(57.71);
+  }
+
+  @Test
+  void matchingAndMeasuringRecordTheSeekersNearestPlaceWhenAsked() {
+    JoinedGameDTO[] players = seekingGame();
+    JoinedGameDTO seeker = players[0];
+    QuestionRequests.AskRequest stations = new QuestionRequests.AskRequest(QuestionType.MATCHING, "game_station", null, null, null);
+    // Their position is not known yet
+    QuestionDTO unknown = questions.ask(playerOf(seeker), stations);
+    assertThat(unknown.params().nearest()).isNull();
+    clock.advance(Duration.ofMinutes(5));
+    questions.expireOverdue();
+
+    OverpassLocationEntity near = museum(1, "Röhsska", 11.98, 57.70);
+    museum(2, "Far away", 12.40, 57.90);
+    jdbcTemplate.update("""
+        INSERT INTO overpass_voronoi_cell (overpass_location_id, category, geometry)
+        VALUES (?, 'MUSEUM', ST_GeomFromText('POLYGON((11.9 57.6, 12.1 57.6, 12.1 57.8, 11.9 57.8, 11.9 57.6))', 4326))
+        """, near.getId());
+    play.reportLocation(playerOf(seeker), new GameRequests.LocationRequest(11.97, 57.70, 10f));
+
+    QuestionDTO measuring = questions.ask(playerOf(seeker), new QuestionRequests.AskRequest(QuestionType.MEASURING, "museums", null, null, null));
+    assertThat(measuring.params().nearest().name()).isEqualTo("Röhsska");
+    assertThat(measuring.params().nearest().longitude()).isEqualTo(11.98);
+    assertThat(measuring.params().nearest().distanceMeters()).isBetween(590, 600);
+    assertThat(measuring.params().nearest().cell()).contains("Polygon");
+    // Around every museum in reach of the play area, cut to it
+    assertThat(measuring.params().nearest().reach()).contains("Polygon");
+    assertThat(jdbcTemplate.queryForObject("""
+        SELECT ST_Contains(ST_GeomFromGeoJSON(?), ST_SetSRID(ST_MakePoint(11.98, 57.70), 4326))
+          AND NOT ST_Intersects(ST_GeomFromGeoJSON(?), ST_SetSRID(ST_MakePoint(12.40, 57.90), 4326))
+        """, Boolean.class, measuring.params().nearest().reach(), measuring.params().nearest().reach())).isTrue();
+    questions.answer(playerOf(players[1]), measuring.id(), new QuestionRequests.AnswerRequest("CLOSER", null));
+
+    // The game's own stations, each with the area nearest it
+    QuestionDTO matching = questions.ask(playerOf(seeker), stations);
+    assertThat(matching.params().nearest().name()).isEqualTo("Centralstationen");
+    assertThat(matching.params().nearest().reach()).isNull();
+    assertThat(matching.params().nearest().cell()).contains("Polygon");
+    questions.answer(playerOf(players[1]), matching.id(), new QuestionRequests.AnswerRequest("NO", null));
+
+    // A category without places
+    QuestionDTO empty = questions.ask(playerOf(seeker), new QuestionRequests.AskRequest(QuestionType.MATCHING, "zoos", null, null, null));
+    assertThat(empty.params().nearest()).isNull();
+    assertThat(questions.list(seeker.gameId()).getFirst().params().nearest()).isNull();
+  }
+
+  @Test
+  void aPreviewSaysWhatAQuestionWouldBeWithoutAskingIt() {
+    JoinedGameDTO[] players = seekingGame();
+    JoinedGameDTO seeker = players[0];
+    museum(1, "Röhsska", 11.98, 57.70);
+    play.reportLocation(playerOf(seeker), new GameRequests.LocationRequest(11.97, 57.70, 10f));
+    QuestionRequests.AskRequest measuring = new QuestionRequests.AskRequest(QuestionType.MEASURING, "museums", null, null, null);
+    long eventsBefore = eventLog.after(seeker.gameId(), 0, 100).size();
+
+    QuestionParams preview = questions.preview(playerOf(seeker), measuring);
+
+    assertThat(preview.origin().longitude()).isEqualTo(11.97);
+    assertThat(preview.nearest().name()).isEqualTo("Röhsska");
+    assertThat(preview.nearest().reach()).contains("Polygon");
+    assertThat(questions.list(seeker.gameId())).isEmpty();
+    assertThat(eventLog.after(seeker.gameId(), 0, 100)).hasSize((int) eventsBefore);
+    assertThat(questions.ask(playerOf(seeker), measuring).params()).isEqualTo(preview);
+
+    assertStatus(() -> questions.preview(playerOf(players[1]), measuring), HttpStatus.FORBIDDEN);
+    assertStatus(() -> questions.preview(playerOf(seeker), measuring), HttpStatus.CONFLICT);
+  }
+
+  @Test
+  void aPlaceNamedInAnAnswerIsFoundOnTheMapIfItCanBe() {
+    JoinedGameDTO[] players = seekingGame();
+    JoinedGameDTO seeker = players[0];
+    museum(1, "Röhsska", 11.98, 57.70);
+    play.reportLocation(playerOf(seeker), new GameRequests.LocationRequest(11.97, 57.70, 10f));
+    QuestionRequests.AskRequest tentacles = new QuestionRequests.AskRequest(QuestionType.TENTACLES, "museums", 2000, null, null);
+
+    QuestionDTO known = questions.ask(playerOf(seeker), tentacles);
+    assertThat(questions.answer(playerOf(players[1]), known.id(), new QuestionRequests.AnswerRequest("PLACE", "röhsska")).answer())
+      .isEqualTo(new QuestionAnswer("PLACE", "röhsska", new QuestionParams.Position(11.98, 57.70)));
+
+    QuestionDTO unknown = questions.ask(playerOf(seeker), tentacles);
+    assertThat(questions.answer(playerOf(players[1]), unknown.id(), new QuestionRequests.AnswerRequest("PLACE", "The old mill")).answer().position())
+      .isNull();
   }
 
   @Test
@@ -582,6 +792,21 @@ class GameServiceTest {
     games.setRole(playerOf(host), host.playerId(), PlayerRole.SEEKER);
     games.setRole(playerOf(host), grace.playerId(), PlayerRole.HIDER);
     return new JoinedGameDTO[]{host, grace};
+  }
+
+  /** A seeker and a hider, in the seeking phase. */
+  private JoinedGameDTO[] seekingGame() {
+    JoinedGameDTO[] players = gameWithSeekerAndHider();
+    games.start(playerOf(players[0]));
+    clock.advance(Duration.ofMinutes(45));
+    games.advancePhases();
+    return players;
+  }
+
+  private OverpassLocationEntity museum(long osmId, String name, double longitude, double latitude) {
+    OverpassLocationEntity museum = new OverpassLocationEntity(OsmType.NODE, osmId);
+    museum.update(latitude, longitude, Map.of("tourism", "museum", "name", name), "generation");
+    return locations.saveAndFlush(museum);
   }
 
   /** The player as a request's token finds them. */

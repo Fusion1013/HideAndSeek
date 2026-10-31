@@ -5,8 +5,9 @@ import { AbstractControl, FormControl, ValidationErrors, Validators } from '@ang
 import { Router } from '@angular/router';
 
 import { GameTemplateControllerService, RouteControllerService } from '../api/generated';
-import type { TemplateDTO, TemplateRequest, TemplateRouteDTO } from '../api/generated';
+import type { QuestionRules, TemplateDTO, TemplateRequest, TemplateRouteDTO } from '../api/generated';
 import { AccessTokenStore } from '../auth/access-token.store';
+import { QuestionSettings, questionRules, QuestionType, settingsProblem } from '../game/questions';
 import { MapService } from '../map/map.service';
 import { sameItems } from '../shared/guards';
 import { problemDetail } from '../shared/problem-detail';
@@ -50,6 +51,7 @@ export class TemplateEditorService {
   readonly routeIds = signal<string[]>([], { equal: sameItems });
   /** The saved template's routes with the names they were saved with, for routes the timetable no longer has. */
   readonly savedRoutes = signal<readonly TemplateRouteDTO[]>([]);
+  readonly questions = signal<QuestionSettings>({});
 
   readonly status = signal<EditorStatus>('idle');
   /** A saved template that could not be loaded. */
@@ -129,6 +131,11 @@ export class TemplateEditorService {
     this.markChanged();
   }
 
+  setQuestionRules(type: QuestionType, change: Partial<QuestionRules>): void {
+    this.questions.update(questions => ({ ...questions, [type]: { ...questionRules(questions, type), ...change } }));
+    this.markChanged();
+  }
+
   /** Creates the template, or saves the changes to it. A new template's owner token is kept in this browser. */
   save(): void {
     const area = this.area();
@@ -138,10 +145,17 @@ export class TemplateEditorService {
       return;
     }
 
+    const problem = settingsProblem(this.questions());
+    if (problem) {
+      this.error.set(problem);
+      return;
+    }
+
     const request: TemplateRequest = {
       name: this.name.value.trim(),
       boundary: boundsToRing(area),
-      routeIds: this.routeIds()
+      routeIds: this.routeIds(),
+      settings: { questions: this.questions() }
     };
     const templateId = this.templateId();
     this.status.set('saving');
@@ -192,6 +206,7 @@ export class TemplateEditorService {
     this.area.set(ringToBounds(template.boundary));
     this.routeIds.set(template.routes.map(route => route.routeId));
     this.savedRoutes.set(template.routes);
+    this.questions.set(template.settings.questions);
     this.dirty.set(false);
   }
 

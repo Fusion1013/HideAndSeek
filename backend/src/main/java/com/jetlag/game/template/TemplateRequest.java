@@ -1,5 +1,6 @@
 package com.jetlag.game.template;
 
+import com.jetlag.game.GameSettings;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.util.List;
@@ -12,7 +13,9 @@ public record TemplateRequest(
     + "the ring is closed if the last position differs from the first", requiredMode = Schema.RequiredMode.REQUIRED)
   List<List<Double>> boundary,
   @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
-  List<String> routeIds
+  List<String> routeIds,
+  @Schema(description = "The rules for its games; everything is as usual if left out")
+  GameSettings settings
 ) {
   public static final int MAX_NAME_LENGTH = 100;
 }

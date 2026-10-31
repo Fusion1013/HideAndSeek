@@ -6,6 +6,7 @@ import { formatElapsed } from '../shared/format';
 import { ControlsPanelService } from '../controls/controls-panel.service';
 import { injectFocusAfterRender } from '../shared/focus';
 import { GameSessionService } from './game-session.service';
+import { QuestionPhotoComponent } from './question-photo.component';
 import { GameReplayService } from './replay/game-replay.service';
 import { answerText, questionText } from './questions';
 
@@ -27,7 +28,7 @@ export function seekingDuration(game: Pick<GameDTO, 'seekingStartedAt' | 'finish
  */
 @Component({
   selector: 'app-game-recap',
-  imports: [RouterLink],
+  imports: [QuestionPhotoComponent, RouterLink],
   template: `
     @if (session.game(); as game) {
       <section class="panel-section" aria-labelledby="recap-heading">
@@ -113,6 +114,9 @@ export function seekingDuration(game: Pick<GameDTO, 'seekingStartedAt' | 'finish
             <li>
               <p class="question-text">{{ text(question) }}</p>
               <p [class]="question.status === 'ANSWERED' ? 'answer' : 'answer expired'">{{ answerOf(question) }}</p>
+              @if (question.answer?.choice === 'PHOTO') {
+                <app-question-photo [question]="question" />
+              }
               <p class="status-text">{{ askerName(question) }} · {{ clock(question.askedAt) }}</p>
             </li>
           } @empty {

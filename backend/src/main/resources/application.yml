@@ -17,6 +17,11 @@ spring:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/jetlag}
     username: ${SPRING_DATASOURCE_USERNAME:jetlag}
     password: ${SPRING_DATASOURCE_PASSWORD:jetlag}
+  servlet:
+    multipart:
+      # A photo answering a question; the app shrinks them to well under this. nginx.conf sets its own limit, above it
+      max-file-size: 10MB
+      max-request-size: 10MB
   mvc:
     problemdetails:
       # Errors as RFC 7807 bodies, whose "detail" carries the reason given to ResponseStatusException

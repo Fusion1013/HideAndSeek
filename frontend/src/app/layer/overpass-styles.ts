@@ -10,10 +10,13 @@ export type OverpassStyle =
   | { kind: 'point' }
   /** A colored line, optionally on a white casing so it stands out from the base map. */
   | { kind: 'line'; width: number; casing?: boolean }
-  /** A tinted, outlined shape. Places stored without one show as a small dot. */
-  | { kind: 'area' }
-  /** A faintly tinted region with an outline, for Voronoi cells that tile the map side by side. */
-  | { kind: 'cells' };
+  /** A tinted, outlined shape, optionally labelled with the place name. Places stored without one show as a small dot. */
+  | { kind: 'area'; labels?: boolean }
+  /**
+   * A faintly tinted region with an outline, for regions that tile the map side by side (Voronoi cells, divisions),
+   * optionally labelled with the place name.
+   */
+  | { kind: 'cells'; labels?: boolean };
 
 export type OverpassStyleFunction = (feature: FeatureLike) => Style | Style[];
 
@@ -22,8 +25,8 @@ export function createOverpassStyle(style: OverpassStyle, color: string): Overpa
   switch (style.kind) {
     case 'point': return pointStyle(color);
     case 'line': return lineStyle(color, style.width, style.casing ?? false);
-    case 'area': return areaStyle(color);
-    case 'cells': return cellStyle(color);
+    case 'area': return areaStyle(color, style.labels ?? false);
+    case 'cells': return cellStyle(color, style.labels ?? false);
   }
 }
 
@@ -33,27 +36,7 @@ function pointStyle(color: string): OverpassStyleFunction {
     fill: new Fill({ color }),
     stroke: new Stroke({ color: '#ffffff', width: 2 })
   });
-  const byName = new Map<string, Style>();
-
-  return feature => {
-    const name = (feature.get('place') as OverpassLocationDTO | undefined)?.name ?? '';
-    let style = byName.get(name);
-    if (!style) {
-      style = new Style({
-        image,
-        text: new Text({
-          text: name,
-          font: 'bold 16px sans-serif',
-          offsetY: -18,
-          fill: new Fill({ color }),
-          stroke: new Stroke({ color: '#ffffff', width: 3 })
-        }),
-        zIndex: 200
-      });
-      byName.set(name, style);
-    }
-    return style;
-  };
+  return withNameLabel(new Style({ image, zIndex: 200 }), color, 'bold 16px sans-serif', -18);
 }
 
 function lineStyle(color: string, width: number, casing: boolean): OverpassStyleFunction {
@@ -64,7 +47,7 @@ function lineStyle(color: string, width: number, casing: boolean): OverpassStyle
   return () => styles;
 }
 
-function areaStyle(color: string): OverpassStyleFunction {
+function areaStyle(color: string, labels: boolean): OverpassStyleFunction {
   const [red, green, blue] = asArray(color);
   const style = new Style({
     fill: new Fill({ color: [red, green, blue, 0.25] }),
@@ -76,16 +59,48 @@ function areaStyle(color: string): OverpassStyleFunction {
     }),
     zIndex: 100
   });
-  return () => style;
+  if (!labels) return () => style;
+
+  const shape = withNameLabel(style, color, REGION_FONT);
+  // Places stored without a shape are dots: the name goes above them, as for points
+  const dot = withNameLabel(style, color, REGION_FONT, -12);
+  return feature => (feature.getGeometry()?.getType() === 'Point' ? dot : shape)(feature);
 }
 
-function cellStyle(color: string): OverpassStyleFunction {
+function cellStyle(color: string, labels: boolean): OverpassStyleFunction {
   const [red, green, blue] = asArray(color);
-  // Neighbouring cells share their edges, so each edge is drawn twice: a thin line is enough
+  // Neighbouring regions share their edges, so each edge is drawn twice: a thin line is enough
   const style = new Style({
     fill: new Fill({ color: [red, green, blue, 0.08] }),
     stroke: new Stroke({ color, width: 1.5 }),
     zIndex: 50
   });
-  return () => style;
+  return labels ? withNameLabel(style, color, REGION_FONT) : () => style;
+}
+
+/** Smaller than point labels: shapes are labelled inside themselves, and many can be in view at once. */
+const REGION_FONT = 'bold 13px sans-serif';
+
+/**
+ * Adds the place name to a style, as a copy made once per name. Shapes are labelled at a point inside them
+ * (every part of a multi-part shape), and only where the name fits, so small lakes and islands go unlabelled.
+ */
+function withNameLabel(style: Style, color: string, font: string, offsetY = 0): OverpassStyleFunction {
+  const byName = new Map<string, Style>();
+  return feature => {
+    const name = (feature.get('place') as OverpassLocationDTO | undefined)?.name ?? '';
+    let labelled = byName.get(name);
+    if (!labelled) {
+      labelled = style.clone();
+      labelled.setText(new Text({
+        text: name,
+        font,
+        offsetY,
+        fill: new Fill({ color }),
+        stroke: new Stroke({ color: '#ffffff', width: 3 })
+      }));
+      byName.set(name, labelled);
+    }
+    return labelled;
+  };
 }

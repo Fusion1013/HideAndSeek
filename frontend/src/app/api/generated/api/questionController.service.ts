@@ -22,6 +22,8 @@ import { AnswerRequest } from '../model/answerRequest';
 import { AskRequest } from '../model/askRequest';
 // @ts-ignore
 import { QuestionDTO } from '../model/questionDTO';
+// @ts-ignore
+import { QuestionParams } from '../model/questionParams';
 
 // @ts-ignore
 import { BASE_PATH, COLLECTION_FORMATS }                     from '../variables';
@@ -118,8 +120,99 @@ export class QuestionControllerService extends BaseService {
     }
 
     /**
+     * Answer the waiting photo question with a picture
+     * Hiders only, before the deadline. What is kept is a JPEG of the picture, without its metadata.
+     * @endpoint post /api/games/{gameId}/questions/{questionId}/photo
+     * @param gameId 
+     * @param questionId 
+     * @param photo 
+     * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
+     * @param reportProgress flag to report request and response progress.
+     * @param options additional options
+     */
+    public answerQuestionWithPhoto(gameId: string, questionId: string, photo: Blob, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<QuestionDTO>;
+    public answerQuestionWithPhoto(gameId: string, questionId: string, photo: Blob, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<QuestionDTO>>;
+    public answerQuestionWithPhoto(gameId: string, questionId: string, photo: Blob, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<QuestionDTO>>;
+    public answerQuestionWithPhoto(gameId: string, questionId: string, photo: Blob, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
+        if (gameId === null || gameId === undefined) {
+            throw new Error('Required parameter gameId was null or undefined when calling answerQuestionWithPhoto.');
+        }
+        if (questionId === null || questionId === undefined) {
+            throw new Error('Required parameter questionId was null or undefined when calling answerQuestionWithPhoto.');
+        }
+        if (photo === null || photo === undefined) {
+            throw new Error('Required parameter photo was null or undefined when calling answerQuestionWithPhoto.');
+        }
+
+        let localVarHeaders = this.defaultHeaders;
+
+        // authentication (playerToken) required
+        localVarHeaders = this.configuration.addCredentialToHeaders('playerToken', 'Authorization', localVarHeaders, 'Bearer ');
+
+        const localVarHttpHeaderAcceptSelected: string | undefined = options?.httpHeaderAccept ?? this.configuration.selectHeaderAccept([
+            'application/json'
+        ]);
+        if (localVarHttpHeaderAcceptSelected !== undefined) {
+            localVarHeaders = localVarHeaders.set('Accept', localVarHttpHeaderAcceptSelected);
+        }
+
+        const localVarHttpContext: HttpContext = options?.context ?? new HttpContext();
+
+        const localVarTransferCache: boolean = options?.transferCache ?? true;
+
+        // to determine the Content-Type header
+        const consumes: string[] = [
+            'multipart/form-data'
+        ];
+
+        const canConsumeForm = this.canConsumeForm(consumes);
+
+        let localVarFormParams: { append(param: string, value: any): any; };
+        let localVarUseForm = false;
+        let localVarConvertFormParamsToString = false;
+        // use FormData to transmit files using content-type "multipart/form-data"
+        // see https://stackoverflow.com/questions/4007969/application-x-www-form-urlencoded-or-multipart-form-data
+        localVarUseForm = canConsumeForm;
+        if (localVarUseForm) {
+            localVarFormParams = new FormData();
+        } else {
+            localVarFormParams = new HttpParams({encoder: this.encoder});
+        }
+
+        if (photo !== undefined) {
+            localVarFormParams = localVarFormParams.append('photo', <any>photo) as any || localVarFormParams;
+        }
+
+        let responseType_: 'text' | 'json' | 'blob' = 'json';
+        if (localVarHttpHeaderAcceptSelected) {
+            if (localVarHttpHeaderAcceptSelected.startsWith('text')) {
+                responseType_ = 'text';
+            } else if (this.configuration.isJsonMime(localVarHttpHeaderAcceptSelected)) {
+                responseType_ = 'json';
+            } else {
+                responseType_ = 'blob';
+            }
+        }
+
+        let localVarPath = `/api/games/${this.configuration.encodeParam({name: "gameId", value: gameId, in: "path", style: "simple", explode: false, dataType: "string", dataFormat: "uuid"})}/questions/${this.configuration.encodeParam({name: "questionId", value: questionId, in: "path", style: "simple", explode: false, dataType: "string", dataFormat: "uuid"})}/photo`;
+        const { basePath, withCredentials } = this.configuration;
+        return this.httpClient.request<QuestionDTO>('post', `${basePath}${localVarPath}`,
+            {
+                context: localVarHttpContext,
+                body: localVarConvertFormParamsToString ? localVarFormParams.toString() : localVarFormParams,
+                responseType: <any>responseType_,
+                ...(withCredentials ? { withCredentials } : {}),
+                headers: localVarHeaders,
+                observe: observe,
+                ...(localVarTransferCache !== undefined ? { transferCache: localVarTransferCache } : {}),
+                reportProgress: reportProgress
+            }
+        );
+    }
+
+    /**
      * Ask the hiders a question
-     * Seekers only, while seeking, one question at a time. The hiders have 5 minutes to answer.
+     * Seekers only, while seeking, one question at a time. The game sets how long the hiders have to answer each kind of question, 5 minutes unless it says otherwise.
      * @endpoint post /api/games/{gameId}/questions
      * @param gameId 
      * @param askRequest 
@@ -192,6 +285,58 @@ export class QuestionControllerService extends BaseService {
     }
 
     /**
+     * Get the picture that answered a photo question
+     * @endpoint get /api/games/{gameId}/questions/{questionId}/photo
+     * @param gameId 
+     * @param questionId 
+     * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
+     * @param reportProgress flag to report request and response progress.
+     * @param options additional options
+     */
+    public getQuestionPhoto(gameId: string, questionId: string, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'image/jpeg', context?: HttpContext, transferCache?: boolean}): Observable<Blob>;
+    public getQuestionPhoto(gameId: string, questionId: string, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'image/jpeg', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<Blob>>;
+    public getQuestionPhoto(gameId: string, questionId: string, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'image/jpeg', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<Blob>>;
+    public getQuestionPhoto(gameId: string, questionId: string, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'image/jpeg', context?: HttpContext, transferCache?: boolean}): Observable<any> {
+        if (gameId === null || gameId === undefined) {
+            throw new Error('Required parameter gameId was null or undefined when calling getQuestionPhoto.');
+        }
+        if (questionId === null || questionId === undefined) {
+            throw new Error('Required parameter questionId was null or undefined when calling getQuestionPhoto.');
+        }
+
+        let localVarHeaders = this.defaultHeaders;
+
+        // authentication (playerToken) required
+        localVarHeaders = this.configuration.addCredentialToHeaders('playerToken', 'Authorization', localVarHeaders, 'Bearer ');
+
+        const localVarHttpHeaderAcceptSelected: string | undefined = options?.httpHeaderAccept ?? this.configuration.selectHeaderAccept([
+            'image/jpeg'
+        ]);
+        if (localVarHttpHeaderAcceptSelected !== undefined) {
+            localVarHeaders = localVarHeaders.set('Accept', localVarHttpHeaderAcceptSelected);
+        }
+
+        const localVarHttpContext: HttpContext = options?.context ?? new HttpContext();
+
+        const localVarTransferCache: boolean = options?.transferCache ?? true;
+
+
+        let localVarPath = `/api/games/${this.configuration.encodeParam({name: "gameId", value: gameId, in: "path", style: "simple", explode: false, dataType: "string", dataFormat: "uuid"})}/questions/${this.configuration.encodeParam({name: "questionId", value: questionId, in: "path", style: "simple", explode: false, dataType: "string", dataFormat: "uuid"})}/photo`;
+        const { basePath, withCredentials } = this.configuration;
+        return this.httpClient.request('get', `${basePath}${localVarPath}`,
+            {
+                context: localVarHttpContext,
+                responseType: "blob",
+                ...(withCredentials ? { withCredentials } : {}),
+                headers: localVarHeaders,
+                observe: observe,
+                ...(localVarTransferCache !== undefined ? { transferCache: localVarTransferCache } : {}),
+                reportProgress: reportProgress
+            }
+        );
+    }
+
+    /**
      * Get the game\&#39;s questions and answers
      * @endpoint get /api/games/{gameId}/questions
      * @param gameId 
@@ -240,6 +385,80 @@ export class QuestionControllerService extends BaseService {
         return this.httpClient.request<Array<QuestionDTO>>('get', `${basePath}${localVarPath}`,
             {
                 context: localVarHttpContext,
+                responseType: <any>responseType_,
+                ...(withCredentials ? { withCredentials } : {}),
+                headers: localVarHeaders,
+                observe: observe,
+                ...(localVarTransferCache !== undefined ? { transferCache: localVarTransferCache } : {}),
+                reportProgress: reportProgress
+            }
+        );
+    }
+
+    /**
+     * See what a question would be about
+     * As asking, for the seekers choosing one, but nothing is kept and nobody is told.
+     * @endpoint post /api/games/{gameId}/questions/preview
+     * @param gameId 
+     * @param askRequest 
+     * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
+     * @param reportProgress flag to report request and response progress.
+     * @param options additional options
+     */
+    public previewQuestion(gameId: string, askRequest: AskRequest, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<QuestionParams>;
+    public previewQuestion(gameId: string, askRequest: AskRequest, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<QuestionParams>>;
+    public previewQuestion(gameId: string, askRequest: AskRequest, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<QuestionParams>>;
+    public previewQuestion(gameId: string, askRequest: AskRequest, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
+        if (gameId === null || gameId === undefined) {
+            throw new Error('Required parameter gameId was null or undefined when calling previewQuestion.');
+        }
+        if (askRequest === null || askRequest === undefined) {
+            throw new Error('Required parameter askRequest was null or undefined when calling previewQuestion.');
+        }
+
+        let localVarHeaders = this.defaultHeaders;
+
+        // authentication (playerToken) required
+        localVarHeaders = this.configuration.addCredentialToHeaders('playerToken', 'Authorization', localVarHeaders, 'Bearer ');
+
+        const localVarHttpHeaderAcceptSelected: string | undefined = options?.httpHeaderAccept ?? this.configuration.selectHeaderAccept([
+            'application/json'
+        ]);
+        if (localVarHttpHeaderAcceptSelected !== undefined) {
+            localVarHeaders = localVarHeaders.set('Accept', localVarHttpHeaderAcceptSelected);
+        }
+
+        const localVarHttpContext: HttpContext = options?.context ?? new HttpContext();
+
+        const localVarTransferCache: boolean = options?.transferCache ?? true;
+
+
+        // to determine the Content-Type header
+        const consumes: string[] = [
+            'application/json'
+        ];
+        const httpContentTypeSelected: string | undefined = this.configuration.selectHeaderContentType(consumes);
+        if (httpContentTypeSelected !== undefined) {
+            localVarHeaders = localVarHeaders.set('Content-Type', httpContentTypeSelected);
+        }
+
+        let responseType_: 'text' | 'json' | 'blob' = 'json';
+        if (localVarHttpHeaderAcceptSelected) {
+            if (localVarHttpHeaderAcceptSelected.startsWith('text')) {
+                responseType_ = 'text';
+            } else if (this.configuration.isJsonMime(localVarHttpHeaderAcceptSelected)) {
+                responseType_ = 'json';
+            } else {
+                responseType_ = 'blob';
+            }
+        }
+
+        let localVarPath = `/api/games/${this.configuration.encodeParam({name: "gameId", value: gameId, in: "path", style: "simple", explode: false, dataType: "string", dataFormat: "uuid"})}/questions/preview`;
+        const { basePath, withCredentials } = this.configuration;
+        return this.httpClient.request<QuestionParams>('post', `${basePath}${localVarPath}`,
+            {
+                context: localVarHttpContext,
+                body: askRequest,
                 responseType: <any>responseType_,
                 ...(withCredentials ? { withCredentials } : {}),
                 headers: localVarHeaders,

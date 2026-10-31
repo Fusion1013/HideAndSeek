@@ -168,6 +168,13 @@ export class GameSessionService {
     return this.send(this.questionApi.answerQuestion(game.id, questionId, request), 'The answer could not be sent.');
   }
 
+  answerWithPhoto(questionId: string, photo: Blob): Promise<boolean> {
+    const game = this.game();
+    if (!game) return Promise.resolve(false);
+    return this.send(this.questionApi.answerQuestionWithPhoto(game.id, questionId, photo),
+      'The photo could not be sent. Check the connection and try again.');
+  }
+
   chooseHidingStation(stationId: string): void {
     const game = this.game();
     if (!game) return;

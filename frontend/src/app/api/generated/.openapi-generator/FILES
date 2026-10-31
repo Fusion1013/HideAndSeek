@@ -32,6 +32,7 @@ model/createGameRequest.ts
 model/createdTemplateDTO.ts
 model/gameDTO.ts
 model/gameRouteDTO.ts
+model/gameSettings.ts
 model/gameTimelineDTO.ts
 model/hidingStationDTO.ts
 model/hidingStationRequest.ts
@@ -39,6 +40,7 @@ model/joinGameRequest.ts
 model/joinedGameDTO.ts
 model/locationRequest.ts
 model/models.ts
+model/nearestPlace.ts
 model/overpassLocationDTO.ts
 model/overpassLocationPage.ts
 model/playerDTO.ts
@@ -51,6 +53,7 @@ model/pushSubscriptionRequest.ts
 model/questionAnswer.ts
 model/questionDTO.ts
 model/questionParams.ts
+model/questionRules.ts
 model/reachabilityLegDTO.ts
 model/reachabilityLegStopDTO.ts
 model/reachabilityPathPointDTO.ts

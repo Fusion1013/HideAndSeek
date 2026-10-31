@@ -350,7 +350,7 @@ export class GameTemplateControllerService extends BaseService {
     }
 
     /**
-     * Replace a game template\&#39;s name, area and routes
+     * Replace a game template\&#39;s name, area, routes and settings
      * Games already created from the template keep their own copy and do not change.
      * @endpoint put /api/templates/{templateId}
      * @param templateId 

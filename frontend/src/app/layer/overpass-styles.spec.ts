@@ -1,4 +1,5 @@
 import Feature from 'ol/Feature';
+import { Point, Polygon } from 'ol/geom';
 import { Style } from 'ol/style';
 
 import { createOverpassStyle } from './overpass-styles';
@@ -29,5 +30,24 @@ describe('createOverpassStyle', () => {
     const style = createOverpassStyle({ kind: 'area' }, '#1565c0')(place('')) as Style;
     expect(style.getFill()?.getColor()).toEqual([21, 101, 192, 0.25]);
     expect(style.getStroke()?.getColor()).toBe('#1565c0');
+  });
+
+  it('labels areas and regions with the place name only when asked', () => {
+    const lake = new Feature({ place: { name: 'Vättern' }, geometry: new Polygon([[[0, 0], [1, 0], [1, 1], [0, 0]]]) });
+    const area = createOverpassStyle({ kind: 'area', labels: true }, '#1565c0')(lake) as Style;
+    expect(area.getText()?.getText()).toBe('Vättern');
+    expect(area.getText()?.getOffsetY()).toBe(0);
+    expect(area.getFill()?.getColor()).toEqual([21, 101, 192, 0.25]);
+
+    // A lake stored without its shape is a dot, with the name above it
+    const dot = new Feature({ place: { name: 'Vättern' }, geometry: new Point([0, 0]) });
+    expect((createOverpassStyle({ kind: 'area', labels: true }, '#1565c0')(dot) as Style).getText()?.getOffsetY())
+      .toBeLessThan(0);
+
+    const region = createOverpassStyle({ kind: 'cells', labels: true }, '#d67d3d')(place('Uppsala')) as Style;
+    expect(region.getText()?.getText()).toBe('Uppsala');
+
+    expect((createOverpassStyle({ kind: 'cells' }, '#d67d3d')(place('Uppsala')) as Style).getText()).toBeNull();
+    expect((createOverpassStyle({ kind: 'area' }, '#1565c0')(lake) as Style).getText()).toBeNull();
   });
 });

@@ -56,18 +56,29 @@ export const MAP_LAYERS = [
     overpass: { category: 'PARK', color: '#2e734e', style: { kind: 'point' } } },
   cellLayer('park_regions', 'parks', 'Park Regions', 'PARK', '#2e734e', 8),
   { id: 'rail_station', label: 'Rail Stations', visible: false, measurable: true,
-    overpass: { category: 'RAIL_STATION', color: '#7fb7cf', style: { kind: 'point' } } },
+    overpass: { category: 'RAIL_STATION', color: '#4d8da9', style: { kind: 'point' } } },
   cellLayer('rail_station_regions', 'rail_station', 'Rail Station Regions', 'RAIL_STATION', '#7fb7cf'),
   { id: 'mountains', label: 'Mountains', visible: false, measurable: true,
     overpass: { category: 'MOUNTAIN', color: '#636764', style: { kind: 'point' } } },
   cellLayer('mountain_regions', 'mountains', 'Mountain Regions', 'MOUNTAIN', '#636764', 8),
-  // Areas stored as a center point only: a distance to the center would be misleading
+  // Outlines that tile the country, with long, detailed borders: loaded where the map is viewed, simplified to
+  // the zoom. Not measurable: what matters is which division you are in, not the distance to one.
   { id: 'admin_division_1', label: 'Admin Division 1', visible: false,
-    overpass: { category: 'ADMIN_DIVISION_1', color: '#db9868', style: { kind: 'point' } } },
+    overpass: {
+      category: 'ADMIN_DIVISION_1', color: '#ff0000', style: { kind: 'cells', labels: true },
+      loadStrategy: 'bbox', includeGeometry: true, simplifyGeometry: true, zIndex: 44
+    } },
   { id: 'admin_division_2', label: 'Admin Division 2', visible: false,
-    overpass: { category: 'ADMIN_DIVISION_2', color: '#d67d3d', style: { kind: 'point' } } },
+    overpass: {
+      category: 'ADMIN_DIVISION_2', color: '#b00000', style: { kind: 'cells', labels: true },
+      loadStrategy: 'bbox', includeGeometry: true, simplifyGeometry: true, zIndex: 44
+    } },
+  // Patchy: only parts of the country are divided this finely
   { id: 'admin_division_4', label: 'Admin Division 4', visible: false,
-    overpass: { category: 'ADMIN_DIVISION_4', color: '#d66310', style: { kind: 'point' } } },
+    overpass: {
+      category: 'ADMIN_DIVISION_4', color: '#830000', style: { kind: 'cells', labels: true },
+      loadStrategy: 'bbox', includeGeometry: true, simplifyGeometry: true, minZoom: 7, zIndex: 44
+    } },
   // A few hundred line segments: loaded once, in full detail
   { id: 'high_speed_rail', label: 'High-Speed Rail', visible: false, measurable: true,
     overpass: {
@@ -83,7 +94,7 @@ export const MAP_LAYERS = [
     } },
   { id: 'bodies_of_water', label: 'Bodies of Water', visible: false,
     overpass: {
-      category: 'BODY_OF_WATER', color: '#1565c0', style: { kind: 'area' },
+      category: 'BODY_OF_WATER', color: '#1565c0', style: { kind: 'area', labels: true },
       loadStrategy: 'bbox', includeGeometry: true, simplifyGeometry: true, minZoom: 9, zIndex: 51
     } },
   { id: 'zoos', label: 'Zoos', visible: false, measurable: true,

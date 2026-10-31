@@ -1,26 +1,34 @@
 import { computed, DestroyRef, effect, inject, Injectable, signal, untracked } from '@angular/core';
 import Feature, { type FeatureLike } from 'ol/Feature';
+import GeoJSON from 'ol/format/GeoJSON';
+import type Geometry from 'ol/geom/Geometry';
 import type MapBrowserEvent from 'ol/MapBrowserEvent';
 import LineString from 'ol/geom/LineString';
+import MultiPolygon from 'ol/geom/MultiPolygon';
 import Point from 'ol/geom/Point';
 import Polygon, { circular } from 'ol/geom/Polygon';
 import VectorLayer from 'ol/layer/Vector';
 import type OlMap from 'ol/Map';
-import { fromLonLat } from 'ol/proj';
+import { fromLonLat, toLonLat } from 'ol/proj';
 import VectorSource from 'ol/source/Vector';
-import { Circle as CircleStyle, Fill, Stroke, Style, Text } from 'ol/style';
+import { Circle as CircleStyle, Fill, Icon, Stroke, Style, Text } from 'ol/style';
+import type { LucideIconData } from '@lucide/angular';
 
-import type { PlayerDTO, QuestionDTO, StationDTO } from '../api/generated';
+import type { PlayerDTO, Position, QuestionDTO, StationDTO } from '../api/generated';
 import { ControlsPanelService } from '../controls/controls-panel.service';
 import { MapService } from '../map/map.service';
-import { formatAge } from '../shared/format';
+import { LonLat, perpendicularBisector } from '../shared/bisector';
+import { formatAge, formatDistance } from '../shared/format';
 import { RouteSelectionService } from '../transit/route-selection.service';
 import { GameSessionService } from './game-session.service';
-import { answerText, questionKind } from './questions';
+import { excludedArea } from './excluded-area';
+import { QuestionPreviewService } from './question-preview.service';
+import { CIRCLE_POINTS, CIRCLE_QUESTIONS, mapLabel, QUESTION_KINDS } from './questions';
 import { GameReplayService } from './replay/game-replay.service';
+import { ThermometerDraftService } from './thermometer-draft.service';
 
 /** Above the routes, below the measuring shapes. */
-const Z_INDEX = { area: 880, questions: 885, paths: 887, stations: 890, questionPins: 893, players: 895 };
+const Z_INDEX = { excluded: 878, area: 880, questions: 885, paths: 887, stations: 890, questionPins: 893, players: 895 };
 
 const AREA_STYLE = [
   new Style({ stroke: new Stroke({ color: '#ffffff', width: 6 }) }),
@@ -36,20 +44,44 @@ const PICKED_STATION_STYLE = new Style({
 const HIDING_STATION_STYLE = new Style({
   image: new CircleStyle({ radius: 10, fill: new Fill({ color: '#a85d00' }), stroke: new Stroke({ color: '#ffffff', width: 3 }) })
 });
+/** Where the answers so far rule the hiders out. */
+const EXCLUDED_STYLE = new Style({
+  fill: new Fill({ color: 'rgba(23, 35, 43, 0.38)' }),
+  stroke: new Stroke({ color: '#17232b', width: 1.5 })
+});
 const SEEKER_COLOR = '#2d5bb8';
 const HIDER_COLOR = '#a85d00';
 const QUESTION_COLOR = '#7b3fa0';
 
-/** A pin where a question was asked from. */
-const QUESTION_PIN_STYLE = new Style({
-  image: new CircleStyle({ radius: 10, fill: new Fill({ color: QUESTION_COLOR }), stroke: new Stroke({ color: '#ffffff', width: 2 }) }),
-  text: new Text({ text: '?', font: '700 13px system-ui, sans-serif', fill: new Fill({ color: '#ffffff' }) })
-});
+/** A pin's size on the screen, in pixels, and how much sharper it is made: enough for a phone's screen. */
+const PIN_SIZE = 28;
+const PIN_SHARPNESS = 3;
 
-/** Radar and tentacles questions are about a circle around where the asking seeker was. */
-const CIRCLE_QUESTIONS: readonly QuestionDTO.TypeEnum[] = ['RADAR', 'TENTACLES'];
-/** Points around each circle, enough for it to look round at any zoom. */
-const CIRCLE_POINTS = 96;
+/** A pin in the question colour with the icon on it, as an image. */
+function pinImage(icon: LucideIconData): string {
+  const shapes = icon.node.map(([name, attributes]) => {
+    const drawn = Object.entries(attributes).filter(([attribute]) => attribute !== 'key');
+    return `<${name} ${drawn.map(([attribute, value]) => `${attribute}="${value}"`).join(' ')}/>`;
+  });
+  const size = PIN_SIZE * PIN_SHARPNESS;
+  return `data:image/svg+xml,${encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 28 28">
+      <circle cx="14" cy="14" r="12" fill="${QUESTION_COLOR}" stroke="#ffffff" stroke-width="2"/>
+      <g transform="translate(6 6) scale(0.6667)" fill="none" stroke="#ffffff" stroke-width="2.25"
+        stroke-linecap="round" stroke-linejoin="round">${shapes.join('')}</g>
+    </svg>`)}`;
+}
+
+/** The pins where questions were asked from, by kind. */
+const QUESTION_PIN_STYLES = new Map(QUESTION_KINDS.map(kind => [kind.type, new Style({
+  image: new Icon({ src: pinImage(kind.icon), scale: 1 / PIN_SHARPNESS })
+})]));
+
+export function questionPinStyle(question: Pick<QuestionDTO, 'type'>): Style {
+  return QUESTION_PIN_STYLES.get(question.type)!;
+}
+
+const GEO_JSON = new GeoJSON({ dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857' });
 
 /** Pixels around a click in which a station counts as clicked; a fingertip is wider than a marker. */
 const HIT_TOLERANCE = 12;
@@ -68,29 +100,39 @@ export class GameMapService {
   private readonly routeSelection = inject(RouteSelectionService);
   private readonly controls = inject(ControlsPanelService);
   private readonly replay = inject(GameReplayService);
+  private readonly draft = inject(ThermometerDraftService);
+  private readonly preview = inject(QuestionPreviewService);
 
   private readonly areaSource = new VectorSource<Feature<Polygon>>();
   private readonly stationSource = new VectorSource<Feature<Point>>();
   private readonly playerSource = new VectorSource<Feature<Point>>();
   private readonly pathSource = new VectorSource<Feature<LineString>>();
-  private readonly questionSource = new VectorSource<Feature<Polygon>>();
+  private readonly questionSource = new VectorSource<Feature<Geometry>>();
+  private readonly draftSource = new VectorSource<Feature<Geometry>>();
   private readonly questionPinSource = new VectorSource<Feature<Point>>();
+  private readonly excludedSource = new VectorSource<Feature<MultiPolygon>>();
   private readonly layers = [
     new VectorLayer({ source: this.areaSource, style: AREA_STYLE, zIndex: Z_INDEX.area }),
     new VectorLayer({ source: this.questionSource, style: feature => questionStyle(feature), zIndex: Z_INDEX.questions }),
+    new VectorLayer({ source: this.draftSource, style: feature => questionStyle(feature), zIndex: Z_INDEX.questions }),
     new VectorLayer({ source: this.stationSource, style: feature => this.stationStyle(feature), zIndex: Z_INDEX.stations }),
     new VectorLayer({ source: this.pathSource, style: feature => pathStyle(feature), zIndex: Z_INDEX.paths }),
-    new VectorLayer({ source: this.questionPinSource, style: QUESTION_PIN_STYLE, zIndex: Z_INDEX.questionPins }),
-    new VectorLayer({ source: this.playerSource, style: feature => playerStyle(feature), zIndex: Z_INDEX.players })
+    new VectorLayer({ source: this.questionPinSource, style: feature => questionPinStyle(feature.get('question')), zIndex: Z_INDEX.questionPins }),
+    new VectorLayer({ source: this.playerSource, style: feature => playerStyle(feature), zIndex: Z_INDEX.players }),
+    new VectorLayer({ source: this.excludedSource, style: EXCLUDED_STYLE, zIndex: Z_INDEX.excluded })
   ];
   private map: OlMap | null = null;
-  private readonly stationLayer = this.layers[2];
+  private readonly stationLayer = this.layers[3];
 
   /** A station clicked on the map, offered in the hiding tab. */
   readonly pickedStation = signal<StationDTO | null>(null);
 
   /** The questions shown: as they are now, or as they were at the replay's moment. */
   private readonly shownQuestions = computed(() => this.replay.frame()?.questions ?? this.session.questions());
+  /** The answered questions shown; only a new answer changes these, not every step of the replay. */
+  private readonly answeredQuestions = computed(() => this.shownQuestions().filter(question => question.answer), {
+    equal: (a, b) => a.length === b.length && a.every((question, index) => question.id === b[index].id)
+  });
   /** The hiders' station shown: as it is now (to whoever may see it), or as it was at the replay's moment. */
   private readonly shownHidingStation = computed(() => {
     const frame = this.replay.frame();
@@ -185,24 +227,40 @@ export class GameMapService {
     // Where each question was asked from, whatever its kind
     effect(() => {
       this.questionPinSource.clear(true);
-      this.questionPinSource.addFeatures(this.shownQuestions()
+      const preview = this.preview.question();
+      this.questionPinSource.addFeatures([...this.shownQuestions(), ...(preview ? [preview] : [])]
         .filter(question => question.params.origin)
-        .map(question => new Feature(new Point(fromLonLat([question.params.origin!.longitude, question.params.origin!.latitude])))));
-    });
-
-    // Radar and tentacles circles, true to the distance on the ground (a circle in the map's projection is not)
-    effect(() => {
-      this.questionSource.clear(true);
-      this.questionSource.addFeatures(this.shownQuestions()
-        .filter(question => CIRCLE_QUESTIONS.includes(question.type) && question.params.origin && question.params.distanceMeters)
         .map(question => {
-          const { longitude, latitude } = question.params.origin!;
-          const circle = circular([longitude, latitude], question.params.distanceMeters!, CIRCLE_POINTS)
-            .transform('EPSG:4326', 'EPSG:3857') as Polygon;
-          const feature = new Feature(circle);
+          const feature = new Feature(new Point(fromLonLat([question.params.origin!.longitude, question.params.origin!.latitude])));
           feature.set('question', question);
           return feature;
         }));
+    });
+
+    // Everywhere the answers so far, live or at the replay's moment, rule the hiders out
+    effect(() => {
+      const excluded = excludedArea(this.session.game()?.boundary ?? [], this.answeredQuestions());
+      this.excludedSource.clear(true);
+      if (excluded.length === 0) return;
+      this.excludedSource.addFeature(new Feature(new MultiPolygon(excluded).transform('EPSG:4326', 'EPSG:3857') as MultiPolygon));
+    });
+
+    effect(() => {
+      this.questionSource.clear(true);
+      this.questionSource.addFeatures(this.shownQuestions().flatMap(question => questionFeatures(question)));
+    });
+
+    // The question being chosen, as it will look once asked; a thermometer's points are set on the map
+    effect(() => {
+      const preview = this.preview.question();
+      const { start, end } = this.draft.shown();
+      this.draftSource.clear(true);
+      if (preview) this.draftSource.addFeatures(questionFeatures(preview));
+      if (start && end) {
+        this.draftSource.addFeatures(thermometerFeatures(start, end));
+      } else if (start || end) {
+        this.draftSource.addFeature(thermometerPart('point', new Point(fromLonLat(lonLat((start ?? end)!)))));
+      }
     });
 
     // The game's routes take the place of the Overview selection, without the routes' own stops
@@ -236,8 +294,18 @@ export class GameMapService {
     this.map = null;
   }
 
-  /** A click on a station, while the hiders may still choose, offers it in the hiding tab. */
+  /**
+   * A click places the point of a thermometer question being picked. Otherwise a click on a station, while the
+   * hiders may still choose, offers it in the hiding tab.
+   */
   private readonly handleClick = (event: MapBrowserEvent): void => {
+    const picking = this.draft.picking();
+    if (picking) {
+      const [longitude, latitude] = toLonLat(event.coordinate);
+      this.draft.set(picking, { longitude, latitude });
+      this.controls.show('questions');
+      return;
+    }
     if (!this.session.canChooseStation() || !this.map) return;
     const station = this.map.forEachFeatureAtPixel(event.pixel, feature => feature.get('station') as StationDTO | undefined, {
       layerFilter: layer => layer === this.stationLayer,
@@ -256,24 +324,149 @@ export class GameMapService {
   }
 }
 
-/** Green where the hiders said they are within it, red where they said they are not, dashed while unanswered. */
-function questionStyle(feature: FeatureLike): Style {
+/**
+ * A question on the map: radar and tentacles circles, true to the distance on the ground (a circle in the map's
+ * projection is not), each thermometer's points with the line between hotter and colder, and the places questions
+ * are about. Once answered, what a question divides belongs to the excluded area.
+ */
+export function questionFeatures(question: QuestionDTO): Feature<Geometry>[] {
+  const { origin, distanceMeters, start, end } = question.params;
+  const features = start && end ? thermometerFeatures(start, end, question) : [];
+  if (!question.answer && CIRCLE_QUESTIONS.includes(question.type) && origin && distanceMeters) {
+    const circle = new Feature<Geometry>(circular([origin.longitude, origin.latitude], distanceMeters, CIRCLE_POINTS)
+      .transform('EPSG:4326', 'EPSG:3857'));
+    circle.set('question', question);
+    features.push(circle);
+  }
+  return [...features, ...placeFeatures(question)];
+}
+
+/** Dashed: what a question divides is only drawn until the hiders answer it. */
+export function questionStyle(feature: FeatureLike): Style | Style[] {
+  if (feature.get('thermometerPart')) return thermometerStyle(feature);
+  if (feature.get('placePart')) return placeStyle(feature);
   const question = feature.get('question') as QuestionDTO;
-  const choice = question.answer?.choice;
-  const inside = choice === 'YES' || choice === 'PLACE';
-  const outside = choice === 'NO' || choice === 'NONE';
-  const color = inside ? '#2e7d32' : outside ? '#b33232' : SEEKER_COLOR;
   return new Style({
-    stroke: new Stroke({ color, width: 2, lineDash: inside || outside ? undefined : [8, 6] }),
-    fill: new Fill({ color: inside ? 'rgba(46, 125, 50, 0.10)' : outside ? 'rgba(179, 50, 50, 0.06)' : 'rgba(45, 91, 184, 0.05)' }),
+    stroke: new Stroke({ color: SEEKER_COLOR, width: 2, lineDash: [8, 6] }),
+    fill: new Fill({ color: 'rgba(45, 91, 184, 0.05)' }),
     text: new Text({
-      text: `${questionKind(question.type).label}: ${answerText(question)}`,
+      text: mapLabel(question),
       placement: 'line',
       font: '600 12px system-ui, sans-serif',
       fill: new Fill({ color: '#17232b' }),
       stroke: new Stroke({ color: '#ffffff', width: 4 })
     })
   });
+}
+
+type PlacePart = 'link' | 'pin';
+
+function placePart(part: PlacePart, geometry: Geometry, question: QuestionDTO, label?: string): Feature<Geometry> {
+  const feature = new Feature(geometry);
+  feature.set('placePart', part);
+  feature.set('question', question);
+  feature.set('label', label);
+  return feature;
+}
+
+/**
+ * The places a question is about. Matching: the seekers' nearest place and, until answered, the area where it is
+ * the nearest. Measuring: that place and, until answered, everywhere as close to one as the seekers were.
+ * Tentacles: the place the hiders named, once answered, if it is on the map.
+ */
+export function placeFeatures(question: QuestionDTO): Feature<Geometry>[] {
+  const { origin, nearest } = question.params;
+  const named = question.answer?.position;
+  const features: Feature<Geometry>[] = [];
+  if (nearest) {
+    const place = fromLonLat([nearest.longitude, nearest.latitude]);
+    const area = question.type === 'MATCHING' ? nearest.cell : nearest.reach;
+    if (area && !question.answer) {
+      const feature = new Feature(GEO_JSON.readGeometry(area));
+      feature.set('question', question);
+      features.push(feature);
+    }
+    if (origin) {
+      const line = new LineString([fromLonLat([origin.longitude, origin.latitude]), place]);
+      features.push(placePart('link', line, question, question.type === 'MEASURING' ? formatDistance(nearest.distanceMeters) : undefined));
+    }
+    features.push(placePart('pin', new Point(place), question, nearest.name ?? 'Unnamed'));
+  }
+  if (named) features.push(placePart('pin', new Point(fromLonLat([named.longitude, named.latitude])), question, question.answer?.text));
+  return features;
+}
+
+function placeStyle(feature: FeatureLike): Style {
+  const label = new Text({
+    text: String(feature.get('label') ?? ''),
+    font: '600 12px system-ui, sans-serif',
+    fill: new Fill({ color: '#17232b' }),
+    stroke: new Stroke({ color: '#ffffff', width: 4 }),
+    overflow: true
+  });
+  if (feature.get('placePart') === 'link') {
+    return new Style({ stroke: new Stroke({ color: SEEKER_COLOR, width: 2, lineDash: [1, 6], lineCap: 'round' }), text: label });
+  }
+  label.setOffsetY(-14);
+  return new Style({
+    image: new CircleStyle({ radius: 6, fill: new Fill({ color: SEEKER_COLOR }), stroke: new Stroke({ color: '#ffffff', width: 2 }) }),
+    text: label
+  });
+}
+
+type ThermometerPart = 'point' | 'path' | 'divide';
+
+function lonLat(position: Position): [number, number] {
+  return [position.longitude, position.latitude];
+}
+
+function thermometerPart(part: ThermometerPart, geometry: Geometry, question?: QuestionDTO): Feature<Geometry> {
+  const feature = new Feature(geometry);
+  feature.set('thermometerPart', part);
+  feature.set('question', question);
+  return feature;
+}
+
+/**
+ * A thermometer on the map: the line moved along with its two points and, until answered, the line dividing nearer
+ * the start from nearer the end.
+ */
+export function thermometerFeatures(start: Position, end: Position, question?: QuestionDTO): Feature<Geometry>[] {
+  const from = lonLat(start);
+  const to = lonLat(end);
+  const project = (points: readonly LonLat[]) => points.map(point => fromLonLat([...point]));
+  const divide = question?.answer ? null : perpendicularBisector(from, to);
+  return [
+    ...(divide ? [thermometerPart('divide', new LineString(project(divide)), question)] : []),
+    thermometerPart('path', new LineString(project([from, to])), question),
+    thermometerPart('point', new Point(fromLonLat(from)), question),
+    thermometerPart('point', new Point(fromLonLat(to)), question)
+  ];
+}
+
+/** Dashed where it divides, as what the other questions divide is. */
+export function thermometerStyle(feature: FeatureLike): Style {
+  const question = feature.get('question') as QuestionDTO | undefined;
+  const color = SEEKER_COLOR;
+  switch (feature.get('thermometerPart') as ThermometerPart) {
+    case 'divide':
+      return new Style({
+        stroke: new Stroke({ color, width: 2, lineDash: [8, 6] }),
+        text: question && new Text({
+          text: mapLabel(question),
+          placement: 'line',
+          font: '600 12px system-ui, sans-serif',
+          fill: new Fill({ color: '#17232b' }),
+          stroke: new Stroke({ color: '#ffffff', width: 4 })
+        })
+      });
+    case 'path':
+      return new Style({ stroke: new Stroke({ color, width: 3 }) });
+    case 'point':
+      return new Style({
+        image: new CircleStyle({ radius: 6, fill: new Fill({ color }), stroke: new Stroke({ color: '#ffffff', width: 2 }) })
+      });
+  }
 }
 
 function roleColor(feature: FeatureLike): string {

@@ -1,6 +1,7 @@
 package com.jetlag.game.template;
 
 import com.jetlag.game.Boundaries;
+import com.jetlag.game.GameSettings;
 import com.jetlag.game.RouteSnapshot;
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -18,6 +19,7 @@ public record TemplateDTO(
   List<List<Double>> boundary,
   @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
   List<TemplateRouteDTO> routes,
+  @Schema(requiredMode = Schema.RequiredMode.REQUIRED) GameSettings settings,
   @Schema(requiredMode = Schema.RequiredMode.REQUIRED) Instant createdAt,
   @Schema(requiredMode = Schema.RequiredMode.REQUIRED) Instant updatedAt
 ) {
@@ -41,6 +43,6 @@ public record TemplateDTO(
         currentRouteIds.contains(route.routeId())))
       .toList();
     return new TemplateDTO(template.getId(), template.getName(), Boundaries.toRing(template.getBoundary()), routes,
-      template.getCreatedAt(), template.getUpdatedAt());
+      template.getSettings(), template.getCreatedAt(), template.getUpdatedAt());
   }
 }

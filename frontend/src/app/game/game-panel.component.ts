@@ -15,7 +15,9 @@ import { GameViewComponent } from './game-view.component';
 import { HidingPanelComponent } from './hiding-panel.component';
 import { JoinGameComponent } from './join-game.component';
 import { MyGamesComponent } from './my-games.component';
+import { QuestionPreviewService } from './question-preview.service';
 import { QuestionsPanelComponent } from './questions-panel.component';
+import { ThermometerDraftService } from './thermometer-draft.service';
 import { GameReplayService } from './replay/game-replay.service';
 import { GameTimelineComponent } from './replay/game-timeline.component';
 import { LocationReporter } from './location-reporter.service';
@@ -30,7 +32,8 @@ import { LocationReporter } from './location-reporter.service';
     DistancesPanelComponent, GameViewComponent, HidingPanelComponent, JoinGameComponent, LayersPanelComponent, MeasurePanelComponent,
     MyGamesComponent, QuestionsPanelComponent
   ],
-  providers: [GameSessionService, GameClock, GameReplayService, GameMapService, LocationReporter],
+  providers: [GameSessionService, GameClock, GameReplayService, GameMapService, LocationReporter, ThermometerDraftService,
+    QuestionPreviewService],
   template: `
     @switch (controls.activeMenu()) {
       @case ('game') {

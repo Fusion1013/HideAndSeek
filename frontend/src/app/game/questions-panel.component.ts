@@ -1,13 +1,20 @@
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
-import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 
-import type { QuestionDTO } from '../api/generated';
+import { getDistance } from 'ol/sphere';
+
+import type { AskRequest, Position, QuestionDTO } from '../api/generated';
+import { GeolocationService } from '../position/geolocation.service';
 import { formatAge, formatApproximateDistance } from '../shared/format';
 import { injectFocusAfterRender } from '../shared/focus';
 import { GameSessionService } from './game-session.service';
 import { NearestPlaceComponent } from './nearest-place.component';
-import { answerText, QUESTION_CATEGORIES, QUESTION_KINDS, questionKind, questionText, QuestionType } from './questions';
+import { PhotoAnswerComponent } from './photo-answer.component';
+import { QuestionPhotoComponent } from './question-photo.component';
+import { QuestionPreviewService } from './question-preview.service';
+import { answerText, nearestText, offeredKinds, photoRules, QUESTION_CATEGORIES, QUESTION_KINDS, questionKind, questionText, QuestionType } from './questions';
+import { PathPoint, ThermometerDraftService } from './thermometer-draft.service';
 
 /**
  * The questions tab: seekers ask (one at a time, while seeking), hiders answer the waiting question before its
@@ -15,7 +22,7 @@ import { answerText, QUESTION_CATEGORIES, QUESTION_KINDS, questionKind, question
  */
 @Component({
   selector: 'app-questions-panel',
-  imports: [NearestPlaceComponent, ReactiveFormsModule],
+  imports: [NearestPlaceComponent, PhotoAnswerComponent, QuestionPhotoComponent, ReactiveFormsModule],
   template: `
     @if (pending(); as question) {
       <section class="panel-section pending-question" aria-labelledby="pending-heading">
@@ -24,9 +31,15 @@ import { answerText, QUESTION_CATEGORIES, QUESTION_KINDS, questionKind, question
           <span aria-hidden="true">{{ timeLeft(question) }}</span>
         </h3>
         <p class="question-text">{{ text(question) }}</p>
+        @if (nearest(question); as nearest) {
+          <p class="status-text">{{ nearest }}</p>
+        }
+        @if (rules(question); as rules) {
+          <p class="status-text">{{ rules }}</p>
+        }
         <p class="visually-hidden">Answer by {{ clock(question.deadlineAt) }}.</p>
         @if (isHider()) {
-          @if (question.params.category; as category) {
+          @if (placeCategory(question); as category) {
             <app-nearest-place [category]="category" [canUse]="hasPlaceChoice(question)"
               (use)="placeForm.controls.name.setValue($event)" />
           }
@@ -40,6 +53,8 @@ import { answerText, QUESTION_CATEGORIES, QUESTION_KINDS, questionKind, question
                   </label>
                   <button type="submit" [disabled]="session.busy()">Send</button>
                 </form>
+              } @else if (option.choice === 'PHOTO') {
+                <app-photo-answer [busy]="session.busy()" (send)="answerPhoto(question, $event)" />
               } @else {
                 <button type="button" [disabled]="session.busy()" (click)="answer(question, option.choice)">{{ option.label }}</button>
               }
@@ -56,21 +71,23 @@ import { answerText, QUESTION_CATEGORIES, QUESTION_KINDS, questionKind, question
           <p class="status-text">You can ask once the hiding time is over.</p>
         } @else if (pending()) {
           <p class="status-text">You can ask again once the hiders have answered.</p>
+        } @else if (kinds().length === 0) {
+          <p class="status-text">This game has no questions to ask.</p>
         } @else {
           <fieldset class="question-kinds">
             <legend class="status-text">Kind of question</legend>
-            @for (kind of kinds; track kind.type) {
+            @for (kind of kinds(); track kind.type) {
               <label class="question-kind">
                 <input type="radio" formControlName="type" [value]="kind.type">
                 <span><strong>{{ kind.label }}</strong> <span class="status-text">{{ kind.summary }}</span></span>
               </label>
             }
           </fieldset>
-          @if (chosenKind().needsCategory) {
+          @if (chosenKind().categories.length > 0) {
             <label class="control-field" for="question-category">
-              Place
+              {{ chosenKind().categoryLabel }}
               <select id="question-category" formControlName="category">
-                @for (category of categories; track category.id) {
+                @for (category of chosenKind().categories; track category.id) {
                   <option [value]="category.id">{{ category.name }}</option>
                 }
               </select>
@@ -86,9 +103,44 @@ import { answerText, QUESTION_CATEGORIES, QUESTION_KINDS, questionKind, question
               </select>
             </label>
           }
+          @if (chosenKind().needsPath) {
+            @for (point of pathPoints; track point.id) {
+              <div class="path-point" role="group" [attr.aria-labelledby]="'path-' + point.id">
+                <p [id]="'path-' + point.id" class="status-text">
+                  <strong>{{ point.label }}</strong> {{ pointText(point.id) }}
+                </p>
+                <div class="panel-actions">
+                  <button type="button" [attr.aria-pressed]="draft.picking() === point.id" (click)="togglePicking(point.id)">
+                    {{ draft.picking() === point.id ? 'Cancel picking' : 'Pick on map' }}
+                    <span class="visually-hidden">for {{ point.label }}</span>
+                  </button>
+                  <button type="button" [disabled]="!gpsPosition()" (click)="useMyPosition(point.id)">
+                    My position
+                    <span class="visually-hidden">for {{ point.label }}</span>
+                  </button>
+                </div>
+              </div>
+            }
+            @if (draft.picking()) {
+              <p class="status-text">Click the map to place the point. You can close this panel to see more of the map.</p>
+            } @else if (!draft.complete()) {
+              <p class="status-text">Set both points to ask.</p>
+            }
+          }
           <p class="question-preview">“{{ preview() }}”</p>
+          @if (previewRules(); as rules) {
+            <p class="status-text">{{ rules }}</p>
+          }
+          @if (previewed(); as question) {
+            @if (nearest(question); as nearest) {
+              <p class="status-text">{{ nearest }}</p>
+            }
+            @if (!chosenKind().needsPath && !question.params.origin) {
+              <p class="status-text">Your position is not known yet, so this cannot be shown on the map.</p>
+            }
+          }
           <div class="panel-actions">
-            <button type="submit" class="primary-action" [disabled]="session.busy()">Ask</button>
+            <button type="submit" class="primary-action" [disabled]="session.busy() || !canAsk()">Ask</button>
           </div>
         }
       </form>
@@ -105,7 +157,16 @@ import { answerText, QUESTION_CATEGORIES, QUESTION_KINDS, questionKind, question
         @for (question of answered(); track question.id) {
           <li>
             <p class="question-text">{{ text(question) }}</p>
+            @if (nearest(question); as nearest) {
+              <p class="status-text">{{ nearest }}</p>
+            }
+            @if (rules(question); as rules) {
+              <p class="status-text">{{ rules }}</p>
+            }
             <p [class]="question.status === 'EXPIRED' ? 'answer expired' : 'answer'">{{ answerOf(question) }}</p>
+            @if (question.answer?.choice === 'PHOTO') {
+              <app-question-photo [question]="question" />
+            }
             <p class="status-text">{{ askerName(question) }} · {{ age(question.askedAt) }}</p>
           </li>
         } @empty {
@@ -119,17 +180,25 @@ import { answerText, QUESTION_CATEGORIES, QUESTION_KINDS, questionKind, question
 })
 export class QuestionsPanelComponent {
   protected readonly session = inject(GameSessionService);
+  protected readonly draft = inject(ThermometerDraftService);
+  private readonly mapPreview = inject(QuestionPreviewService);
+  private readonly geolocation = inject(GeolocationService);
   private readonly focus = injectFocusAfterRender();
 
-  protected readonly kinds = QUESTION_KINDS;
-  protected readonly categories = QUESTION_CATEGORIES;
   protected readonly kind = questionKind;
   protected readonly text = questionText;
+  protected readonly nearest = nearestText;
+  protected readonly rules = photoRules;
   protected readonly answerOf = answerText;
   protected readonly distanceLabel = formatApproximateDistance;
+  protected readonly pathPoints: readonly { id: PathPoint; label: string }[] = [
+    { id: 'start', label: 'Start' },
+    { id: 'end', label: 'End' }
+  ];
+  protected readonly gpsPosition = this.geolocation.position;
 
   protected readonly form = new FormGroup({
-    type: new FormControl<QuestionType>('RADAR', { nonNullable: true }),
+    type: new FormControl<QuestionType>(this.draft.selected() ? 'THERMOMETER' : 'RADAR', { nonNullable: true }),
     category: new FormControl(QUESTION_CATEGORIES[0].id, { nonNullable: true }),
     distanceMeters: new FormControl(1000, { nonNullable: true })
   });
@@ -139,52 +208,119 @@ export class QuestionsPanelComponent {
   /** The device's clock, ticking each second for the deadline. */
   private readonly now = signal(Date.now());
 
+  /** What the game's settings leave to ask. */
+  protected readonly kinds = computed(() => offeredKinds(this.session.game()?.settings.questions ?? {}));
   protected readonly isSeeker = computed(() => this.session.me()?.role === 'SEEKER');
   protected readonly isHider = computed(() => this.session.me()?.role === 'HIDER');
   protected readonly pending = this.session.pendingQuestion;
   /** Everything but the waiting question, newest first. */
   protected readonly answered = computed(() => this.session.questions().filter(question => question.status !== 'PENDING').reverse());
 
-  protected readonly chosenKind = computed(() => questionKind(this.formValue().type ?? 'RADAR'));
+  /** The form is there to choose from. */
+  private readonly canChoose = computed(() =>
+    this.isSeeker() && this.session.game()?.status === 'SEEKING' && !this.pending() && this.kinds().length > 0);
+  protected readonly chosenKind = computed(() => {
+    const kinds = this.kinds();
+    return kinds.find(kind => kind.type === this.formValue().type) ?? kinds[0] ?? QUESTION_KINDS[0];
+  });
+  protected readonly previewed = this.mapPreview.question;
+  protected readonly canAsk = computed(() => !this.chosenKind().needsPath || this.draft.complete());
   protected readonly preview = computed(() => {
     const value = this.formValue();
-    return questionText({
-      type: value.type ?? 'RADAR',
-      params: { category: value.category, distanceMeters: value.distanceMeters }
-    });
+    const distanceMeters = this.chosenKind().needsPath ? this.pathDistance() : value.distanceMeters;
+    return questionText({ type: this.chosenKind().type, params: { category: value.category, distanceMeters } });
+  });
+  protected readonly previewRules = computed(() =>
+    photoRules({ type: this.chosenKind().type, params: { category: this.formValue().category } }));
+  private readonly pathDistance = computed(() => {
+    const start = this.draft.start();
+    const end = this.draft.end();
+    return start && end ? getDistance([start.longitude, start.latitude], [end.longitude, end.latitude]) : undefined;
+  });
+
+  /**
+   * What to show on the map: the form's choices, while the form is there. A thermometer's points show themselves, and
+   * a photo is not about anywhere on the map.
+   */
+  private readonly choosing = computed<AskRequest | null>(() => {
+    if (!this.canChoose() || this.chosenKind().needsPath || this.chosenKind().type === 'PHOTO') return null;
+    const { category, distanceMeters } = this.formValue();
+    return this.request(category ?? QUESTION_CATEGORIES[0].id, distanceMeters ?? 0);
   });
 
   /** Said once by screen readers when a question arrives or is answered. */
   protected readonly announcement = computed(() => {
     const pending = this.pending();
-    if (pending) return `New question: ${questionText(pending)}`;
+    if (pending) return `New question: ${questionText(pending)} ${nearestText(pending) ?? photoRules(pending) ?? ''}`.trim();
     const last = this.answered()[0];
     return last ? `${questionText(last)} ${answerText(last)}.` : '';
   });
 
   constructor() {
-    // A kind of question that takes other distances starts on its first one
-    this.form.controls.type.valueChanges.pipe(takeUntilDestroyed()).subscribe(type => {
-      const distances = questionKind(type).distances;
-      if (distances.length > 0 && !distances.includes(this.form.controls.distanceMeters.value)) {
-        this.form.controls.distanceMeters.setValue(distances[0]);
+    // Choices the kind of question does not offer, or that the game's settings rule out, move to its first one.
+    // First among the effects, so what follows only sees choices that can be asked.
+    effect(() => {
+      const kind = this.chosenKind();
+      const { type, category, distanceMeters } = this.formValue();
+      const { controls } = this.form;
+      if (type !== kind.type) controls.type.setValue(kind.type);
+      if (kind.categories.length > 0 && !kind.categories.some(candidate => candidate.id === category)) {
+        controls.category.setValue(kind.categories[0].id);
+      }
+      if (kind.distances.length > 0 && !kind.distances.includes(distanceMeters ?? 0)) {
+        controls.distanceMeters.setValue(kind.distances[0]);
       }
     });
 
+    effect(() => this.mapPreview.request.set(this.choosing()));
+    effect(() => {
+      const selected = this.canChoose() && this.chosenKind().needsPath;
+      this.draft.selected.set(selected);
+      // The next click on the map is not for a question no longer being chosen
+      if (!selected) this.draft.picking.set(null);
+    });
+
     const ticker = setInterval(() => this.now.set(Date.now()), 1000);
-    inject(DestroyRef).onDestroy(() => clearInterval(ticker));
+    inject(DestroyRef).onDestroy(() => {
+      clearInterval(ticker);
+      this.mapPreview.request.set(null);
+    });
   }
 
   protected async ask(): Promise<void> {
-    const { type, category, distanceMeters } = this.form.getRawValue();
-    const kind = questionKind(type);
-    const asked = await this.session.ask({
-      type,
-      ...(kind.needsCategory ? { category } : {}),
-      ...(kind.distances.length > 0 ? { distanceMeters } : {})
-    });
+    const { category, distanceMeters } = this.form.getRawValue();
+    const kind = this.chosenKind();
+    const asked = await this.session.ask(this.request(category, distanceMeters));
+    if (!asked) return;
+    if (kind.needsPath) this.draft.clear();
     // The form gives way to the waiting question
-    if (asked) this.focus('pending-heading');
+    this.focus('pending-heading');
+  }
+
+  /** The chosen kind of question, with only what it needs. */
+  private request(category: string, distanceMeters: number): AskRequest {
+    const kind = this.chosenKind();
+    return {
+      type: kind.type,
+      ...(kind.categories.length > 0 ? { category } : {}),
+      ...(kind.distances.length > 0 ? { distanceMeters } : {}),
+      ...(kind.needsPath ? { start: this.draft.start() ?? undefined, end: this.draft.end() ?? undefined } : {})
+    };
+  }
+
+  protected pointText(which: PathPoint): string {
+    const point: Position | null = this.draft.point(which);
+    return point ? `${point.latitude.toFixed(5)}, ${point.longitude.toFixed(5)}` : 'not set';
+  }
+
+  /** Picking the same point again cancels it. */
+  protected togglePicking(which: PathPoint): void {
+    this.draft.picking.update(picking => picking === which ? null : which);
+  }
+
+  protected useMyPosition(which: PathPoint): void {
+    const position = this.gpsPosition();
+    if (position) this.draft.set(which, { longitude: position.longitude, latitude: position.latitude });
   }
 
   protected async answer(question: QuestionDTO, choice: string): Promise<void> {
@@ -202,6 +338,15 @@ export class QuestionsPanelComponent {
       this.placeForm.reset();
       this.focus('history-heading');
     }
+  }
+
+  protected async answerPhoto(question: QuestionDTO, photo: Blob): Promise<void> {
+    if (await this.session.answerWithPhoto(question.id, photo)) this.focus('history-heading');
+  }
+
+  /** The category of place to help the hiders with; a photo's subject is not one. */
+  protected placeCategory(question: QuestionDTO): string | undefined {
+    return question.type === 'PHOTO' ? undefined : question.params.category;
   }
 
   protected hasPlaceChoice(question: QuestionDTO): boolean {

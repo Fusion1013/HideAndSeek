@@ -12,6 +12,8 @@ import { VehicleLayerService } from '../layer/vehicle-layer.service';
 import { ModeService } from '../mode/mode.service';
 import { ReachabilityRouteService } from '../shape/reachability-route.service';
 import { ReachabilityService } from '../shape/reachability.service';
+import { ShapeMenuComponent } from '../shape/shape-menu.component';
+import { ShapeService } from '../shape/shape.service';
 import { StationTimetableService } from '../station/station-timetable.service';
 import { RouteCatalogService } from '../transit/route-catalog.service';
 import { RouteSelectionService } from '../transit/route-selection.service';
@@ -28,7 +30,7 @@ import { MapService } from './map.service';
   selector: 'app-map',
   templateUrl: './map.component.html',
   styleUrl: './map.component.scss',
-  imports: [ControlsPanelComponent, NgComponentOutlet, RouterOutlet],
+  imports: [ControlsPanelComponent, NgComponentOutlet, RouterOutlet, ShapeMenuComponent],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MapComponent {
@@ -45,6 +47,7 @@ export class MapComponent {
   protected readonly routeCatalog = inject(RouteCatalogService);
   protected readonly routeSelection = inject(RouteSelectionService);
   protected readonly stationTimetable = inject(StationTimetableService);
+  protected readonly shapes = inject(ShapeService);
 
   /** The map the click handler is attached to, so it can be detached from that same map. */
   private boundMap: ReturnType<MapService['getMap']> = null;

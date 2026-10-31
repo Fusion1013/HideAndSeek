@@ -21,4 +21,10 @@
 
 		<router-outlet />
 	</app-controls-panel>
+
+	@if (shapes.selectedShape()) {
+		<div class="map-corner" [class.above-overlay]="mapOverlay.overlay()">
+			<app-shape-menu />
+		</div>
+	}
 </div>

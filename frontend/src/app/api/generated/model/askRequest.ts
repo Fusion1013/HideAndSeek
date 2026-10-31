@@ -7,18 +7,27 @@
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
+import { Position } from './position';
 
 
 export interface AskRequest { 
     type: AskRequest.TypeEnum;
     /**
-     * For matching, measuring and tentacles
+     * For matching, measuring, tentacles and photo
      */
     category?: string;
     /**
-     * In metres, for radar, thermometer and tentacles
+     * In metres, for radar and tentacles
      */
     distanceMeters?: number;
+    /**
+     * Where the seekers started moving, for thermometer
+     */
+    start?: Position;
+    /**
+     * Where the seekers stopped moving, for thermometer
+     */
+    end?: Position;
 }
 export namespace AskRequest {
     export const TypeEnum = {
@@ -27,6 +36,7 @@ export namespace AskRequest {
         Radar: 'RADAR',
         Thermometer: 'THERMOMETER',
         Tentacles: 'TENTACLES',
+        Photo: 'PHOTO',
     } as const;
     export type TypeEnum = typeof TypeEnum[keyof typeof TypeEnum];
 }

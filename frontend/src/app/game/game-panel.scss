@@ -252,6 +252,16 @@
   }
 }
 
+// A point of a thermometer question
+.path-point {
+  display: grid;
+  gap: 4px;
+
+  p {
+    margin: 0;
+  }
+}
+
 .question-preview {
   margin: 0;
   color: var(--control-ink);

@@ -24,6 +24,7 @@ function template(overrides: Partial<TemplateDTO> = {}): TemplateDTO {
     name: 'Göteborg',
     boundary: RING,
     routes: [{ routeId: 'r6', routeShortName: '6', agencyName: 'Västtrafik', routeType: '900', available: true }],
+    settings: { questions: {} },
     createdAt: '2026-10-25T10:00:00Z',
     updatedAt: '2026-10-25T10:00:00Z',
     ...overrides
@@ -97,7 +98,7 @@ describe('TemplateEditorService', () => {
 
     editor.save();
 
-    expect(templateApi.createTemplate).toHaveBeenCalledWith({ name: 'Göteborg', boundary: RING, routeIds: ['r6'] });
+    expect(templateApi.createTemplate).toHaveBeenCalledWith({ name: 'Göteborg', boundary: RING, routeIds: ['r6'], settings: { questions: {} } });
     expect(tokens.get('templates', 't1')).toBe('owner-token');
     expect(navigate).toHaveBeenCalledWith(['/create', 't1'], expect.objectContaining({ replaceUrl: true }));
   });
@@ -116,9 +117,41 @@ describe('TemplateEditorService', () => {
     expect(editor.dirty()).toBe(true);
     editor.save();
 
-    expect(templateApi.updateTemplate).toHaveBeenCalledWith('t1', { name: 'Centrum', boundary: RING, routeIds: ['r6'] });
+    expect(templateApi.updateTemplate).toHaveBeenCalledWith('t1', { name: 'Centrum', boundary: RING, routeIds: ['r6'], settings: { questions: {} } });
     expect(editor.notice()).toBe('Changes saved.');
     expect(editor.dirty()).toBe(false);
+  });
+
+  it('loads and saves the question settings, marking them as changes', () => {
+    const radar = { disabled: false, answerMinutes: 10, disabledCategories: [], disabledDistances: [500] };
+    templateApi.getTemplate.mockReturnValue(of(template({ settings: { questions: { RADAR: radar } } })));
+    tokens.set('templates', 't1', 'owner-token');
+    editor.load('t1');
+    expect(editor.questions()).toEqual({ RADAR: radar });
+
+    editor.setQuestionRules('MATCHING', { disabled: true });
+    expect(editor.dirty()).toBe(true);
+    editor.save();
+
+    expect(templateApi.updateTemplate).toHaveBeenCalledWith('t1', expect.objectContaining({
+      settings: { questions: { RADAR: radar, MATCHING: { disabled: true, disabledCategories: [], disabledDistances: [] } } }
+    }));
+  });
+
+  it('does not save settings that leave a kind of question, or the game, nothing to ask', () => {
+    editor.name.setValue('Göteborg');
+    editor.setArea(AREA);
+
+    editor.setQuestionRules('RADAR', { disabledDistances: [500, 1000, 2000, 5000, 10_000, 25_000] });
+    editor.save();
+    expect(editor.error()).toBe('Leave Radar something to choose from, or turn it off.');
+
+    for (const type of ['MATCHING', 'MEASURING', 'RADAR', 'THERMOMETER', 'TENTACLES', 'PHOTO'] as const) {
+      editor.setQuestionRules(type, { disabled: true });
+    }
+    editor.save();
+    expect(editor.error()).toBe('Leave at least one kind of question available.');
+    expect(templateApi.createTemplate).not.toHaveBeenCalled();
   });
 
   it('only shows a template whose owner token it does not hold', () => {

@@ -1,6 +1,7 @@
 package com.jetlag.game;
 
 import com.jetlag.game.auth.AccessTokens;
+import com.jetlag.game.question.QuestionRules;
 import com.jetlag.game.session.GameEntity;
 import com.jetlag.game.session.GameOutcome;
 import com.jetlag.game.session.GamePlayerEntity;
@@ -27,6 +28,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -70,7 +72,8 @@ class GameSchemaTest {
     GameTemplateEntity template = new GameTemplateEntity("Göteborg", box(11.9, 57.6, 12.1, 57.8),
       AccessTokens.issue().hash());
     template.setRoutes(Set.of(route));
-    template.setSettings(Map.of("hidingMinutes", 45));
+    GameSettings settings = new GameSettings(Map.of("RADAR", new QuestionRules(false, 10, List.of(), List.of(500))));
+    template.setSettings(settings);
     templates.save(template);
 
     GameEntity game = games.save(new GameEntity(template.getId(), "ABC234", template.getName(), 30,
@@ -82,7 +85,7 @@ class GameSchemaTest {
 
     GameTemplateEntity storedTemplate = templates.findById(template.getId()).orElseThrow();
     assertThat(storedTemplate.getRoutes()).containsExactly(route);
-    assertThat(storedTemplate.getSettings()).containsEntry("hidingMinutes", 45);
+    assertThat(storedTemplate.getSettings()).isEqualTo(settings);
     assertThat(storedTemplate.getBoundary().equalsExact(template.getBoundary())).isTrue();
     assertThat(storedTemplate.getCreatedAt()).isNotNull();
 
@@ -100,14 +103,14 @@ class GameSchemaTest {
 
   @Test
   void invitesCodesAreReusableOnlyOnceTheGameIsFinished() {
-    GameEntity finished = games.save(new GameEntity(null, "SAME22", "Same", 30, box(0, 0, 1, 1), Map.of(), Set.of()));
+    GameEntity finished = games.save(new GameEntity(null, "SAME22", "Same", 30, box(0, 0, 1, 1), GameSettings.DEFAULTS, Set.of()));
     entityManager.flush();
     finished.finish(Instant.now(), GameOutcome.ENDED);
     entityManager.flush();
-    games.save(new GameEntity(null, "SAME22", "Same", 30, box(0, 0, 1, 1), Map.of(), Set.of()));
+    games.save(new GameEntity(null, "SAME22", "Same", 30, box(0, 0, 1, 1), GameSettings.DEFAULTS, Set.of()));
     entityManager.flush();
 
-    assertThatThrownBy(() -> games.saveAndFlush(new GameEntity(null, "SAME22", "Same", 30, box(0, 0, 1, 1), Map.of(), Set.of())))
+    assertThatThrownBy(() -> games.saveAndFlush(new GameEntity(null, "SAME22", "Same", 30, box(0, 0, 1, 1), GameSettings.DEFAULTS, Set.of())))
       .isInstanceOf(DataIntegrityViolationException.class);
   }
 

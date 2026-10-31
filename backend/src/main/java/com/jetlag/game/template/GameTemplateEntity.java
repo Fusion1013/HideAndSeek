@@ -1,5 +1,6 @@
 package com.jetlag.game.template;
 
+import com.jetlag.game.GameSettings;
 import com.jetlag.game.RouteSnapshot;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -9,13 +10,14 @@ import org.hibernate.type.SqlTypes;
 import org.locationtech.jts.geom.Polygon;
 
 import java.time.Instant;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-/** The reusable setup of a game: where it is played and which routes count. Created in Create mode. */
+/**
+ * The reusable setup of a game: where it is played, which routes count and which questions may be asked. Created in
+ * Create mode.
+ */
 @Entity
 @Table(name = "game_template")
 public class GameTemplateEntity {
@@ -32,7 +34,7 @@ public class GameTemplateEntity {
 
   @JdbcTypeCode(SqlTypes.JSON)
   @Column(nullable = false, columnDefinition = "jsonb")
-  private Map<String, Object> settings = new HashMap<>();
+  private GameSettings settings = GameSettings.DEFAULTS;
 
   /** SHA-256 of the token that may edit the template; the token itself is only ever sent to its creator. */
   @Column(name = "owner_token_hash", nullable = false)
@@ -79,11 +81,11 @@ public class GameTemplateEntity {
     this.boundary = boundary;
   }
 
-  public Map<String, Object> getSettings() {
+  public GameSettings getSettings() {
     return settings;
   }
 
-  public void setSettings(Map<String, Object> settings) {
+  public void setSettings(GameSettings settings) {
     this.settings = settings;
   }
 

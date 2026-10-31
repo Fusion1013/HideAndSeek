@@ -528,7 +528,8 @@ describe('MapComponent', () => {
 
   it('selects every route serving a stop inside the current view', async () => {
     const view = new View({ center: [0, 0], resolution: 10 });
-    vi.spyOn(TestBed.inject(MapService), 'getMap').mockReturnValue({ getSize: () => [100, 100], getView: () => view } as never);
+    vi.spyOn(TestBed.inject(MapService), 'getMap')
+      .mockReturnValue({ getSize: () => [100, 100], getView: () => view, on: vi.fn(), un: vi.fn() } as never);
     const getRouteIdsWithinBounds = vi.spyOn(TestBed.inject(RouteControllerService), 'getRouteIdsWithinBounds')
       .mockReturnValue(of(['visible-route']) as never);
     const getStopIdsForRoutes = vi.spyOn(TestBed.inject(RouteControllerService), 'getStopIdsForRoutes')

@@ -18,8 +18,8 @@ export class MapService {
       target,
       layers: [],
       view: new View({
-        center: fromLonLat([12.0799, 57.7206]),
-        zoom: 11
+        center: fromLonLat([14.5799, 61.7206]),
+        zoom: 5
       })
     });
 

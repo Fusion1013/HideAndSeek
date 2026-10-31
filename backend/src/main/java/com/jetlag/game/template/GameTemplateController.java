@@ -48,7 +48,7 @@ public class GameTemplateController {
     description = "Returns the template and its owner token; the token is not sent again.",
     responses = {
       @ApiResponse(responseCode = "201", description = "The new template and its owner token"),
-      @ApiResponse(responseCode = "400", description = "Missing name, unusable area, or unknown route")
+      @ApiResponse(responseCode = "400", description = "Missing name, unusable area or settings, or unknown route")
     }
   )
   public CreatedTemplateDTO createTemplate(@RequestBody TemplateRequest request) {
@@ -98,11 +98,11 @@ public class GameTemplateController {
   @SecurityRequirement(name = GameAuthConfig.TEMPLATE_OWNER_TOKEN)
   @Operation(
     operationId = "updateTemplate",
-    summary = "Replace a game template's name, area and routes",
+    summary = "Replace a game template's name, area, routes and settings",
     description = "Games already created from the template keep their own copy and do not change.",
     responses = {
       @ApiResponse(responseCode = "200", description = "The updated template"),
-      @ApiResponse(responseCode = "400", description = "Missing name, unusable area, or unknown route"),
+      @ApiResponse(responseCode = "400", description = "Missing name, unusable area or settings, or unknown route"),
       @ApiResponse(responseCode = "401", description = "No owner token"),
       @ApiResponse(responseCode = "403", description = "Not this template's owner token"),
       @ApiResponse(responseCode = "404", description = "No such template")

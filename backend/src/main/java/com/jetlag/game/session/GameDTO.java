@@ -1,6 +1,7 @@
 package com.jetlag.game.session;
 
 import com.jetlag.game.Boundaries;
+import com.jetlag.game.GameSettings;
 import com.jetlag.game.RouteSnapshot;
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -28,6 +29,7 @@ public record GameDTO(
     requiredMode = Schema.RequiredMode.REQUIRED)
   List<List<Double>> boundary,
   @Schema(requiredMode = Schema.RequiredMode.REQUIRED) List<GameRouteDTO> routes,
+  @Schema(requiredMode = Schema.RequiredMode.REQUIRED) GameSettings settings,
   @Schema(description = "How many stations the hiders can choose from", requiredMode = Schema.RequiredMode.REQUIRED)
   int stationCount,
   @Schema(description = "In the order they joined", requiredMode = Schema.RequiredMode.REQUIRED)
@@ -61,6 +63,7 @@ public record GameDTO(
     return new GameDTO(game.getId(), game.getName(), game.getInviteCode(), game.getStatus(), game.getHidingMinutes(),
       game.getHidingStartedAt(), game.getHidingEndsAt(), game.getSeekingStartedAt(), game.getFinishedAt(),
       game.getOutcome(),
-      Boundaries.toRing(game.getBoundary()), routes, stationCount, players.stream().map(PlayerDTO::from).toList());
+      Boundaries.toRing(game.getBoundary()), routes, game.getSettings(), stationCount,
+      players.stream().map(PlayerDTO::from).toList());
   }
 }

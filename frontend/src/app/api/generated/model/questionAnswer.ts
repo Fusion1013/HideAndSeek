@@ -7,16 +7,21 @@
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
+import { Position } from './position';
 
 
 export interface QuestionAnswer { 
     /**
-     * YES, NO, CLOSER, FURTHER, HOTTER, COLDER, PLACE or NONE, as the question type allows
+     * YES, NO, CLOSER, FURTHER, HOTTER, COLDER, PLACE, NONE or PHOTO, as the question type allows
      */
     choice: string;
     /**
      * The place\'s name, for PLACE
      */
     text?: string;
+    /**
+     * Where the place named is; null if no place of the category has that name
+     */
+    position?: Position;
 }
 

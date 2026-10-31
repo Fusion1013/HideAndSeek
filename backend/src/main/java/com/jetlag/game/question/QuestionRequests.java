@@ -10,8 +10,10 @@ public final class QuestionRequests {
 
   public record AskRequest(
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED) QuestionType type,
-    @Schema(description = "For matching, measuring and tentacles") String category,
-    @Schema(description = "In metres, for radar, thermometer and tentacles") Integer distanceMeters
+    @Schema(description = "For matching, measuring, tentacles and photo") String category,
+    @Schema(description = "In metres, for radar and tentacles") Integer distanceMeters,
+    @Schema(description = "Where the seekers started moving, for thermometer") QuestionParams.Position start,
+    @Schema(description = "Where the seekers stopped moving, for thermometer") QuestionParams.Position end
   ) {
   }
 

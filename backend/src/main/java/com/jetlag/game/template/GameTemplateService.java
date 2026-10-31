@@ -1,9 +1,13 @@
 package com.jetlag.game.template;
 
 import com.jetlag.game.Boundaries;
+import com.jetlag.game.GameSettings;
 import com.jetlag.game.RouteSnapshot;
 import com.jetlag.game.auth.AccessTokens;
 import com.jetlag.game.auth.InvalidTokenException;
+import com.jetlag.game.question.QuestionRules;
+import com.jetlag.game.question.QuestionService;
+import com.jetlag.game.question.QuestionType;
 import com.jetlag.game.session.GameStations;
 import com.jetlag.game.session.StationDTO;
 import com.jetlag.transit.model.AgencyRouteEntity;
@@ -13,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -30,6 +35,8 @@ public class GameTemplateService {
   /** Stays well below PostgreSQL's 65 535 parameters when the routes are looked up. */
   static final int MAX_ROUTES = 5000;
   static final int MAX_LISTED = 100;
+  /** Of the categories, or of the distances, of one kind of question. */
+  static final int MAX_DISABLED = 100;
 
   private final GameTemplateRepository templateRepository;
   private final AgencyRouteRepository agencyRouteRepository;
@@ -48,6 +55,7 @@ public class GameTemplateService {
     GameTemplateEntity template = new GameTemplateEntity(validName(request.name()),
       Boundaries.toPolygon(request.boundary()), token.hash());
     template.setRoutes(snapshotRoutes(request.routeIds(), Set.of()));
+    template.setSettings(validSettings(request.settings()));
     templateRepository.saveAndFlush(template);
     return new CreatedTemplateDTO(toDTO(template), token.token());
   }
@@ -81,6 +89,7 @@ public class GameTemplateService {
     template.setName(validName(request.name()));
     template.setBoundary(Boundaries.toPolygon(request.boundary()));
     template.setRoutes(snapshotRoutes(request.routeIds(), template.getRoutes()));
+    template.setSettings(validSettings(request.settings()));
     templateRepository.saveAndFlush(template);
     return toDTO(template);
   }
@@ -114,6 +123,31 @@ public class GameTemplateService {
         "The name is longer than " + TemplateRequest.MAX_NAME_LENGTH + " characters");
     }
     return trimmed;
+  }
+
+  /** Keeps the kinds of question that exist, so one that has since gone does not stand in the way of saving. */
+  private static GameSettings validSettings(GameSettings settings) {
+    if (settings == null) return GameSettings.DEFAULTS;
+    if (Arrays.stream(QuestionType.values()).allMatch(type -> settings.rules(type).disabled())) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Leave at least one kind of question available");
+    }
+    return new GameSettings(Arrays.stream(QuestionType.values())
+      .filter(type -> settings.questions().containsKey(type.name()))
+      .collect(Collectors.toMap(QuestionType::name, type -> validRules(settings.rules(type)))));
+  }
+
+  private static QuestionRules validRules(QuestionRules rules) {
+    Integer minutes = rules.answerMinutes();
+    if (minutes != null && (minutes < QuestionRules.MIN_ANSWER_MINUTES || minutes > QuestionRules.MAX_ANSWER_MINUTES)) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The time to answer must be "
+        + QuestionRules.MIN_ANSWER_MINUTES + " to " + QuestionRules.MAX_ANSWER_MINUTES + " minutes");
+    }
+    if (rules.disabledCategories().size() > MAX_DISABLED || rules.disabledDistances().size() > MAX_DISABLED) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "At most " + MAX_DISABLED + " disabled choices");
+    }
+    rules.disabledCategories().forEach(QuestionService::validCategory);
+    rules.disabledDistances().forEach(QuestionService::validDistance);
+    return rules;
   }
 
   /**

@@ -1,5 +1,6 @@
 package com.jetlag.game.session;
 
+import com.jetlag.game.GameSettings;
 import com.jetlag.game.RouteSnapshot;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -9,9 +10,7 @@ import org.locationtech.jts.geom.Polygon;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -51,7 +50,7 @@ public class GameEntity {
 
   @JdbcTypeCode(SqlTypes.JSON)
   @Column(nullable = false, columnDefinition = "jsonb")
-  private Map<String, Object> settings = new HashMap<>();
+  private GameSettings settings = GameSettings.DEFAULTS;
 
   @ElementCollection
   @CollectionTable(name = "game_route", joinColumns = @JoinColumn(name = "game_id"))
@@ -85,13 +84,13 @@ public class GameEntity {
   }
 
   public GameEntity(UUID templateId, String inviteCode, String name, int hidingMinutes, Polygon boundary,
-                    Map<String, Object> settings, Set<RouteSnapshot> routes) {
+                    GameSettings settings, Set<RouteSnapshot> routes) {
     this.templateId = templateId;
     this.inviteCode = inviteCode;
     this.name = name;
     this.hidingMinutes = hidingMinutes;
     this.boundary = boundary;
-    this.settings = new HashMap<>(settings);
+    this.settings = settings;
     this.routes = new HashSet<>(routes);
   }
 
@@ -147,7 +146,7 @@ public class GameEntity {
     return boundary;
   }
 
-  public Map<String, Object> getSettings() {
+  public GameSettings getSettings() {
     return settings;
   }
 

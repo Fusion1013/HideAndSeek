@@ -17,7 +17,7 @@ export const TIMELINE: GameTimelineDTO = {
   game: {
     id: 'g1', name: 'Göteborg', inviteCode: 'ABC234', status: 'FINISHED', outcome: 'FOUND', hidingMinutes: 30,
     hidingStartedAt: at(0), hidingEndsAt: at(30), seekingStartedAt: at(30), finishedAt: at(60),
-    boundary: [], routes: [], stationCount: 2,
+    boundary: [], routes: [], settings: { questions: {} }, stationCount: 2,
     players: [
       { id: 'p1', displayName: 'Ada', host: true, role: 'HIDER' },
       { id: 'p2', displayName: 'Grace', host: false, role: 'SEEKER' }

@@ -9,6 +9,7 @@
  */
 import { PlayerDTO } from './playerDTO';
 import { GameRouteDTO } from './gameRouteDTO';
+import { GameSettings } from './gameSettings';
 
 
 export interface GameDTO { 
@@ -33,6 +34,7 @@ export interface GameDTO {
      */
     boundary: Array<Array<number>>;
     routes: Array<GameRouteDTO>;
+    settings: GameSettings;
     /**
      * How many stations the hiders can choose from
      */

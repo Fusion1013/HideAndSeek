@@ -7,6 +7,7 @@
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
+import { GameSettings } from './gameSettings';
 import { TemplateRouteDTO } from './templateRouteDTO';
 
 
@@ -18,6 +19,7 @@ export interface TemplateDTO {
      */
     boundary: Array<Array<number>>;
     routes: Array<TemplateRouteDTO>;
+    settings: GameSettings;
     createdAt: string;
     updatedAt: string;
 }

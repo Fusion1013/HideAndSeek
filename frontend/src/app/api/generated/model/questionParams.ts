@@ -8,11 +8,12 @@
  * Do not edit the class manually.
  */
 import { Position } from './position';
+import { NearestPlace } from './nearestPlace';
 
 
 export interface QuestionParams { 
     /**
-     * The category of place, for matching, measuring and tentacles (e.g. museums, game_station)
+     * The category of place, for matching, measuring and tentacles (e.g. museums, game_station), or what to photograph, for photo (e.g. tree)
      */
     category?: string;
     /**
@@ -23,5 +24,17 @@ export interface QuestionParams {
      * Where the asking seeker last reported being; null if they had not
      */
     origin?: Position;
+    /**
+     * Where the seekers started moving, for thermometer
+     */
+    start?: Position;
+    /**
+     * Where the seekers stopped moving, for thermometer
+     */
+    end?: Position;
+    /**
+     * The place of the category nearest the asking seeker when asked, for matching and measuring; null if their position was not known or the category has no places
+     */
+    nearest?: NearestPlace;
 }
 
