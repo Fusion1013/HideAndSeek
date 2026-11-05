@@ -2,9 +2,11 @@ import { computed, DestroyRef, DOCUMENT, inject, Injectable, signal } from '@ang
 import { rxResource, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Observable, Subscription } from 'rxjs';
 
-import { GameControllerService, GamePlayControllerService, QuestionControllerService } from '../api/generated';
+import {
+  GameControllerService, GamePlayControllerService, PlayerAccessControllerService, QuestionControllerService
+} from '../api/generated';
 import type {
-  AnswerRequest, AskRequest, GameDTO, HidingStationDTO, PlayerDTO, PlayerGameDTO, QuestionDTO, SeekerLocationDTO, StationDTO
+  AnswerRequest, AskRequest, GameDTO, HidingStationDTO, JoinedGameDTO, PlayerDTO, PlayerGameDTO, QuestionDTO, SeekerLocationDTO, StationDTO
 } from '../api/generated';
 import { AccessTokenStore } from '../auth/access-token.store';
 import { problemDetail } from '../shared/problem-detail';
@@ -32,12 +34,16 @@ export const STREAM_SILENCE_MS = 45_000;
  * One game, as the player on this page sees it, kept up to date by the game's event stream, with the host's
  * actions. One per game page (provided by the page). A lost stream is opened again with the ID of the last event
  * received, so the server sends what was missed.
+ *
+ * A browser that has lost its token (or holds one that no longer works) asks the server once for its place back,
+ * from the copy the server keeps in the browser's cookie. A rejoin link from the host gets it back on any browser.
  */
 @Injectable()
 export class GameSessionService {
   private readonly gameApi = inject(GameControllerService);
   private readonly playApi = inject(GamePlayControllerService);
   private readonly questionApi = inject(QuestionControllerService);
+  private readonly accessApi = inject(PlayerAccessControllerService);
   private readonly tokens = inject(AccessTokenStore);
   private readonly events = inject(GameEventStream);
   private readonly destroyRef = inject(DestroyRef);
@@ -45,6 +51,10 @@ export class GameSessionService {
 
   private gameId: string | null = null;
   private stream: Subscription | null = null;
+  /** Getting the player's place back, from the cookie or a rejoin link. */
+  private recovery: Subscription | null = null;
+  /** The cookie is asked once per game followed, so a cookie that does not work never loops. */
+  private restoreTried = false;
   private lastEventId: string | null = null;
   private failedAttempts = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | undefined;
@@ -61,6 +71,8 @@ export class GameSessionService {
   /** A host action in progress. */
   readonly busy = signal(false);
   readonly error = signal('');
+  /** Why the rejoin link this page was opened with did not work. */
+  readonly rejoinError = signal('');
 
   /** Hiders only: where they hide, once chosen. */
   readonly hidingStation = signal<HidingStationDTO | null>(null);
@@ -115,18 +127,22 @@ export class GameSessionService {
     });
   }
 
-  /** Starts following the game; stops once it is finished. */
-  follow(gameId: string): void {
+  /** Starts following the game, first rejoining with the code from a rejoin link if given; stops once it is finished. */
+  follow(gameId: string, rejoinCode?: string): void {
     this.close();
     this.gameId = gameId;
     this.lastEventId = null;
     this.failedAttempts = 0;
-    if (!this.tokens.get('games', gameId)) {
-      this.access.set('no-token');
-      this.loading.set(false);
+    this.restoreTried = false;
+    this.rejoinError.set('');
+    if (rejoinCode) {
+      this.claim(this.accessApi.rejoinGame(gameId, { code: rejoinCode }), error => {
+        this.rejoinError.set(problemDetail(error) ?? 'The rejoin link did not work. Check the connection and try again.');
+        this.begin();
+      });
       return;
     }
-    this.connect();
+    this.begin();
   }
 
   /** The server's idea of now, in milliseconds since the epoch. */
@@ -190,6 +206,40 @@ export class GameSessionService {
         this.error.set(problemDetail(error) ?? 'The station could not be chosen. Check the connection and try again.');
       }
     });
+  }
+
+  /** Follows with the token this browser holds, or first asks for its place back. */
+  private begin(): void {
+    if (this.gameId && this.tokens.get('games', this.gameId)) this.connect();
+    else this.restore('no-token');
+  }
+
+  /** Asks the server for this browser's place back, from its cookie, once; without one, access is as given. */
+  private restore(otherwise: GameAccess): void {
+    if (this.restoreTried || !this.gameId) {
+      this.deny(otherwise);
+      return;
+    }
+    this.restoreTried = true;
+    this.claim(this.accessApi.restorePlayer(this.gameId), () => this.deny(otherwise));
+  }
+
+  /** Keeps the token the request answers with, and follows the game with it. */
+  private claim(request: Observable<JoinedGameDTO>, failed: (error: unknown) => void): void {
+    this.recovery?.unsubscribe();
+    this.recovery = request.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: ({ gameId, playerToken }) => {
+        this.tokens.set('games', gameId, playerToken);
+        if (gameId === this.gameId) this.connect();
+      },
+      error: failed
+    });
+  }
+
+  private deny(access: GameAccess): void {
+    this.close();
+    this.access.set(access);
+    this.loading.set(false);
   }
 
   private connect(): void {
@@ -258,10 +308,14 @@ export class GameSessionService {
   private lost(error: unknown): void {
     clearTimeout(this.silenceTimer);
     const status = error instanceof GameStreamError ? error.status : undefined;
-    if (status === 401 || status === 403 || status === 404) {
-      this.access.set(status === 404 ? 'not-found' : 'refused');
-      this.loading.set(false);
+    if (status === 401) {
+      // The token no longer works; the cookie may hold a newer one, e.g. from another tab that got the place back
       this.close();
+      this.restore('refused');
+      return;
+    }
+    if (status === 403 || status === 404) {
+      this.deny(status === 404 ? 'not-found' : 'refused');
       return;
     }
     if (!this.game()) {
@@ -275,6 +329,8 @@ export class GameSessionService {
   }
 
   private close(): void {
+    this.recovery?.unsubscribe();
+    this.recovery = null;
     clearTimeout(this.reconnectTimer);
     clearTimeout(this.silenceTimer);
     this.stream?.unsubscribe();

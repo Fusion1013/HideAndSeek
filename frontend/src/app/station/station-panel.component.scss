@@ -61,6 +61,7 @@
   th {
     position: sticky;
     top: 0;
+    z-index: 1;
     background: var(--control-surface);
     color: var(--control-muted);
     font-weight: 600;
@@ -87,6 +88,14 @@
 
   .stop-time-upcoming td:first-child {
     color: var(--control-muted);
+  }
+
+  // Positioned so the hidden text stays in its row, and does not stretch the panel around the scrolling table
+  .stop-time-note {
+    position: relative;
+    display: block;
+    font-size: 11px;
+    font-weight: 400;
   }
 }
 

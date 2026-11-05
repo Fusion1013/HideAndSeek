@@ -138,6 +138,24 @@ describe('TemplateEditorService', () => {
     }));
   });
 
+  it('loads and saves the station filter, marking it as a change, and clears it', () => {
+    templateApi.getTemplate.mockReturnValue(of(template({ settings: { questions: {}, maxStationGapMinutes: 20 } })));
+    tokens.set('templates', 't1', 'owner-token');
+    editor.load('t1');
+    expect(editor.maxStationGapMinutes()).toBe(20);
+    expect(editor.dirty()).toBe(false);
+
+    editor.setMaxStationGapMinutes(undefined);
+    expect(editor.dirty()).toBe(true);
+    editor.save();
+    expect(templateApi.updateTemplate.mock.calls[0][1].settings.maxStationGapMinutes).toBeUndefined();
+
+    // As the backend sends a template with no filter
+    templateApi.getTemplate.mockReturnValue(of(template({ settings: { questions: {}, maxStationGapMinutes: null as unknown as undefined } })));
+    editor.load('t1');
+    expect(editor.maxStationGapMinutes()).toBeUndefined();
+  });
+
   it('does not save settings that leave a kind of question, or the game, nothing to ask', () => {
     editor.name.setValue('Göteborg');
     editor.setArea(AREA);

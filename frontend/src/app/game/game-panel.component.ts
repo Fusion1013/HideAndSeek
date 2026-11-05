@@ -1,4 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, Injector, input, untracked } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router } from '@angular/router';
 
 import { ControlsPanelService } from '../controls/controls-panel.service';
 import { ClosestLocationsService } from '../distance/closest-locations.service';
@@ -17,6 +19,7 @@ import { JoinGameComponent } from './join-game.component';
 import { MyGamesComponent } from './my-games.component';
 import { QuestionPreviewService } from './question-preview.service';
 import { QuestionsPanelComponent } from './questions-panel.component';
+import { rejoinCode } from './rejoin-link.component';
 import { ThermometerDraftService } from './thermometer-draft.service';
 import { GameReplayService } from './replay/game-replay.service';
 import { GameTimelineComponent } from './replay/game-timeline.component';
@@ -140,11 +143,20 @@ export default class GamePanelComponent {
       closest.positionSource.set(overviewSource);
     });
 
+    // A rejoin link from the host, opened afresh or on the game's page already open: its code works once, so it
+    // leaves the address (and the history) at once
+    const route = inject(ActivatedRoute);
+    const router = inject(Router);
+    const fragment = toSignal(route.fragment, { initialValue: route.snapshot.fragment });
+    let followed: string | undefined;
     effect(() => {
       const gameId = this.gameId();
-      if (!gameId) return;
+      const code = rejoinCode(fragment());
+      if (!gameId || (gameId === followed && !code)) return;
+      followed = gameId;
       untracked(() => {
-        session.follow(gameId);
+        if (code) void router.navigate([], { relativeTo: route, replaceUrl: true });
+        session.follow(gameId, code);
         // Created here rather than by a tab, so the map and the position sharing run whichever tab is open
         injector.get(GameMapService);
         injector.get(LocationReporter);

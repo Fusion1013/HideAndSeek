@@ -83,8 +83,8 @@ public class GameTemplateController {
   @Operation(
     operationId = "getTemplateStations",
     summary = "Get the stations a game from this template would have",
-    description = "Served by the template's routes and inside its area, as the timetable is now. A game copies them "
-      + "when it is created.",
+    description = "Served by the template's routes, often enough if its settings ask for that, and inside its area, "
+      + "as the timetable is now. A game copies them when it is created.",
     responses = {
       @ApiResponse(responseCode = "200", description = "The stations, by name"),
       @ApiResponse(responseCode = "404", description = "No such template")

@@ -60,6 +60,19 @@ describe('StationTimetableService', () => {
     expect(setHighlightedRouteIds).toHaveBeenLastCalledWith(['route-of-trip-late', 'route-of-trip-early']);
   });
 
+  it('carries each stop time\'s pickup and drop off rules onto its row and the key', async () => {
+    stopTimesByStop['stop-1'] = of([{ tripId: 'trip-1', stopSequence: 1, arrivalTime: '08:00:00', pickupType: 2, dropOffType: 1 }]);
+    service.select({ stopId: 'stop-1' });
+    await settle(() => expect(service.rows()).toHaveLength(1));
+
+    expect(service.rows()[0].pickupNote?.label).toBe('Phone agency');
+    expect(service.rows()[0].dropOffNote?.label).toBe('No drop off');
+    expect(service.serviceLegend().map(entry => entry.description)).toEqual([
+      'No drop off available',
+      'Must phone agency to arrange pickup'
+    ]);
+  });
+
   it('ignores a slow timetable for a station that is no longer selected', async () => {
     const slow = new Subject<unknown>();
     stopTimesByStop['stop-1'] = slow;

@@ -80,6 +80,18 @@ public class CalendarEntity {
     return day.name().toLowerCase();
   }
 
+  /**
+   * SQL for the service_ids that run on a date, which is passed three times: a service runs when its calendar has
+   * that weekday in its date range or calendar_dates adds the date, unless calendar_dates removes it.
+   */
+  public static String runningServices(DayOfWeek day) {
+    return """
+      SELECT service_id FROM gtfs_calendar WHERE ? BETWEEN start_date AND end_date AND %s
+      UNION SELECT service_id FROM gtfs_calendar_dates WHERE date = ? AND exception_type = %d
+      EXCEPT SELECT service_id FROM gtfs_calendar_dates WHERE date = ? AND exception_type = %d
+      """.formatted(column(day), CalendarDateEntity.ADDED, CalendarDateEntity.REMOVED);
+  }
+
   private static boolean runsOn(CSVRecord record, DayOfWeek day) throws IOException {
     return Integer.valueOf(1).equals(GtfsParserUtil.integer(record, column(day)));
   }

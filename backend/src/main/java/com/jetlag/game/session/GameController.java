@@ -27,7 +27,8 @@ import java.util.UUID;
 
 /**
  * Games: created from a template, joined with an invite code. Creating or joining returns a player token; every
- * other request about the game needs it, and only works on the game it belongs to.
+ * other request about the game needs it, and only works on the game it belongs to. The browser also keeps it as a
+ * cookie, to get the player's place back with if the page loses it (see {@link PlayerAccessController}).
  */
 @RestController
 // Declared, so the API document says JSON rather than */*; the generated client reads */* responses as blobs
@@ -54,8 +55,8 @@ public class GameController {
       @ApiResponse(responseCode = "404", description = "No such template")
     }
   )
-  public JoinedGameDTO createGame(@RequestBody GameRequests.CreateGameRequest request) {
-    return gameService.create(request);
+  public JoinedGameDTO createGame(@RequestBody GameRequests.CreateGameRequest request, HttpServletResponse response) {
+    return PlayerAccessController.remembered(gameService.create(request), response);
   }
 
   @PostMapping("/join")
@@ -70,8 +71,8 @@ public class GameController {
       @ApiResponse(responseCode = "409", description = "Already started, full, or the name is taken")
     }
   )
-  public JoinedGameDTO joinGame(@RequestBody GameRequests.JoinGameRequest request) {
-    return gameService.join(request);
+  public JoinedGameDTO joinGame(@RequestBody GameRequests.JoinGameRequest request, HttpServletResponse response) {
+    return PlayerAccessController.remembered(gameService.join(request), response);
   }
 
   @GetMapping("/{gameId}")

@@ -9,7 +9,7 @@ import { StationMeasurementService } from '../layer/station-measurement.service'
 import { VehicleLayerService } from '../layer/vehicle-layer.service';
 import { secondsOfDay } from '../shared/gtfs-time';
 import { isNonEmptyString } from '../shared/guards';
-import { buildStationTimetableRows, compareStationStopTimes } from './station-timetable';
+import { buildStationTimetableRows, buildStopServiceLegend, compareStationStopTimes } from './station-timetable';
 import type { StationStopTimeRow } from './station-timetable';
 
 /** How often "in 3 min" and the past/next marking are brought up to date. */
@@ -49,6 +49,7 @@ export class StationTimetableService {
     this.timetable.hasValue() ? this.timetable.value().rows : [],
     secondsOfDay(this.clock())
   ));
+  readonly serviceLegend = computed(() => buildStopServiceLegend(this.timetable.hasValue() ? this.timetable.value().rows : []));
   readonly loading = this.timetable.isLoading;
   readonly error = computed(() => this.timetable.error() !== undefined);
 
@@ -98,7 +99,9 @@ export class StationTimetableService {
                 tripShortName: trip?.tripShortName,
                 routeId: trip?.routeId,
                 arrivalTime: stopTime.arrivalTime,
-                departureTime: stopTime.departureTime
+                departureTime: stopTime.departureTime,
+                pickupType: stopTime.pickupType,
+                dropOffType: stopTime.dropOffType
               };
             }).sort(compareStationStopTimes)
           };

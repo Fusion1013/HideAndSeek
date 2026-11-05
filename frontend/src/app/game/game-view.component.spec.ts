@@ -1,13 +1,15 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { Observable, of, Subject } from 'rxjs';
+import { Observable, of, Subject, throwError } from 'rxjs';
 
 import {
-  GameControllerService, GamePlayControllerService, GameTimelineControllerService, QuestionControllerService
+  GameControllerService, GamePlayControllerService, GameTimelineControllerService, PlayerAccessControllerService,
+  QuestionControllerService
 } from '../api/generated';
 import type { GameDTO, GameTimelineDTO, PlayerGameDTO } from '../api/generated';
-import { TOKEN_STORAGE } from '../auth/access-token.store';
+import { AccessTokenStore, TOKEN_STORAGE } from '../auth/access-token.store';
 import { MapService } from '../map/map.service';
 import { GeolocationService } from '../position/geolocation.service';
 import { RouteSelectionService } from '../transit/route-selection.service';
@@ -73,6 +75,7 @@ describe('GameViewComponent', () => {
   let gameApi: Record<'setPlayerRole' | 'startGame' | 'endGame' | 'foundHiders', ReturnType<typeof vi.fn>>;
   /** One per stream opened, in order; with the Last-Event-ID it was opened with. */
   let streams: { subject: Subject<SseMessage>; lastEventId: string | null; closed: boolean }[];
+  let accessApi: Record<'restorePlayer' | 'rejoinGame' | 'createRejoinCode', ReturnType<typeof vi.fn>>;
   let playApi: Record<'getGameStations' | 'reportLocation' | 'chooseHidingStation', ReturnType<typeof vi.fn>>;
   let gpsPosition: ReturnType<typeof signal<{ longitude: number; latitude: number; accuracyMeters: number; timestamp: number } | null>>;
   let fixture: ComponentFixture<GameViewComponent>;
@@ -88,6 +91,13 @@ describe('GameViewComponent', () => {
       startGame: vi.fn(() => of(view(game()))),
       endGame: vi.fn(() => of(view(game({ status: 'FINISHED', outcome: 'ENDED' })))),
       foundHiders: vi.fn(() => of(view(game({ status: 'FINISHED', outcome: 'FOUND' }))))
+    };
+    // By default the browser has no cookie to get a place back with
+    accessApi = {
+      restorePlayer: vi.fn(() => throwError(() => new HttpErrorResponse({ status: 401 }))),
+      rejoinGame: vi.fn(),
+      createRejoinCode: vi.fn((_game: string, playerId: string) =>
+        of({ playerId, code: 'one-time', expiresAt: new Date(NOW + 30 * 60_000).toISOString() }))
     };
     playApi = {
       getGameStations: vi.fn(() => of([])),
@@ -113,6 +123,7 @@ describe('GameViewComponent', () => {
         LocationReporter,
         { provide: GameTimelineControllerService, useValue: { getGameTimeline: (gameId: string) => timelineFor(gameId) } },
         { provide: GameControllerService, useValue: gameApi },
+        { provide: PlayerAccessControllerService, useValue: accessApi },
         { provide: GamePlayControllerService, useValue: playApi },
         { provide: QuestionControllerService, useValue: {} },
         { provide: MapService, useValue: { getMap: () => null } },
@@ -140,7 +151,7 @@ describe('GameViewComponent', () => {
             }
           }
         },
-        { provide: TOKEN_STORAGE, useValue: { getItem: (key: string) => storage.get(key) ?? null, setItem: () => undefined } }
+        { provide: TOKEN_STORAGE, useValue: { getItem: (key: string) => storage.get(key) ?? null, setItem: (key: string, value: string) => storage.set(key, value) } }
       ]
     });
   });
@@ -474,7 +485,8 @@ describe('GameViewComponent', () => {
 
   it('explains a game this browser has not joined, or no longer may see', () => {
     render('other');
-    expect(text('.load-error')).toBe('This browser has not joined this game.');
+    expect(accessApi.restorePlayer).toHaveBeenCalledWith('other');
+    expect(text('.load-error')).toBe('This browser has not joined this game, or has forgotten that it did.');
     expect(streams).toHaveLength(0);
 
     render();
@@ -483,5 +495,75 @@ describe('GameViewComponent', () => {
     expect(text('.load-error')).toBe('This browser\'s place in the game is no longer valid.');
     vi.advanceTimersByTime(60_000);
     expect(streams).toHaveLength(1);
+  });
+
+  it('gets its place back from the cookie when the page has lost its token', () => {
+    accessApi.restorePlayer.mockReturnValue(of({ gameId: 'g2', playerId: 'p2', playerToken: 'restored' }));
+    render('g2');
+
+    expect(accessApi.restorePlayer).toHaveBeenCalledWith('g2');
+    expect(TestBed.inject(AccessTokenStore).get('games', 'g2')).toBe('restored');
+    expect(streams).toHaveLength(1);
+  });
+
+  it('asks the cookie once when its token stops working, then gives up', () => {
+    accessApi.restorePlayer.mockReturnValue(of({ gameId: 'g1', playerId: 'p1', playerToken: 'newer' }));
+    render();
+    streams[0].subject.error(new GameStreamError(401));
+    fixture.detectChanges();
+    expect(TestBed.inject(AccessTokenStore).get('games', 'g1')).toBe('newer');
+    expect(streams).toHaveLength(2);
+
+    streams[1].subject.error(new GameStreamError(401));
+    fixture.detectChanges();
+    expect(accessApi.restorePlayer).toHaveBeenCalledTimes(1);
+    expect(text('.load-error')).toBe("This browser's place in the game is no longer valid.");
+  });
+
+  it('rejoins with the code from a rejoin link', () => {
+    accessApi.rejoinGame.mockReturnValue(of({ gameId: 'g3', playerId: 'p2', playerToken: 'rejoined' }));
+    fixture = TestBed.createComponent(GameViewComponent);
+    TestBed.inject(GameSessionService).follow('g3', 'one-time');
+    fixture.detectChanges();
+
+    expect(accessApi.rejoinGame).toHaveBeenCalledWith('g3', { code: 'one-time' });
+    expect(TestBed.inject(AccessTokenStore).get('games', 'g3')).toBe('rejoined');
+    expect(streams).toHaveLength(1);
+  });
+
+  it('says why a rejoin link did not work, and carries on with the place it has', () => {
+    accessApi.rejoinGame.mockReturnValue(throwError(() => new HttpErrorResponse({
+      status: 410, error: { detail: 'This rejoin link has expired. Ask the host for a new one.' }
+    })));
+    fixture = TestBed.createComponent(GameViewComponent);
+    TestBed.inject(GameSessionService).follow('g1', 'old');
+    fixture.detectChanges();
+    element = fixture.nativeElement as HTMLElement;
+
+    expect(text('.load-error')).toBe('This rejoin link has expired. Ask the host for a new one.');
+    expect(streams).toHaveLength(1);
+  });
+
+  it('lets the host make a one-time rejoin link for a player', async () => {
+    render();
+    send(snapshot('1', game()));
+    const select = element.querySelector('#rejoin-player') as HTMLSelectElement;
+    expect(select.value).toBe('p2');
+
+    button('Make rejoin link').click();
+    fixture.detectChanges();
+
+    expect(accessApi.createRejoinCode).toHaveBeenCalledWith('g1', 'p2');
+    expect((element.querySelector('#rejoin-url') as HTMLInputElement).value)
+      .toBe(`${location.origin}/game/g1#rejoin=one-time`);
+    expect(text('label[for=rejoin-url]')).toContain('Link for Grace, works once until');
+    vi.useRealTimers();
+    await expectNoAxeViolations(element);
+  });
+
+  it('shows the rejoin links to the host only', () => {
+    render();
+    send(snapshot('1', game(), 'p2'));
+    expect(element.querySelector('#rejoin-player')).toBeNull();
   });
 });

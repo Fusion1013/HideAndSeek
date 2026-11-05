@@ -11,6 +11,7 @@ import { GameNotificationsComponent } from './game-notifications.component';
 import { clockTime, GameRecapComponent } from './game-recap.component';
 import { GameRole, GameSessionService } from './game-session.service';
 import { questionText } from './questions';
+import { RejoinLinkComponent } from './rejoin-link.component';
 import { LocationReporter } from './location-reporter.service';
 
 const ROLE_LABELS: Record<GameRole, string> = { SEEKER: 'Seeker', HIDER: 'Hider' };
@@ -21,15 +22,24 @@ const ROLE_LABELS: Record<GameRole, string> = { SEEKER: 'Seeker', HIDER: 'Hider'
  */
 @Component({
   selector: 'app-game-view',
-  imports: [GameNotificationsComponent, GameRecapComponent, RouterLink],
+  imports: [GameNotificationsComponent, GameRecapComponent, RejoinLinkComponent, RouterLink],
   template: `
+    @if (session.rejoinError()) {
+      <p class="load-error" role="alert">{{ session.rejoinError() }}</p>
+    }
     @if (session.loading()) {
       <p class="status-text">Loading the game…</p>
     } @else if (session.access() === 'no-token') {
-      <p class="load-error" role="alert">This browser has not joined this game.</p>
-      <p class="status-text"><a routerLink="/join">Join it with its invite code</a></p>
+      <p class="load-error" role="alert">This browser has not joined this game, or has forgotten that it did.</p>
+      <p class="status-text">
+        Before the game starts, <a routerLink="/join">join it with its invite code</a>. If you were already in it,
+        ask the host for a rejoin link.
+      </p>
     } @else if (session.access() === 'refused') {
       <p class="load-error" role="alert">This browser's place in the game is no longer valid.</p>
+      <p class="status-text">
+        If you rejoined on another phone or browser, carry on there. Otherwise ask the host for a rejoin link.
+      </p>
     } @else if (session.access() === 'not-found') {
       <p class="load-error" role="alert">There is no game at this address.</p>
     } @else if (session.access() === 'failed') {
@@ -160,6 +170,10 @@ const ROLE_LABELS: Record<GameRole, string> = { SEEKER: 'Seeker', HIDER: 'Hider'
 
       @if (session.error()) {
         <p class="load-error" role="alert">{{ session.error() }}</p>
+      }
+
+      @if (session.isHost()) {
+        <app-rejoin-link [game]="game" [myPlayerId]="session.myPlayerId()" />
       }
 
       <app-game-notifications [gameId]="game.id" />

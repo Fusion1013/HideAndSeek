@@ -52,7 +52,7 @@ public class ReachabilityService {
     WALKING_METERS_PER_SECOND, LIKELY_TRANSFER_SECONDS, MAX_TRANSFER_WALK_METERS, MAX_FINAL_WALK_METERS);
 
   /** The time zone of the timetable, in which a date without one is taken. */
-  static final ZoneId TIMETABLE_ZONE = ZoneId.of("Europe/Stockholm");
+  public static final ZoneId TIMETABLE_ZONE = ZoneId.of("Europe/Stockholm");
 
   /**
    * How long the timetable of the last search is kept, so that the routes asked for after it are found at once.

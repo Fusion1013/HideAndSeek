@@ -1,6 +1,5 @@
 package com.jetlag.transit.reachability;
 
-import com.jetlag.transit.model.CalendarDateEntity;
 import com.jetlag.transit.model.CalendarEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowCallbackHandler;
@@ -164,18 +163,12 @@ class ReachabilityQueries implements ReachabilityService.TripData {
 
   /**
    * The trips that run on the service date of each window, with the windows they run in as a bit mask: bit
-   * {@code i} for the {@code i}th window. A service runs on a date when its calendar has that weekday in its date
-   * range or calendar_dates adds the date, unless calendar_dates removes it.
+   * {@code i} for the {@code i}th window.
    */
   private Map<String, Integer> runningTrips(List<Window> windows) {
     String trips = windows.stream()
-      .map(window -> """
-        SELECT trip_id, %d AS service_day FROM gtfs_trips WHERE service_id IN (
-          SELECT service_id FROM gtfs_calendar WHERE ? BETWEEN start_date AND end_date AND %s
-          UNION SELECT service_id FROM gtfs_calendar_dates WHERE date = ? AND exception_type = %d
-          EXCEPT SELECT service_id FROM gtfs_calendar_dates WHERE date = ? AND exception_type = %d)
-        """.formatted(window.index(), CalendarEntity.column(window.date().getDayOfWeek()),
-        CalendarDateEntity.ADDED, CalendarDateEntity.REMOVED))
+      .map(window -> "SELECT trip_id, %d AS service_day FROM gtfs_trips WHERE service_id IN (%s)"
+        .formatted(window.index(), CalendarEntity.runningServices(window.date().getDayOfWeek())))
       .collect(Collectors.joining(" UNION ALL "));
 
     Map<String, Integer> running = new HashMap<>();

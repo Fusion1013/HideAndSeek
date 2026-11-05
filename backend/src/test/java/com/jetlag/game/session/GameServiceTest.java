@@ -75,6 +75,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
   HidingSpots.class, GamePositions.class, GamePlayService.class, QuestionService.class, NearestPlaces.class,
   GameTemplateService.class,
   GameNotifications.class, PushSubscriptions.class, VapidKeys.class,
+  PlayerAccessService.class,
   GameServiceTest.TestClock.class, GameServiceTest.Timeline.class})
 class GameServiceTest {
 
@@ -158,6 +159,9 @@ class GameServiceTest {
 
   @Autowired
   private GameTimelineService timelines;
+
+  @Autowired
+  private PlayerAccessService access;
 
   private UUID templateId;
 
@@ -477,10 +481,124 @@ class GameServiceTest {
   }
 
   @Test
+  void aBrowserGetsItsPlaceBackFromItsCookieWithANewToken() {
+    JoinedGameDTO host = games.create(new GameRequests.CreateGameRequest(templateId, "Ada", 45));
+    JoinedGameDTO other = games.create(new GameRequests.CreateGameRequest(templateId, "Grace", 45));
+
+    JoinedGameDTO restored = access.restore(host.gameId(), host.playerToken());
+    assertThat(restored.playerId()).isEqualTo(host.playerId());
+    assertThat(restored.playerToken()).isNotEqualTo(host.playerToken());
+    assertThat(playerOf(restored).getId()).isEqualTo(host.playerId());
+    assertThat(players.findByTokenHash(AccessTokens.hash(host.playerToken()))).isEmpty();
+
+    // The old token is gone, and a token only restores a place in its own game
+    assertStatus(() -> access.restore(host.gameId(), host.playerToken()), HttpStatus.UNAUTHORIZED);
+    assertStatus(() -> access.restore(host.gameId(), other.playerToken()), HttpStatus.UNAUTHORIZED);
+    assertStatus(() -> access.restore(UUID.randomUUID(), host.playerToken()), HttpStatus.NOT_FOUND);
+  }
+
+  @Test
+  void theHostMakesAOneTimeCodeForAPlayerToRejoinWithInAnyPhase() {
+    JoinedGameDTO host = games.create(new GameRequests.CreateGameRequest(templateId, "Ada", 45));
+    String code = games.get(playerOf(host)).game().inviteCode();
+    JoinedGameDTO grace = games.join(new GameRequests.JoinGameRequest(code, "Grace"));
+    games.setRole(playerOf(host), host.playerId(), PlayerRole.SEEKER);
+    games.setRole(playerOf(host), grace.playerId(), PlayerRole.HIDER);
+    games.start(playerOf(host));
+
+    assertStatus(() -> access.createRejoinCode(playerOf(grace), host.playerId()), HttpStatus.FORBIDDEN);
+    assertStatus(() -> access.createRejoinCode(playerOf(host), UUID.randomUUID()), HttpStatus.NOT_FOUND);
+
+    RejoinCodeDTO rejoinCode = access.createRejoinCode(playerOf(host), grace.playerId());
+    assertThat(rejoinCode.expiresAt()).isEqualTo(clock.instant().plus(PlayerAccessService.REJOIN_CODE_TTL));
+    assertStatus(() -> access.rejoin(host.gameId(), "not-the-code"), HttpStatus.NOT_FOUND);
+
+    JoinedGameDTO rejoined = access.rejoin(host.gameId(), rejoinCode.code());
+    assertThat(rejoined.playerId()).isEqualTo(grace.playerId());
+    assertThat(playerOf(rejoined).getRole()).isEqualTo(PlayerRole.HIDER);
+    // The browser that had the place before has lost it, and the code works only once
+    assertThat(players.findByTokenHash(AccessTokens.hash(grace.playerToken()))).isEmpty();
+    assertStatus(() -> access.rejoin(host.gameId(), rejoinCode.code()), HttpStatus.NOT_FOUND);
+  }
+
+  @Test
+  void aRejoinCodeExpiresAndANewOneReplacesTheOld() {
+    JoinedGameDTO host = games.create(new GameRequests.CreateGameRequest(templateId, "Ada", 45));
+    JoinedGameDTO elsewhere = games.create(new GameRequests.CreateGameRequest(templateId, "Linus", 45));
+
+    RejoinCodeDTO first = access.createRejoinCode(playerOf(host), host.playerId());
+    RejoinCodeDTO second = access.createRejoinCode(playerOf(host), host.playerId());
+    assertStatus(() -> access.rejoin(host.gameId(), first.code()), HttpStatus.NOT_FOUND);
+    // Only in the game it was made for
+    assertStatus(() -> access.rejoin(elsewhere.gameId(), second.code()), HttpStatus.NOT_FOUND);
+
+    clock.advance(PlayerAccessService.REJOIN_CODE_TTL);
+    assertStatus(() -> access.rejoin(host.gameId(), second.code()), HttpStatus.GONE);
+    assertThat(playerOf(host).getId()).isEqualTo(host.playerId());
+  }
+
+  @Test
   void showsATemplateTheStationsItsGamesWillHave() {
     assertThat(templates.stations(templateId)).extracting(StationDTO::name).containsExactly("Centralstationen", "Korsvägen");
     JoinedGameDTO host = games.create(new GameRequests.CreateGameRequest(templateId, "Ada", 45));
     assertThat(play.stations(playerOf(host))).isEqualTo(templates.stations(templateId));
+  }
+
+  @Test
+  void leavesOutStationsServedLessOftenThanTheTemplateAsks() {
+    // Two platforms of one station take turns, half an hour apart
+    jdbcTemplate.update("""
+      INSERT INTO gtfs_calendar (service_id, monday, tuesday, wednesday, thursday, friday, saturday, sunday,
+                                 start_date, end_date, import_generation)
+      VALUES ('daily', true, true, true, true, true, true, true, '2026-01-01', '2026-12-31', 'g'),
+             ('never', false, false, false, false, false, false, false, '2026-01-01', '2026-12-31', 'g')
+      """);
+    addCalls("central-a", "r6", "daily", 480, 60);
+    addCalls("central-b", "r6", "daily", 510, 60);
+    addCalls("korsvagen", "r6", "daily", 480, 60);
+    // Neither is a vehicle a player could catch on this template's routes today
+    addCalls("korsvagen", "r16", "daily", 510, 60);
+    addCalls("korsvagen", "r6", "never", 510, 60);
+
+    assertThat(stationsWithGap(60)).containsExactly("Centralstationen", "Korsvägen");
+    assertThat(stationsWithGap(45)).containsExactly("Centralstationen");
+    assertThat(stationsWithGap(null)).containsExactly("Centralstationen", "Korsvägen");
+
+    UUID filtered = templates.create(new TemplateRequest("Göteborg", BOX, List.of("r6"), new GameSettings(Map.of(), 45)))
+      .template().id();
+    JoinedGameDTO host = games.create(new GameRequests.CreateGameRequest(filtered, "Ada", 45));
+    assertThat(play.stations(playerOf(host))).isEqualTo(templates.stations(filtered));
+    assertThat(games.get(playerOf(host)).game().stationCount()).isEqualTo(1);
+  }
+
+  @Test
+  void needsSomeStationToPlayOnWhenTheTemplateFiltersThem() {
+    UUID filtered = templates.create(new TemplateRequest("Göteborg", BOX, List.of("r6"), new GameSettings(Map.of(), 45)))
+      .template().id();
+
+    assertThatThrownBy(() -> games.create(new GameRequests.CreateGameRequest(filtered, "Ada", 45)))
+      .isInstanceOfSatisfying(ResponseStatusException.class,
+        exception -> assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.CONFLICT));
+  }
+
+  private List<String> stationsWithGap(Integer maxGapMinutes) {
+    UUID id = templates.create(new TemplateRequest("Göteborg", BOX, List.of("r6"), new GameSettings(Map.of(), maxGapMinutes)))
+      .template().id();
+    return templates.stations(id).stream().map(StationDTO::name).toList();
+  }
+
+  /** A trip calling at the stop every {@code everyMinutes}, from {@code firstMinute} after midnight to 20:00. */
+  private void addCalls(String stopId, String routeId, String serviceId, int firstMinute, int everyMinutes) {
+    String trip = stopId + "-" + routeId + "-" + serviceId + "-";
+    jdbcTemplate.update("""
+      INSERT INTO gtfs_trips (trip_id, route_id, service_id, import_generation)
+      SELECT ? || minute, ?, ?, 'g' FROM generate_series(?, 1200, ?) minute
+      """, trip, routeId, serviceId, firstMinute, everyMinutes);
+    jdbcTemplate.update("""
+      INSERT INTO gtfs_stop_times (trip_id, stop_sequence, departure_time, stop_id, import_generation)
+      SELECT ? || minute, 1, to_char(make_interval(mins => minute), 'HH24:MI:SS'), ?, 'g'
+      FROM generate_series(?, 1200, ?) minute
+      """, trip, stopId, firstMinute, everyMinutes);
   }
 
   @Test

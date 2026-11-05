@@ -30,7 +30,9 @@ export const TOKEN_STORAGE = new InjectionToken<Storage | null>('TOKEN_STORAGE',
 export class AccessTokenStore {
   /** Null once storage turns out to be unusable; from then on the tokens only last until the page closes. */
   private storage = inject(TOKEN_STORAGE);
+  private readonly navigator = inject(DOCUMENT).defaultView?.navigator;
   private memory: StoredTokens = { games: {}, templates: {} };
+  private persistenceAsked = false;
 
   get(kind: TokenKind, id: string): string | undefined {
     return this.read()[kind][id];
@@ -40,6 +42,7 @@ export class AccessTokenStore {
     const tokens = this.read();
     tokens[kind][id] = token;
     this.write(tokens);
+    this.askToPersist();
   }
 
   remove(kind: TokenKind, id: string): void {
@@ -51,6 +54,21 @@ export class AccessTokenStore {
   /** The IDs of every game or template this browser holds a token for. */
   ids(kind: TokenKind): string[] {
     return Object.keys(this.read()[kind]);
+  }
+
+  /**
+   * Asks the browser not to clear this site's storage when it runs short of space. Browsers decide for
+   * themselves (Chrome grants it to sites used often or installed, Firefox may ask the user), so it is only asked
+   * once, and whatever the answer the cookie copy of a player's token remains.
+   */
+  private askToPersist(): void {
+    if (this.persistenceAsked || !this.storage) return;
+    this.persistenceAsked = true;
+    try {
+      this.navigator?.storage?.persist?.().catch(() => undefined);
+    } catch {
+      // Not offered here
+    }
   }
 
   /** A fresh copy, which the caller may change. */

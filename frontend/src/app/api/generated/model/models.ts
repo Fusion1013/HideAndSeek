@@ -32,6 +32,8 @@ export * from './reachabilityLegStopDTO';
 export * from './reachabilityPathPointDTO';
 export * from './reachabilityRouteDTO';
 export * from './reachableStationDTO';
+export * from './rejoinCodeDTO';
+export * from './rejoinRequest';
 export * from './roleRequest';
 export * from './routeDTO';
 export * from './routeShapeDTO';

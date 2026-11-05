@@ -13,5 +13,8 @@ public interface GamePlayerRepository extends JpaRepository<GamePlayerEntity, UU
   @EntityGraph(attributePaths = "game")
   Optional<GamePlayerEntity> findByTokenHash(byte[] tokenHash);
 
+  @EntityGraph(attributePaths = "game")
+  Optional<GamePlayerEntity> findByRejoinCodeHash(byte[] rejoinCodeHash);
+
   List<GamePlayerEntity> findByGameIdOrderByJoinedAt(UUID gameId);
 }

@@ -11,6 +11,7 @@ api/gameTemplateController.service.ts
 api/gameTimelineController.service.ts
 api/gtfsController.service.ts
 api/overpass.service.ts
+api/playerAccessController.service.ts
 api/pushController.service.ts
 api/questionController.service.ts
 api/reachabilityController.service.ts
@@ -59,6 +60,8 @@ model/reachabilityLegStopDTO.ts
 model/reachabilityPathPointDTO.ts
 model/reachabilityRouteDTO.ts
 model/reachableStationDTO.ts
+model/rejoinCodeDTO.ts
+model/rejoinRequest.ts
 model/roleRequest.ts
 model/routeDTO.ts
 model/routeShapeDTO.ts

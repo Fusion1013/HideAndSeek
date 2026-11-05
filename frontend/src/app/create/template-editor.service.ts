@@ -16,6 +16,10 @@ import { AreaBounds, boundsToRing, ringToBounds } from './area-bounds';
 import { TemplateAreaLayerService } from './template-area-layer.service';
 
 export const MAX_TEMPLATE_NAME_LENGTH = 100;
+/** How far apart a station's arrivals and departures may be, once a template limits it; as GameSettings on the backend. */
+export const DEFAULT_STATION_GAP_MINUTES = 30;
+export const MIN_STATION_GAP_MINUTES = 1;
+export const MAX_STATION_GAP_MINUTES = 240;
 
 export type EditorStatus = 'idle' | 'loading' | 'saving' | 'deleting';
 
@@ -52,6 +56,8 @@ export class TemplateEditorService {
   /** The saved template's routes with the names they were saved with, for routes the timetable no longer has. */
   readonly savedRoutes = signal<readonly TemplateRouteDTO[]>([]);
   readonly questions = signal<QuestionSettings>({});
+  /** Undefined while every station counts, however seldom it is served. */
+  readonly maxStationGapMinutes = signal<number | undefined>(undefined);
 
   readonly status = signal<EditorStatus>('idle');
   /** A saved template that could not be loaded. */
@@ -136,6 +142,11 @@ export class TemplateEditorService {
     this.markChanged();
   }
 
+  setMaxStationGapMinutes(minutes: number | undefined): void {
+    this.maxStationGapMinutes.set(minutes);
+    this.markChanged();
+  }
+
   /** Creates the template, or saves the changes to it. A new template's owner token is kept in this browser. */
   save(): void {
     const area = this.area();
@@ -155,7 +166,7 @@ export class TemplateEditorService {
       name: this.name.value.trim(),
       boundary: boundsToRing(area),
       routeIds: this.routeIds(),
-      settings: { questions: this.questions() }
+      settings: { questions: this.questions(), maxStationGapMinutes: this.maxStationGapMinutes() }
     };
     const templateId = this.templateId();
     this.status.set('saving');
@@ -207,6 +218,8 @@ export class TemplateEditorService {
     this.routeIds.set(template.routes.map(route => route.routeId));
     this.savedRoutes.set(template.routes);
     this.questions.set(template.settings.questions);
+    // The backend sends null for "not set"
+    this.maxStationGapMinutes.set(template.settings.maxStationGapMinutes ?? undefined);
     this.dirty.set(false);
   }
 

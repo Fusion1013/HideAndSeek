@@ -80,7 +80,8 @@ public class GameTemplateService {
   @Transactional(readOnly = true)
   public List<StationDTO> stations(UUID id) {
     GameTemplateEntity template = find(id);
-    return stations.forTemplate(template.getId(), template.getRoutes().stream().map(RouteSnapshot::routeId).toList());
+    return stations.forTemplate(template.getId(), template.getRoutes().stream().map(RouteSnapshot::routeId).toList(),
+      template.getSettings().maxStationGapMinutes());
   }
 
   @Transactional
@@ -131,9 +132,14 @@ public class GameTemplateService {
     if (Arrays.stream(QuestionType.values()).allMatch(type -> settings.rules(type).disabled())) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Leave at least one kind of question available");
     }
+    Integer gap = settings.maxStationGapMinutes();
+    if (gap != null && (gap < GameSettings.MIN_STATION_GAP_MINUTES || gap > GameSettings.MAX_STATION_GAP_MINUTES)) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The time between arrivals and departures must be "
+        + GameSettings.MIN_STATION_GAP_MINUTES + " to " + GameSettings.MAX_STATION_GAP_MINUTES + " minutes");
+    }
     return new GameSettings(Arrays.stream(QuestionType.values())
       .filter(type -> settings.questions().containsKey(type.name()))
-      .collect(Collectors.toMap(QuestionType::name, type -> validRules(settings.rules(type)))));
+      .collect(Collectors.toMap(QuestionType::name, type -> validRules(settings.rules(type)))), gap);
   }
 
   private static QuestionRules validRules(QuestionRules rules) {

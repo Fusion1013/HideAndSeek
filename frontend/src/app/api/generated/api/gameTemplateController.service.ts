@@ -225,7 +225,7 @@ export class GameTemplateControllerService extends BaseService {
 
     /**
      * Get the stations a game from this template would have
-     * Served by the template\&#39;s routes and inside its area, as the timetable is now. A game copies them when it is created.
+     * Served by the template\&#39;s routes, often enough if its settings ask for that, and inside its area, as the timetable is now. A game copies them when it is created.
      * @endpoint get /api/templates/{templateId}/stations
      * @param templateId 
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.

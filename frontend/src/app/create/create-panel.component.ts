@@ -14,6 +14,7 @@ import { MAX_TEMPLATE_NAME_LENGTH, TemplateEditorService } from './template-edit
 import { TemplateListComponent } from './template-list.component';
 import { TemplateQuestionsComponent } from './template-questions.component';
 import { TemplateRoutePickerComponent } from './template-route-picker.component';
+import { TemplateStationsComponent } from './template-stations.component';
 
 /**
  * Create mode: setting up a game template, new or (with a template ID in the address) existing, in the Template
@@ -24,7 +25,8 @@ import { TemplateRoutePickerComponent } from './template-route-picker.component'
   selector: 'app-create-panel',
   imports: [
     ExportImageDialogComponent, HostGameComponent, LayersPanelComponent, OpenTemplateComponent, ReactiveFormsModule, RouterLink,
-    TemplateAreaComponent, TemplateLinkComponent, TemplateListComponent, TemplateQuestionsComponent, TemplateRoutePickerComponent
+    TemplateAreaComponent, TemplateLinkComponent, TemplateListComponent, TemplateQuestionsComponent, TemplateRoutePickerComponent,
+    TemplateStationsComponent
   ],
   providers: [TemplateEditorService],
   template: `
@@ -64,6 +66,7 @@ import { TemplateRoutePickerComponent } from './template-route-picker.component'
 
             <app-template-area />
             <app-template-route-picker />
+            <app-template-stations />
             <app-template-questions />
 
             @if (editor.error()) {

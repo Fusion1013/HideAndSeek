@@ -60,6 +60,18 @@ describe('access tokens', () => {
     expect(store.get('games', 'g1')).toBeUndefined();
   });
 
+  it('asks the browser once to keep its storage, as soon as there is a token to keep', () => {
+    const persist = vi.fn(() => Promise.resolve(true));
+    Object.defineProperty(navigator, 'storage', { value: { persist }, configurable: true });
+    try {
+      store.set('games', 'g1', 'player-token');
+      store.set('games', 'g2', 'other-token');
+      expect(persist).toHaveBeenCalledTimes(1);
+    } finally {
+      Reflect.deleteProperty(navigator, 'storage');
+    }
+  });
+
   it('keeps tokens in memory when storage refuses them', () => {
     localStorage.setItem = () => {
       throw new DOMException('Quota exceeded', 'QuotaExceededError');

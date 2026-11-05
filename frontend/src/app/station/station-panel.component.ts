@@ -1,4 +1,4 @@
-import { afterRenderEffect, ChangeDetectionStrategy, Component, ElementRef, inject, viewChild } from '@angular/core';
+import { afterRenderEffect, ChangeDetectionStrategy, Component, ElementRef, inject, OnInit, viewChild } from '@angular/core';
 
 import type { StopDTO } from '../api/generated';
 import { ControlsPanelService } from '../controls/controls-panel.service';
@@ -14,7 +14,7 @@ import { StationTimetableService } from './station-timetable.service';
   styleUrl: './station-panel.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class StationPanelComponent {
+export class StationPanelComponent implements OnInit {
   protected readonly timetable = inject(StationTimetableService);
   protected readonly controls = inject(ControlsPanelService);
   private readonly reachability = inject(ReachabilityService);
@@ -34,6 +34,10 @@ export class StationPanelComponent {
       const anchorTop = anchor.getBoundingClientRect().top - viewport.getBoundingClientRect().top + viewport.scrollTop;
       viewport.scrollTop = anchorTop + anchor.offsetHeight / 2 - viewport.clientHeight / 2;
     });
+  }
+
+  ngOnInit(): void {
+    
   }
 
   protected clear(): void {

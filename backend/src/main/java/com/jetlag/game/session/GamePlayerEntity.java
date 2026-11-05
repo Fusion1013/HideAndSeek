@@ -34,6 +34,13 @@ public class GamePlayerEntity {
   @Column(name = "token_hash", nullable = false, unique = true)
   private byte[] tokenHash;
 
+  /** SHA-256 of the one-time code the host made for this player to rejoin with, if any. */
+  @Column(name = "rejoin_code_hash", unique = true)
+  private byte[] rejoinCodeHash;
+
+  @Column(name = "rejoin_code_expires_at")
+  private Instant rejoinCodeExpiresAt;
+
   @CreationTimestamp
   @Column(name = "joined_at", nullable = false, updatable = false)
   private Instant joinedAt;
@@ -88,6 +95,24 @@ public class GamePlayerEntity {
 
   public byte[] getTokenHash() {
     return tokenHash;
+  }
+
+  /** Gives the player a new token; whoever held the old one is no longer this player. */
+  public void replaceToken(byte[] tokenHash) {
+    this.tokenHash = tokenHash;
+  }
+
+  public Instant getRejoinCodeExpiresAt() {
+    return rejoinCodeExpiresAt;
+  }
+
+  public void setRejoinCode(byte[] codeHash, Instant expiresAt) {
+    this.rejoinCodeHash = codeHash;
+    this.rejoinCodeExpiresAt = expiresAt;
+  }
+
+  public void clearRejoinCode() {
+    setRejoinCode(null, null);
   }
 
   public Instant getJoinedAt() {

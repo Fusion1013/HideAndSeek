@@ -1,5 +1,6 @@
 package com.jetlag.game.template;
 
+import com.jetlag.config.ClockConfig;
 import com.jetlag.game.GameSettings;
 import com.jetlag.game.auth.AccessTokens;
 import com.jetlag.game.auth.InvalidTokenException;
@@ -35,7 +36,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Testcontainers(disabledWithoutDocker = true)
-@Import({GameTemplateService.class, GameStations.class})
+@Import({GameTemplateService.class, GameStations.class, ClockConfig.class})
 class GameTemplateServiceTest {
 
   @Container
@@ -137,6 +138,20 @@ class GameTemplateServiceTest {
   }
 
   @Test
+  void keepsTheStationFilterOnlyWhenItIsSet() {
+    CreatedTemplateDTO created = templates.create(new TemplateRequest("Göteborg", BOX, List.of(), null));
+    assertThat(created.template().settings().maxStationGapMinutes()).isNull();
+
+    TemplateDTO filtered = templates.update(created.template().id(), created.ownerToken(),
+      new TemplateRequest("Göteborg", BOX, List.of(), new GameSettings(Map.of(), 30)));
+    assertThat(templates.get(filtered.id()).settings().maxStationGapMinutes()).isEqualTo(30);
+
+    TemplateDTO unfiltered = templates.update(filtered.id(), created.ownerToken(),
+      new TemplateRequest("Göteborg", BOX, List.of(), new GameSettings(Map.of())));
+    assertThat(templates.get(unfiltered.id()).settings().maxStationGapMinutes()).isNull();
+  }
+
+  @Test
   void readsSettingsItDoesNotKnowOrThatWereNeverSet() {
     UUID id = templates.create(new TemplateRequest("Göteborg", BOX, List.of(), null)).template().id();
     jdbcTemplate.update("UPDATE game_template SET settings = '{\"hidingMinutes\": 45}' WHERE id = ?", id);
@@ -153,7 +168,9 @@ class GameTemplateServiceTest {
       new GameSettings(Map.of("RADAR", new QuestionRules(false, 0, List.of(), List.of()))),
       new GameSettings(Map.of("RADAR", new QuestionRules(false, 121, List.of(), List.of()))),
       new GameSettings(Map.of("MATCHING", new QuestionRules(false, null, List.of("Bad!"), List.of()))),
-      new GameSettings(Map.of("RADAR", new QuestionRules(false, null, List.of(), List.of(1)))))) {
+      new GameSettings(Map.of("RADAR", new QuestionRules(false, null, List.of(), List.of(1)))),
+      new GameSettings(Map.of(), 0),
+      new GameSettings(Map.of(), 241))) {
       assertStatus(() -> templates.create(new TemplateRequest("Göteborg", BOX, List.of(), settings)), HttpStatus.BAD_REQUEST);
     }
   }

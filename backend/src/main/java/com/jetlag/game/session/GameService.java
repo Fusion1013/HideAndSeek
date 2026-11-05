@@ -91,7 +91,13 @@ public class GameService {
     GameEntity game = gameRepository.saveAndFlush(new GameEntity(template.getId(), unusedInviteCode(),
       template.getName(), hidingMinutes, (Polygon) template.getBoundary().copy(), template.getSettings(),
       template.getRoutes()));
-    stations.snapshot(game.getId(), template.getRoutes().stream().map(RouteSnapshot::routeId).toList());
+    Integer maxStationGap = template.getSettings().maxStationGapMinutes();
+    int stationCount = stations.snapshot(game.getId(), template.getRoutes().stream().map(RouteSnapshot::routeId).toList(),
+      maxStationGap);
+    if (stationCount == 0 && maxStationGap != null) {
+      throw new ResponseStatusException(HttpStatus.CONFLICT,
+        "No station has an arrival or departure every " + maxStationGap + " minutes today");
+    }
     JoinedGameDTO host = addPlayer(game, displayName, true);
     recordState(game);
     return host;

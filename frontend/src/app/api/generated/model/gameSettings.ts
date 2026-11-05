@@ -15,5 +15,9 @@ export interface GameSettings {
      * By question type, for the kinds of question that differ from the usual
      */
     questions: { [key: string]: QuestionRules; };
+    /**
+     * Leaves out stations with a longer wait for an arrival or departure during the day, on the template\'s routes; every station counts if not set
+     */
+    maxStationGapMinutes?: number;
 }
 

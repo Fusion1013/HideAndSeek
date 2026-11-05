@@ -51,14 +51,37 @@
 								[class.stop-time-anchor]="row.isTimeAnchor"
 							>
 								<td>{{ tripLabel(row) }}</td>
-								<td>{{ row.arrivalTime || '—' }}</td>
-								<td>{{ row.departureTime || '—' }}</td>
+								<td>
+									{{ row.arrivalTime || '—' }}
+									@if (row.dropOffNote?.label; as label) {
+										<span class="stop-time-note">
+											<span aria-hidden="true">{{ label }}</span>
+											<span class="visually-hidden">{{ row.dropOffNote?.description }}</span>
+										</span>
+									}
+								</td>
+								<td>
+									{{ row.departureTime || '—' }}
+									@if (row.pickupNote?.label; as label) {
+										<span class="stop-time-note">
+											<span aria-hidden="true">{{ label }}</span>
+											<span class="visually-hidden">{{ row.pickupNote?.description }}</span>
+										</span>
+									}
+								</td>
 								<td>{{ row.relativeTime }}</td>
 							</tr>
 						}
 					</tbody>
 				</table>
 			</div>
+			@if (timetable.serviceLegend().length > 0) {
+				<dl class="station-details" aria-label="Pickup and drop off notes">
+					@for (entry of timetable.serviceLegend(); track entry.term) {
+						<div><dt>{{ entry.term }}</dt><dd>{{ entry.description }}</dd></div>
+					}
+				</dl>
+			}
 		}
 		<div class="panel-actions">
 			<button type="button" (click)="findReachable(stop)">Reachable from here</button>

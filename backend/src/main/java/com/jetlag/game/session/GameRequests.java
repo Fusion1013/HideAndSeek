@@ -29,6 +29,12 @@ public final class GameRequests {
   ) {
   }
 
+  public record RejoinRequest(
+    @Schema(description = "The code from the rejoin link the host made", requiredMode = Schema.RequiredMode.REQUIRED)
+    String code
+  ) {
+  }
+
   public record RoleRequest(
     @Schema(description = "Null to take the role away again") PlayerRole role
   ) {
