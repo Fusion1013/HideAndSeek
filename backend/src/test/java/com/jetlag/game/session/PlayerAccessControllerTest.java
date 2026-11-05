@@ -66,4 +66,22 @@ class PlayerAccessControllerTest {
       .andExpect(jsonPath("$.playerId").value(playerId.toString()))
       .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString(PlayerCookie.NAME + "=new-token")));
   }
+
+  @Test
+  void scopesTheCookieToTheGameUnderThePathTheProxyServesTheApiFrom() throws Exception {
+    when(service.rejoin(any(), any())).thenReturn(new JoinedGameDTO(gameId, playerId, "new-token"));
+
+    mvc.perform(post("/api/games/{gameId}/rejoin", gameId).header("X-Forwarded-Prefix", "/hideandseek/")
+        .contentType(MediaType.APPLICATION_JSON).content("{\"code\":\"abc\"}"))
+      .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("Path=/hideandseek/api/games/" + gameId + ";")));
+  }
+
+  @Test
+  void ignoresAPrefixThatIsNotAPlainPath() throws Exception {
+    when(service.rejoin(any(), any())).thenReturn(new JoinedGameDTO(gameId, playerId, "new-token"));
+
+    mvc.perform(post("/api/games/{gameId}/rejoin", gameId).header("X-Forwarded-Prefix", "/x; Domain=evil.example")
+        .contentType(MediaType.APPLICATION_JSON).content("{\"code\":\"abc\"}"))
+      .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("Path=/api/games/" + gameId + ";")));
+  }
 }

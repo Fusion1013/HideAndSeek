@@ -47,7 +47,7 @@ public class PlayerAccessController {
   public JoinedGameDTO restorePlayer(@PathVariable UUID gameId, HttpServletRequest request,
                                      HttpServletResponse response) {
     String cookieToken = PlayerCookie.from(request).orElseThrow(InvalidTokenException::new);
-    return remembered(accessService.restore(gameId, cookieToken), response);
+    return remembered(accessService.restore(gameId, cookieToken), request, response);
   }
 
   @PostMapping("/players/{playerId}/rejoin-code")
@@ -80,12 +80,12 @@ public class PlayerAccessController {
     }
   )
   public JoinedGameDTO rejoinGame(@PathVariable UUID gameId, @RequestBody GameRequests.RejoinRequest request,
-                                  HttpServletResponse response) {
-    return remembered(accessService.rejoin(gameId, request.code()), response);
+                                  HttpServletRequest httpRequest, HttpServletResponse response) {
+    return remembered(accessService.rejoin(gameId, request.code()), httpRequest, response);
   }
 
-  static JoinedGameDTO remembered(JoinedGameDTO joined, HttpServletResponse response) {
-    PlayerCookie.set(response, joined.gameId(), joined.playerToken());
+  static JoinedGameDTO remembered(JoinedGameDTO joined, HttpServletRequest request, HttpServletResponse response) {
+    PlayerCookie.set(request, response, joined.gameId(), joined.playerToken());
     return joined;
   }
 }

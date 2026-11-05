@@ -8,5 +8,5 @@ RUN npm run build --workspace=jetlag-web
 
 FROM nginx:1.27-alpine
 COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=build /workspace/frontend/dist/jetlag-web/browser /usr/share/nginx/html
+COPY --from=build /workspace/frontend/dist/jetlag-web/browser /usr/share/nginx/html/hideandseek
 EXPOSE 80

@@ -103,14 +103,15 @@ public class GameNotifications {
    * of the app that is already open if there is one.
    */
   private byte[] payload(Notification notification) {
-    String url = "/game/" + notification.gameId();
+    // Relative, so they resolve against the service worker's scope: the app may not be at the site root
+    String url = "game/" + notification.gameId();
     Map<String, Object> shown = Map.of(
       "title", notification.title(),
       "body", notification.body(),
       "tag", notification.tag(),
       "renotify", true,
-      "icon", "/icons/icon-192.png",
-      "badge", "/icons/badge-96.png",
+      "icon", "icons/icon-192.png",
+      "badge", "icons/badge-96.png",
       "data", Map.of("onActionClick", Map.of(
         "default", Map.of("operation", "navigateLastFocusedOrOpen", "url", url))));
     try {

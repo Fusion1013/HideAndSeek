@@ -1,6 +1,7 @@
 import { HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 
+import { APP_BASE_PATH } from '../api/app-base-path';
 import { AccessTokenStore, TokenKind } from './access-token.store';
 
 /** Which token a request needs, by the resource its path starts with. */
@@ -16,7 +17,7 @@ const TOKEN_PATHS: readonly (readonly [RegExp, TokenKind])[] = [
 export const accessTokenInterceptor: HttpInterceptorFn = (request, next) => {
   if (request.headers.has('Authorization')) return next(request);
 
-  const path = pathOf(request.url);
+  const path = withoutBase(pathOf(request.url), inject(APP_BASE_PATH));
   for (const [pattern, kind] of TOKEN_PATHS) {
     const id = pattern.exec(path)?.[1];
     if (!id) continue;
@@ -25,6 +26,12 @@ export const accessTokenInterceptor: HttpInterceptorFn = (request, next) => {
   }
   return next(request);
 };
+
+/** The path as the API sees it: without the path the app is served under. */
+function withoutBase(path: string, basePath: string): string {
+  if (!basePath) return path;
+  return path.startsWith(basePath + '/') ? path.slice(basePath.length) : '';
+}
 
 /** The path of a relative or absolute URL; tokens only go to this site's own API. */
 function pathOf(url: string): string {

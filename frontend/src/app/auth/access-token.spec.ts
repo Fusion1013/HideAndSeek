@@ -2,6 +2,7 @@ import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 
+import { APP_BASE_PATH, basePathOf } from '../api/app-base-path';
 import { accessTokenInterceptor } from './access-token.interceptor';
 import { AccessTokenStore, TOKEN_STORAGE } from './access-token.store';
 
@@ -24,19 +25,23 @@ describe('access tokens', () => {
   let backend: HttpTestingController;
   let localStorage: MemoryStorage;
 
-  beforeEach(() => {
+  function setUp(basePath = ''): void {
+    TestBed.resetTestingModule();
     localStorage = new MemoryStorage();
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(withInterceptors([accessTokenInterceptor])),
         provideHttpClientTesting(),
-        { provide: TOKEN_STORAGE, useValue: localStorage }
+        { provide: TOKEN_STORAGE, useValue: localStorage },
+        { provide: APP_BASE_PATH, useValue: basePath }
       ]
     });
     store = TestBed.inject(AccessTokenStore);
     http = TestBed.inject(HttpClient);
     backend = TestBed.inject(HttpTestingController);
-  });
+  }
+
+  beforeEach(() => setUp());
 
   afterEach(() => backend.verify());
 
@@ -100,5 +105,23 @@ describe('access tokens', () => {
     expect(authorizationOf('/api/routes')).toBeNull();
     expect(authorizationOf('https://elsewhere.example/api/games/g1')).toBeNull();
     expect(authorizationOf('/api/games/g1', { Authorization: 'Bearer explicit' })).toBe('Bearer explicit');
+  });
+
+  it('finds the API under the path the app is served from', () => {
+    setUp('/hideandseek');
+    store.set('games', 'g1', 'player-token');
+
+    expect(authorizationOf('/hideandseek/api/games/g1/questions')).toBe('Bearer player-token');
+    expect(authorizationOf('/api/games/g1/questions')).toBeNull();
+    expect(authorizationOf('/hideandseekx/api/games/g1')).toBeNull();
+  });
+});
+
+describe('the path the app is served from', () => {
+  it('is the base href without its trailing slash', () => {
+    expect(basePathOf('/')).toBe('');
+    expect(basePathOf(null)).toBe('');
+    expect(basePathOf('/hideandseek/')).toBe('/hideandseek');
+    expect(basePathOf('https://fusion1013.com/hideandseek/')).toBe('/hideandseek');
   });
 });

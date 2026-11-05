@@ -92,7 +92,7 @@ class GameNotificationsTest {
     assertThat(shown.get("title").asText()).isEqualTo("Göteborg");
     assertThat(shown.get("body").asText()).isEqualTo("A radar question is waiting");
     assertThat(shown.get("tag").asText()).isEqualTo("question");
-    assertThat(shown.at("/data/onActionClick/default/url").asText()).isEqualTo("/game/" + GAME);
+    assertThat(shown.at("/data/onActionClick/default/url").asText()).isEqualTo("game/" + GAME);
   }
 
   @Test

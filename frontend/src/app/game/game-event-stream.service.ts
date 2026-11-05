@@ -1,6 +1,7 @@
 import { DOCUMENT, inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
+import { APP_BASE_PATH } from '../api/app-base-path';
 import { SseMessage, SseParser } from '../shared/sse-parser';
 
 /** The stream could not be opened, or the server answered with an error status. */
@@ -20,6 +21,7 @@ export const STREAM_OPEN: SseMessage = { type: 'open', data: '' };
 @Injectable({ providedIn: 'root' })
 export class GameEventStream {
   private readonly window = inject(DOCUMENT).defaultView;
+  private readonly basePath = inject(APP_BASE_PATH);
 
   /**
    * Emits {@link STREAM_OPEN}, then each event; completes when the server ends the stream and fails with a
@@ -37,7 +39,7 @@ export class GameEventStream {
       const read = async (): Promise<void> => {
         const fetch = this.window?.fetch.bind(this.window);
         if (!fetch) throw new GameStreamError(undefined);
-        const response = await fetch(`/api/games/${encodeURIComponent(gameId)}/events`, {
+        const response = await fetch(`${this.basePath}/api/games/${encodeURIComponent(gameId)}/events`, {
           headers,
           cache: 'no-store',
           signal: abort.signal

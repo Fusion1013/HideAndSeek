@@ -10,6 +10,7 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 /**
  * A second copy of the player's token, kept by the browser as a cookie the page cannot read. Browsers drop the
@@ -23,14 +24,20 @@ public final class PlayerCookie {
   public static final String NAME = "jetlag_player";
   /** Longer than any game runs, so the replay can still be reached after it. */
   static final Duration MAX_AGE = Duration.ofDays(30);
+  /**
+   * The path the browser sees the API under when it is not at the site root (/hideandseek), as the proxy in front
+   * passes it on. Only ever the cookie's path, so a request that sets its own can at worst lose its own cookie.
+   */
+  static final String PREFIX_HEADER = "X-Forwarded-Prefix";
+  private static final Pattern PREFIX = Pattern.compile("(/[A-Za-z0-9._~-]+)+");
 
   private PlayerCookie() {
   }
 
   /** Sets the cookie for this game, replacing any earlier one. */
-  public static void set(HttpServletResponse response, UUID gameId, String token) {
+  public static void set(HttpServletRequest request, HttpServletResponse response, UUID gameId, String token) {
     response.addHeader(HttpHeaders.SET_COOKIE, ResponseCookie.from(NAME, token)
-      .path(path(gameId))
+      .path(prefix(request) + path(gameId))
       .maxAge(MAX_AGE)
       .httpOnly(true)
       // Browsers accept secure cookies from http://localhost too, so this holds in development as well
@@ -53,5 +60,13 @@ public final class PlayerCookie {
 
   static String path(UUID gameId) {
     return "/api/games/" + gameId;
+  }
+
+  /** The proxy's prefix without a trailing slash, or "" when there is none or it is not a plain path. */
+  static String prefix(HttpServletRequest request) {
+    String header = request.getHeader(PREFIX_HEADER);
+    if (header == null) return "";
+    String prefix = header.strip().replaceAll("/+$", "");
+    return PREFIX.matcher(prefix).matches() ? prefix : "";
   }
 }

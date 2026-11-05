@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.Parameter;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -55,8 +56,9 @@ public class GameController {
       @ApiResponse(responseCode = "404", description = "No such template")
     }
   )
-  public JoinedGameDTO createGame(@RequestBody GameRequests.CreateGameRequest request, HttpServletResponse response) {
-    return PlayerAccessController.remembered(gameService.create(request), response);
+  public JoinedGameDTO createGame(@RequestBody GameRequests.CreateGameRequest request, HttpServletRequest httpRequest,
+                                  HttpServletResponse response) {
+    return PlayerAccessController.remembered(gameService.create(request), httpRequest, response);
   }
 
   @PostMapping("/join")
@@ -71,8 +73,9 @@ public class GameController {
       @ApiResponse(responseCode = "409", description = "Already started, full, or the name is taken")
     }
   )
-  public JoinedGameDTO joinGame(@RequestBody GameRequests.JoinGameRequest request, HttpServletResponse response) {
-    return PlayerAccessController.remembered(gameService.join(request), response);
+  public JoinedGameDTO joinGame(@RequestBody GameRequests.JoinGameRequest request, HttpServletRequest httpRequest,
+                                HttpServletResponse response) {
+    return PlayerAccessController.remembered(gameService.join(request), httpRequest, response);
   }
 
   @GetMapping("/{gameId}")
