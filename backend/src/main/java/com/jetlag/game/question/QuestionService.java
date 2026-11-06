@@ -199,6 +199,7 @@ public class QuestionService {
     QuestionType type = request.type();
     if (type == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose a kind of question");
     String category = type.needsCategory() ? validCategory(request.category()) : null;
+    String text = type.needsText() ? validText(request.text()) : null;
     QuestionParams.Position start = type.needsPath() ? validPosition(request.start()) : null;
     QuestionParams.Position end = type.needsPath() ? validPosition(request.end()) : null;
     Integer distance = type.needsPath() ? Integer.valueOf(validDistance(start.metersTo(end)))
@@ -212,7 +213,7 @@ public class QuestionService {
     if (type == QuestionType.MEASURING && nearest != null) {
       nearest = nearest.withReach(nearestPlaces.reach(game.getId(), category, nearest.distanceMeters()));
     }
-    return new QuestionParams(category, distance, origin, start, end, nearest);
+    return new QuestionParams(category, distance, origin, start, end, nearest, text);
   }
 
   private QuestionDTO record(GameQuestionEntity question) {
@@ -259,6 +260,15 @@ public class QuestionService {
         "The distance must be " + MIN_DISTANCE_METERS + " m to " + MAX_DISTANCE_METERS / 1000 + " km");
     }
     return distance;
+  }
+
+  private static String validText(String text) {
+    String stripped = text == null ? "" : text.strip();
+    if (stripped.isEmpty() || stripped.length() > QuestionParams.MAX_TEXT_LENGTH) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+        "Write the question, in at most " + QuestionParams.MAX_TEXT_LENGTH + " characters");
+    }
+    return stripped;
   }
 
   private static QuestionParams.Position validPosition(QuestionParams.Position position) {

@@ -682,6 +682,34 @@ class GameServiceTest {
   }
 
   @Test
+  void seekersWriteCustomQuestionsThatHidersAnswerYesOrNo() {
+    JoinedGameDTO[] players = seekingGame();
+    GamePlayerEntity seeker = playerOf(players[0]);
+    GamePlayerEntity hider = playerOf(players[1]);
+
+    assertStatus(() -> questions.ask(seeker, new QuestionRequests.AskRequest(QuestionType.CUSTOM, null, null, null, null)),
+      HttpStatus.BAD_REQUEST);
+    assertStatus(() -> questions.ask(seeker, new QuestionRequests.AskRequest(QuestionType.CUSTOM, null, null, null, null, "  ")),
+      HttpStatus.BAD_REQUEST);
+    assertStatus(() -> questions.ask(seeker, new QuestionRequests.AskRequest(QuestionType.CUSTOM, null, null, null, null,
+      "x".repeat(QuestionParams.MAX_TEXT_LENGTH + 1))), HttpStatus.BAD_REQUEST);
+
+    QuestionDTO asked = questions.ask(seeker, new QuestionRequests.AskRequest(QuestionType.CUSTOM, "parks", 1000, null, null,
+      "  Are you on an island?  "));
+    assertThat(asked.params().text()).isEqualTo("Are you on an island?");
+    // Only the words are kept
+    assertThat(asked.params().category()).isNull();
+    assertThat(asked.params().distanceMeters()).isNull();
+
+    assertStatus(() -> questions.answer(hider, asked.id(), new QuestionRequests.AnswerRequest("CLOSER", null)),
+      HttpStatus.BAD_REQUEST);
+    QuestionDTO answered = questions.answer(hider, asked.id(), new QuestionRequests.AnswerRequest("NO", null));
+    assertThat(answered.answer()).isEqualTo(new QuestionAnswer("NO", null, null));
+    assertThat(questions.list(playerOf(players[0]).getGame().getId()).getFirst().params().text())
+      .isEqualTo("Are you on an island?");
+  }
+
+  @Test
   void aPhotoQuestionsSubjectsFollowTheGamesSettings() {
     templateId = templates.create(new TemplateRequest("Göteborg", BOX, List.of("r6"), new GameSettings(Map.of(
       "PHOTO", new QuestionRules(false, null, List.of("tree"), List.of()))))).template().id();

@@ -13,7 +13,7 @@ import { NearestPlaceComponent } from './nearest-place.component';
 import { PhotoAnswerComponent } from './photo-answer.component';
 import { QuestionPhotoComponent } from './question-photo.component';
 import { QuestionPreviewService } from './question-preview.service';
-import { answerText, nearestText, offeredKinds, photoRules, QUESTION_CATEGORIES, QUESTION_KINDS, questionKind, questionText, QuestionType } from './questions';
+import { answerText, MAX_CUSTOM_TEXT_LENGTH, nearestText, offeredKinds, photoRules, QUESTION_CATEGORIES, QUESTION_KINDS, questionKind, questionText, QuestionType } from './questions';
 import { PathPoint, ThermometerDraftService } from './thermometer-draft.service';
 
 /**
@@ -92,6 +92,14 @@ import { PathPoint, ThermometerDraftService } from './thermometer-draft.service'
                 }
               </select>
             </label>
+          }
+          @if (chosenKind().needsText) {
+            <label class="control-field" for="question-text">
+              Your question
+              <textarea id="question-text" rows="3" formControlName="text" [attr.maxlength]="maxTextLength"
+                aria-describedby="question-text-hint"></textarea>
+            </label>
+            <p id="question-text-hint" class="status-text">The hiders answer yes or no. It does not change the map.</p>
           }
           @if (chosenKind().distances.length > 0) {
             <label class="control-field" for="question-distance">
@@ -196,11 +204,13 @@ export class QuestionsPanelComponent {
     { id: 'end', label: 'End' }
   ];
   protected readonly gpsPosition = this.geolocation.position;
+  protected readonly maxTextLength = MAX_CUSTOM_TEXT_LENGTH;
 
   protected readonly form = new FormGroup({
     type: new FormControl<QuestionType>(this.draft.selected() ? 'THERMOMETER' : 'RADAR', { nonNullable: true }),
     category: new FormControl(QUESTION_CATEGORIES[0].id, { nonNullable: true }),
-    distanceMeters: new FormControl(1000, { nonNullable: true })
+    distanceMeters: new FormControl(1000, { nonNullable: true }),
+    text: new FormControl('', { nonNullable: true })
   });
   protected readonly placeForm = new FormGroup({ name: new FormControl('', { nonNullable: true }) });
 
@@ -224,11 +234,15 @@ export class QuestionsPanelComponent {
     return kinds.find(kind => kind.type === this.formValue().type) ?? kinds[0] ?? QUESTION_KINDS[0];
   });
   protected readonly previewed = this.mapPreview.question;
-  protected readonly canAsk = computed(() => !this.chosenKind().needsPath || this.draft.complete());
+  protected readonly canAsk = computed(() => {
+    const kind = this.chosenKind();
+    if (kind.needsText) return (this.formValue().text ?? '').trim().length > 0;
+    return !kind.needsPath || this.draft.complete();
+  });
   protected readonly preview = computed(() => {
     const value = this.formValue();
     const distanceMeters = this.chosenKind().needsPath ? this.pathDistance() : value.distanceMeters;
-    return questionText({ type: this.chosenKind().type, params: { category: value.category, distanceMeters } });
+    return questionText({ type: this.chosenKind().type, params: { category: value.category, distanceMeters, text: value.text } });
   });
   protected readonly previewRules = computed(() =>
     photoRules({ type: this.chosenKind().type, params: { category: this.formValue().category } }));
@@ -240,12 +254,12 @@ export class QuestionsPanelComponent {
 
   /**
    * What to show on the map: the form's choices, while the form is there. A thermometer's points show themselves, and
-   * a photo is not about anywhere on the map.
+   * photos and custom questions are not about anywhere on the map.
    */
   private readonly choosing = computed<AskRequest | null>(() => {
-    if (!this.canChoose() || this.chosenKind().needsPath || this.chosenKind().type === 'PHOTO') return null;
+    if (!this.canChoose() || this.chosenKind().needsPath || this.chosenKind().offMap) return null;
     const { category, distanceMeters } = this.formValue();
-    return this.request(category ?? QUESTION_CATEGORIES[0].id, distanceMeters ?? 0);
+    return this.request(category ?? QUESTION_CATEGORIES[0].id, distanceMeters ?? 0, '');
   });
 
   /** Said once by screen readers when a question arrives or is answered. */
@@ -288,23 +302,25 @@ export class QuestionsPanelComponent {
   }
 
   protected async ask(): Promise<void> {
-    const { category, distanceMeters } = this.form.getRawValue();
+    const { category, distanceMeters, text } = this.form.getRawValue();
     const kind = this.chosenKind();
-    const asked = await this.session.ask(this.request(category, distanceMeters));
+    const asked = await this.session.ask(this.request(category, distanceMeters, text));
     if (!asked) return;
     if (kind.needsPath) this.draft.clear();
+    if (kind.needsText) this.form.controls.text.setValue('');
     // The form gives way to the waiting question
     this.focus('pending-heading');
   }
 
   /** The chosen kind of question, with only what it needs. */
-  private request(category: string, distanceMeters: number): AskRequest {
+  private request(category: string, distanceMeters: number, text: string): AskRequest {
     const kind = this.chosenKind();
     return {
       type: kind.type,
       ...(kind.categories.length > 0 ? { category } : {}),
       ...(kind.distances.length > 0 ? { distanceMeters } : {}),
-      ...(kind.needsPath ? { start: this.draft.start() ?? undefined, end: this.draft.end() ?? undefined } : {})
+      ...(kind.needsPath ? { start: this.draft.start() ?? undefined, end: this.draft.end() ?? undefined } : {}),
+      ...(kind.needsText ? { text: text.trim() } : {})
     };
   }
 
@@ -346,7 +362,7 @@ export class QuestionsPanelComponent {
 
   /** The category of place to help the hiders with; a photo's subject is not one. */
   protected placeCategory(question: QuestionDTO): string | undefined {
-    return question.type === 'PHOTO' ? undefined : question.params.category;
+    return questionKind(question.type).offMap ? undefined : question.params.category;
   }
 
   protected hasPlaceChoice(question: QuestionDTO): boolean {

@@ -28,6 +28,10 @@ export interface AskRequest {
      * Where the seekers stopped moving, for thermometer
      */
     end?: Position;
+    /**
+     * The question in the seekers' own words, for custom
+     */
+    text?: string;
 }
 export namespace AskRequest {
     export const TypeEnum = {
@@ -37,6 +41,7 @@ export namespace AskRequest {
         Thermometer: 'THERMOMETER',
         Tentacles: 'TENTACLES',
         Photo: 'PHOTO',
+        Custom: 'CUSTOM',
     } as const;
     export type TypeEnum = typeof TypeEnum[keyof typeof TypeEnum];
 }

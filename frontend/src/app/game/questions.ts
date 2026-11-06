@@ -1,4 +1,4 @@
-import { LucideCamera, LucideEqual, LucideIconData, LucideRuler, LucideTarget, LucideThermometer, LucideWaypoints } from '@lucide/angular';
+import { LucideCamera, LucideEqual, LucideIconData, LucideMessageCircleQuestionMark, LucideRuler, LucideTarget, LucideThermometer, LucideWaypoints } from '@lucide/angular';
 
 import type { GameSettings, QuestionDTO, QuestionRules } from '../api/generated';
 import { formatApproximateDistance, formatDistance } from '../shared/format';
@@ -90,6 +90,10 @@ export interface QuestionKind {
   distances: readonly number[];
   /** Whether it is about two points on the map, from which it takes its distance. */
   needsPath: boolean;
+  /** Whether the seekers write the question themselves. */
+  needsText?: boolean;
+  /** Whether it is about nowhere on the map, so is not shown there before it is asked. */
+  offMap?: boolean;
   /** The answers the hiders may give, with their labels. */
   choices: readonly { choice: string; label: string }[];
 }
@@ -123,9 +127,17 @@ export const QUESTION_KINDS: readonly QuestionKind[] = [
   {
     type: 'PHOTO', label: 'Photo', summary: 'Send us a photo of something.', icon: LucideCamera.icon,
     categories: PHOTO_SUBJECTS, categoryLabel: 'Subject', distances: [], needsPath: false,
-    choices: [{ choice: 'PHOTO', label: 'Send a photo' }]
+    choices: [{ choice: 'PHOTO', label: 'Send a photo' }], offMap: true
+  },
+  {
+    type: 'CUSTOM', label: 'Custom', summary: 'Ask anything, answered yes or no.', icon: LucideMessageCircleQuestionMark.icon,
+    categories: [], categoryLabel: '', distances: [], needsPath: false, needsText: true, offMap: true,
+    choices: [{ choice: 'YES', label: 'Yes' }, { choice: 'NO', label: 'No' }]
   }
 ];
+
+/** The longest a custom question may be; as QuestionParams on the backend. */
+export const MAX_CUSTOM_TEXT_LENGTH = 300;
 
 /** How long the hiders have to answer, unless the game says otherwise; as QuestionRules on the backend. */
 export const DEFAULT_ANSWER_MINUTES = 5;
@@ -187,6 +199,7 @@ export function questionText(question: Pick<QuestionDTO, 'type' | 'params'>): st
     case 'THERMOMETER': return `We moved${question.params.distanceMeters ? ` ${distance}` : ''}. Are we hotter or colder?`;
     case 'TENTACLES': return `Of the ${plural} within ${distance} of us, which are you nearest to?`;
     case 'PHOTO': return `Send a photo: ${photoSubjectOf(question)?.name ?? name}`;
+    case 'CUSTOM': return question.params.text?.trim() || 'Your question, answered yes or no';
   }
 }
 

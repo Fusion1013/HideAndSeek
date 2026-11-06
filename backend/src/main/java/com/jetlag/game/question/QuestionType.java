@@ -18,7 +18,9 @@ public enum QuestionType {
   /** Of the (category) within (distance) of us, which are you nearest? Answered with a place's name, or none. */
   TENTACLES(true, true, false, Set.of(QuestionAnswer.PLACE, QuestionAnswer.NONE)),
   /** Send us a photo of (subject). Its subjects are the frontend's categories, and it is answered with the picture. */
-  PHOTO(true, false, false, Set.of(QuestionAnswer.PHOTO));
+  PHOTO(true, false, false, Set.of(QuestionAnswer.PHOTO)),
+  /** A question of the seekers' own words, answered yes or no. It is about nowhere on the map, so rules nothing out. */
+  CUSTOM(false, false, false, Set.of(QuestionAnswer.YES, QuestionAnswer.NO));
 
   private final boolean needsCategory;
   private final boolean needsDistance;
@@ -48,6 +50,11 @@ public enum QuestionType {
   /** Whether it is about a start and an end point. */
   public boolean needsPath() {
     return needsPath;
+  }
+
+  /** Whether the seekers write the question themselves. */
+  public boolean needsText() {
+    return this == CUSTOM;
   }
 
   /** The answers the hiders may give. */

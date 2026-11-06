@@ -164,7 +164,7 @@ describe('TemplateEditorService', () => {
     editor.save();
     expect(editor.error()).toBe('Leave Radar something to choose from, or turn it off.');
 
-    for (const type of ['MATCHING', 'MEASURING', 'RADAR', 'THERMOMETER', 'TENTACLES', 'PHOTO'] as const) {
+    for (const type of ['MATCHING', 'MEASURING', 'RADAR', 'THERMOMETER', 'TENTACLES', 'PHOTO', 'CUSTOM'] as const) {
       editor.setQuestionRules(type, { disabled: true });
     }
     editor.save();

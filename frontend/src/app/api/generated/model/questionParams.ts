@@ -36,5 +36,9 @@ export interface QuestionParams {
      * The place of the category nearest the asking seeker when asked, for matching and measuring; null if their position was not known or the category has no places
      */
     nearest?: NearestPlace;
+    /**
+     * The question in the seekers' own words, for custom
+     */
+    text?: string;
 }
 

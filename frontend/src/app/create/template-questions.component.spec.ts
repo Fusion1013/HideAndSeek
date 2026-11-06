@@ -51,7 +51,7 @@ describe('TemplateQuestionsComponent', () => {
       expect(checkbox(group(kind.label), kind.label).checked).toBe(true);
       expect((element.querySelector(`#answer-minutes-${kind.type}`) as HTMLInputElement).value).toBe('5');
     }
-    expect(element.querySelector('legend')?.textContent).toContain('6 of 6 kinds');
+    expect(element.querySelector('legend')?.textContent).toContain('7 of 7 kinds');
     await expectNoAxeViolations(element);
   });
 
@@ -67,7 +67,7 @@ describe('TemplateQuestionsComponent', () => {
 
     expect(questions()['THERMOMETER'].disabled).toBe(true);
     expect(element.querySelector('#answer-minutes-THERMOMETER')).toBeNull();
-    expect(element.querySelector('legend')?.textContent).toContain('5 of 6 kinds');
+    expect(element.querySelector('legend')?.textContent).toContain('6 of 7 kinds');
 
     change(checkbox(group('Thermometer'), 'Thermometer'));
     expect(questions()['THERMOMETER'].disabled).toBe(false);

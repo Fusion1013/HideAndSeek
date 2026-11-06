@@ -4,7 +4,7 @@ import type { MultiPolygon } from 'polygon-clipping';
 
 import type { QuestionDTO } from '../api/generated';
 import { nearerHalf } from '../shared/bisector';
-import { CIRCLE_POINTS, CIRCLE_QUESTIONS } from './questions';
+import { CIRCLE_POINTS, CIRCLE_QUESTIONS, questionKind } from './questions';
 
 const HITS = ['YES', 'PLACE', 'CLOSER', 'HOTTER', 'COLDER'];
 
@@ -20,6 +20,8 @@ function fromGeoJson(geoJson: string): MultiPolygon {
 
 /** In longitude and latitude, the area an answered question divides; null if it divides none that is known. */
 function questionArea(question: QuestionDTO): MultiPolygon | null {
+  // Photos and custom questions are about nowhere on the map
+  if (questionKind(question.type).offMap) return null;
   const { origin, distanceMeters, start, end, nearest } = question.params;
   if (CIRCLE_QUESTIONS.includes(question.type)) {
     if (!origin || !distanceMeters) return null;

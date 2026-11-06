@@ -134,7 +134,8 @@
     font-size: 12px;
 
     input,
-    select {
+    select,
+    textarea {
       box-sizing: border-box;
       border: 1px solid var(--control-field-border);
       border-radius: 5px;
@@ -145,9 +146,14 @@
       min-height: 40px;
       padding: 6px 8px;
     }
+
+    textarea {
+      resize: vertical;
+    }
   }
 
   button:focus-visible,
+  textarea:focus-visible,
   select:focus-visible,
   input:focus-visible,
   a:focus-visible,

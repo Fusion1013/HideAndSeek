@@ -45,6 +45,14 @@ describe('excludedArea', () => {
     expect(excludedArea([], [radar('q1', 'YES')])).toEqual([]);
   });
 
+  it('rules nothing out with a custom question, whatever its answer', () => {
+    const custom = (id: string, choice: string) =>
+      question(id, 'CUSTOM', { origin: CENTER, distanceMeters: 2000, nearest: { ...NEAREST, cell: WEST_HALF }, text: 'Island?' }, choice);
+    expect(excluded(custom('q1', 'YES'))).toEqual([]);
+    expect(excluded(custom('q1', 'NO'))).toEqual([]);
+    expect(excluded(radar('q1', 'YES'), custom('q2', 'NO'))).toEqual(excluded(radar('q1', 'YES')));
+  });
+
   it('takes in everything outside a hit, and only the area of a miss', () => {
     const hit = excluded(radar('q1', 'YES'));
     expect(contains(hit, MIDDLE)).toBe(false);

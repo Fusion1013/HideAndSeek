@@ -41,6 +41,7 @@ describe('question wording', () => {
       .toBe('We moved 500 m. Are we hotter or colder?');
     expect(questionText(question({ type: 'THERMOMETER', params: {} }))).toBe('We moved. Are we hotter or colder?');
     expect(questionText(question({ type: 'PHOTO', params: { category: 'tree' } }))).toBe('Send a photo: A tree');
+    expect(questionText(question({ type: 'CUSTOM', params: { text: 'Are you on an island?' } }))).toBe('Are you on an island?');
 
     expect(answerText(question())).toBe('Waiting for the hiders');
     expect(answerText(question({ status: 'ANSWERED', answer: { choice: 'YES' } }))).toBe('Yes');
@@ -81,7 +82,7 @@ describe('the kinds of question a game offers', () => {
       RADAR: rules({ disabledDistances: [500] })
     });
 
-    expect(kinds.map(kind => kind.type)).toEqual(['MEASURING', 'RADAR', 'THERMOMETER', 'TENTACLES', 'PHOTO']);
+    expect(kinds.map(kind => kind.type)).toEqual(['MEASURING', 'RADAR', 'THERMOMETER', 'TENTACLES', 'PHOTO', 'CUSTOM']);
     expect(kinds[0].categories.map(category => category.id)).not.toContain('zoos');
     expect(kinds[1].distances).not.toContain(500);
     expect(kinds[3].categories).toEqual(QUESTION_CATEGORIES);
@@ -223,7 +224,7 @@ describe('QuestionsPanelComponent', () => {
       fixture.detectChanges();
 
       const kinds = [...element.querySelectorAll('.question-kind')].map(kind => kind.textContent);
-      expect(kinds).toHaveLength(5);
+      expect(kinds).toHaveLength(6);
       expect(kinds.join()).not.toContain('Radar');
       // Radar was chosen; the first kind left takes over, on its first place
       expect((element.querySelector('.question-kind input') as HTMLInputElement).checked).toBe(true);
@@ -483,6 +484,47 @@ describe('QuestionsPanelComponent', () => {
 
       expect(element.querySelectorAll('app-question-photo')).toHaveLength(1);
       expect(element.querySelector('.question-history')?.textContent).toContain('Photo sent');
+      await expectNoAxeViolations(element);
+    });
+  });
+
+  describe('custom questions', () => {
+    it('lets a seeker write a question, asked only once written, and nothing for the map', async () => {
+      TestBed.tick();
+      await Promise.resolve();
+      previewQuestion.mockClear();
+
+      choose('Custom');
+      const submit = element.querySelector('button[type=submit]') as HTMLButtonElement;
+      expect(element.querySelector('#question-category')).toBeNull();
+      expect(element.querySelector('#question-distance')).toBeNull();
+      expect(submit.disabled).toBe(true);
+
+      const text = element.querySelector('#question-text') as HTMLTextAreaElement;
+      text.value = '  Are you on an island? ';
+      text.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+      expect(submit.disabled).toBe(false);
+      expect(element.querySelector('.question-preview')?.textContent).toBe('“Are you on an island?”');
+      await expectNoAxeViolations(element);
+
+      TestBed.tick();
+      expect(previewQuestion).not.toHaveBeenCalled();
+      expect(element.textContent).not.toContain('Your position is not known yet');
+
+      submit.click();
+      expect(ask).toHaveBeenCalledWith({ type: 'CUSTOM', text: 'Are you on an island?' });
+    });
+
+    it('lets the hider answer yes or no', async () => {
+      role.set('HIDER');
+      questions.set([question({ type: 'CUSTOM', params: { text: 'Are you on an island?' } })]);
+      fixture.detectChanges();
+
+      const pending = element.querySelector('.pending-question')!;
+      expect(pending.textContent).toContain('Are you on an island?');
+      expect([...pending.querySelectorAll('button')].map(button => button.textContent?.trim())).toEqual(['Yes', 'No']);
+      expect(element.querySelector('.nearest-place')).toBeNull();
       await expectNoAxeViolations(element);
     });
   });

@@ -34,6 +34,7 @@ export namespace QuestionDTO {
         Thermometer: 'THERMOMETER',
         Tentacles: 'TENTACLES',
         Photo: 'PHOTO',
+        Custom: 'CUSTOM',
     } as const;
     export type TypeEnum = typeof TypeEnum[keyof typeof TypeEnum];
     export const StatusEnum = {

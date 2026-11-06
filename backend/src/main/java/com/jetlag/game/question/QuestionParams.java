@@ -12,8 +12,17 @@ public record QuestionParams(
   @Schema(description = "Where the seekers started moving, for thermometer") Position start,
   @Schema(description = "Where the seekers stopped moving, for thermometer") Position end,
   @Schema(description = "The place of the category nearest the asking seeker when asked, for matching and measuring; "
-    + "null if their position was not known or the category has no places") NearestPlace nearest
+    + "null if their position was not known or the category has no places") NearestPlace nearest,
+  @Schema(description = "The question in the seekers' own words, for custom") String text
 ) {
+
+  /** The longest a custom question may be. */
+  public static final int MAX_TEXT_LENGTH = 300;
+
+  public QuestionParams(String category, Integer distanceMeters, Position origin, Position start, Position end,
+                        NearestPlace nearest) {
+    this(category, distanceMeters, origin, start, end, nearest, null);
+  }
 
   public record Position(
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED) double longitude,
